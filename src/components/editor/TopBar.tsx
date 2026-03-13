@@ -2,10 +2,11 @@ import { useRef, useCallback } from 'react';
 import { useEditor } from './EditorContext';
 import { getShapeById } from '@/lib/shapes';
 import { exportCanvasAsSVG } from '@/lib/imageProcessing';
+import { exportAsDXF } from '@/lib/exportDXF';
 import { Button } from '@/components/ui/button';
 import {
   Upload, Undo2, Redo2, Download, ZoomIn, ZoomOut,
-  Grid3X3, FileImage, FileCode
+  Grid3X3, FileImage, FileCode, Scissors
 } from 'lucide-react';
 import {
   DropdownMenu,
