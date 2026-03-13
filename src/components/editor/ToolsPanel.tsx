@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { removeBackgroundAuto, convertToClipart } from '@/lib/imageProcessing';
-import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette, Maximize } from 'lucide-react';
 import { useState } from 'react';
 
 export function ToolsPanel() {
