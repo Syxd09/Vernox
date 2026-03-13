@@ -173,6 +173,19 @@ export function TopBar() {
           <DropdownMenuItem onClick={handleExportSVG}>
             <FileCode className="w-4 h-4 mr-2" /> Export as SVG
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => {
+            const shape = getShapeById(state.selectedShapeId);
+            if (!shape) return;
+            const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
+            const dxfContent = exportAsDXF(shapePath, state.shapeWidth, state.shapeHeight);
+            const blob = new Blob([dxfContent], { type: 'application/dxf' });
+            const link = document.createElement('a');
+            link.download = `metal-shape-${state.selectedShapeId}.dxf`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+          }}>
+            <Scissors className="w-4 h-4 mr-2" /> Export as DXF (Laser)
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
