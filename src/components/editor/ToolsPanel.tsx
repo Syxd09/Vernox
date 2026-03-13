@@ -63,6 +63,26 @@ export function ToolsPanel() {
     dispatch({ type: 'REORDER_LAYERS', layers: newLayers });
   };
 
+  const fitToShape = () => {
+    if (!selectedLayer) return;
+    const scaleX = state.shapeWidth / selectedLayer.width;
+    const scaleY = state.shapeHeight / selectedLayer.height;
+    const scale = Math.max(scaleX, scaleY);
+    const newW = selectedLayer.width * scale;
+    const newH = selectedLayer.height * scale;
+    dispatch({
+      type: 'UPDATE_LAYER',
+      id: selectedLayer.id,
+      updates: {
+        x: (state.shapeWidth - newW) / 2,
+        y: (state.shapeHeight - newH) / 2,
+        width: newW,
+        height: newH,
+      },
+    });
+    dispatch({ type: 'PUSH_HISTORY' });
+  };
+
   return (
     <div className="w-72 border-l border-border bg-card flex flex-col h-full">
       <div className="p-4 border-b border-border">
