@@ -11,6 +11,9 @@ export function DesignCanvas() {
   const transformerRef = useRef<Konva.Transformer>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const lastPointer = useRef({ x: 0, y: 0 });
 
   // Measure container
   useEffect(() => {
@@ -54,15 +57,16 @@ export function DesignCanvas() {
     tr.getLayer()?.batchDraw();
   }, [state.selectedLayerId, state.layers]);
 
-  const handleDragEnd = useCallback((layerId: string, e: Konva.KonvaEventObject<DragEvent>, oX: number, oY: number) => {
+  const handleDragEnd = useCallback((layerId: string, e: Konva.KonvaEventObject<DragEvent>) => {
     dispatch({
       type: 'UPDATE_LAYER',
       id: layerId,
-      updates: { x: e.target.x() - oX, y: e.target.y() - oY },
+      updates: { x: e.target.x(), y: e.target.y() },
     });
+    dispatch({ type: 'PUSH_HISTORY' });
   }, [dispatch]);
 
-  const handleTransformEnd = useCallback((layerId: string, e: Konva.KonvaEventObject<Event>, oX: number, oY: number) => {
+  const handleTransformEnd = useCallback((layerId: string, e: Konva.KonvaEventObject<Event>) => {
     const node = e.target;
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
@@ -72,8 +76,8 @@ export function DesignCanvas() {
       type: 'UPDATE_LAYER',
       id: layerId,
       updates: {
-        x: node.x() - oX,
-        y: node.y() - oY,
+        x: node.x(),
+        y: node.y(),
         width: Math.max(5, node.width() * scaleX),
         height: Math.max(5, node.height() * scaleY),
         rotation: node.rotation(),
@@ -83,24 +87,44 @@ export function DesignCanvas() {
   }, [dispatch]);
 
   const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    const className = e.target.getClassName();
-    if (e.target === e.target.getStage() || className === 'Path' || className === 'Rect' || className === 'Line') {
+    if (e.target === e.target.getStage()) {
       dispatch({ type: 'SELECT_LAYER', id: null });
     }
   }, [dispatch]);
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
-    const delta = e.evt.deltaY > 0 ? -0.1 : 0.1;
+    const delta = e.evt.deltaY > 0 ? -0.05 : 0.05;
     dispatch({ type: 'SET_ZOOM', zoom: state.zoom + delta });
   }, [dispatch, state.zoom]);
+
+  // Middle-click panning
+  const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.evt.button === 1 || (e.evt.button === 0 && e.evt.altKey)) {
+      isPanning.current = true;
+      lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY };
+      e.evt.preventDefault();
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!isPanning.current) return;
+    const dx = e.evt.clientX - lastPointer.current.x;
+    const dy = e.evt.clientY - lastPointer.current.y;
+    setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY };
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    isPanning.current = false;
+  }, []);
 
   const shape = getShapeById(state.selectedShapeId);
   if (!shape) return <div className="flex-1 flex items-center justify-center text-muted-foreground">No shape selected</div>;
 
   const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-  const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2;
-  const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2;
+  const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
+  const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
 
   // Grid lines
   const gridLines: React.ReactNode[] = [];
@@ -109,17 +133,46 @@ export function DesignCanvas() {
     const w = containerSize.width / state.zoom;
     const h = containerSize.height / state.zoom;
     for (let x = 0; x < w; x += gridSize) {
-      gridLines.push(<Line key={`gv-${x}`} points={[x, 0, x, h]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.3} />);
+      gridLines.push(<Line key={`gv-${x}`} points={[x, 0, x, h]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.2} />);
     }
     for (let y = 0; y < h; y += gridSize) {
-      gridLines.push(<Line key={`gh-${y}`} points={[0, y, w, y]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.3} />);
+      gridLines.push(<Line key={`gh-${y}`} points={[0, y, w, y]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.2} />);
     }
   }
 
+  // Center guides for shape
+  const centerGuides = (
+    <>
+      <Line
+        points={[offsetX + state.shapeWidth / 2, offsetY - 15, offsetX + state.shapeWidth / 2, offsetY + state.shapeHeight + 15]}
+        stroke="hsl(220, 70%, 50%)"
+        strokeWidth={0.5}
+        dash={[4, 4]}
+        opacity={0.3}
+      />
+      <Line
+        points={[offsetX - 15, offsetY + state.shapeHeight / 2, offsetX + state.shapeWidth + 15, offsetY + state.shapeHeight / 2]}
+        stroke="hsl(220, 70%, 50%)"
+        strokeWidth={0.5}
+        dash={[4, 4]}
+        opacity={0.3}
+      />
+    </>
+  );
+
   return (
-    <div ref={containerRef} className="flex-1 bg-muted/30 overflow-hidden relative">
+    <div ref={containerRef} className="flex-1 bg-muted/30 overflow-hidden relative cursor-crosshair">
+      {/* Zoom indicator */}
       <div className="absolute bottom-4 left-4 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground shadow-sm">
         {Math.round(state.zoom * 100)}%
+      </div>
+
+      {/* Keyboard shortcuts hint */}
+      <div className="absolute bottom-4 right-4 z-10 bg-card/80 border border-border rounded-md px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm space-x-3">
+        <span>Ctrl+Z Undo</span>
+        <span>Del Remove</span>
+        <span>Scroll Zoom</span>
+        <span>Alt+Drag Pan</span>
       </div>
 
       <Stage
@@ -130,22 +183,30 @@ export function DesignCanvas() {
         scaleY={state.zoom}
         onClick={handleStageClick}
         onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
       >
         <Layer>
           {gridLines}
 
+          {/* Shape background shadow */}
           <Rect
             x={offsetX - 10}
             y={offsetY - 10}
             width={state.shapeWidth + 20}
             height={state.shapeHeight + 20}
             fill="white"
-            shadowColor="rgba(0,0,0,0.08)"
-            shadowBlur={20}
-            shadowOffsetY={4}
+            shadowColor="rgba(0,0,0,0.1)"
+            shadowBlur={25}
+            shadowOffsetY={6}
             cornerRadius={4}
           />
 
+          {/* Center guides */}
+          {centerGuides}
+
+          {/* Clipped image group */}
           <Group
             x={offsetX}
             y={offsetY}
@@ -153,6 +214,9 @@ export function DesignCanvas() {
               drawSVGPathOnContext(ctx, shapePath);
             }}
           >
+            {/* White fill inside shape */}
+            <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill="white" />
+
             {state.layers.map(layer => {
               if (!layer.visible || !loadedImages[layer.id]) return null;
               return (
@@ -167,15 +231,16 @@ export function DesignCanvas() {
                   rotation={layer.rotation}
                   opacity={layer.opacity}
                   draggable={!layer.locked}
-                  onDragEnd={(e) => handleDragEnd(layer.id, e, offsetX, offsetY)}
-                  onTransformEnd={(e) => handleTransformEnd(layer.id, e, offsetX, offsetY)}
-                  onClick={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
+                  onDragEnd={(e) => handleDragEnd(layer.id, e)}
+                  onTransformEnd={(e) => handleTransformEnd(layer.id, e)}
+                  onClick={(e) => { e.cancelBubble = true; dispatch({ type: 'SELECT_LAYER', id: layer.id }); }}
                   onTap={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
                 />
               );
             })}
           </Group>
 
+          {/* Shape border */}
           <Path
             x={offsetX}
             y={offsetY}
@@ -186,6 +251,7 @@ export function DesignCanvas() {
             listening={false}
           />
 
+          {/* Transformer */}
           <Transformer
             ref={transformerRef}
             rotateEnabled
@@ -257,15 +323,12 @@ function approximateArc(
   x2: number, y2: number
 ) {
   if (rx === 0 || ry === 0) { ctx.lineTo(x2, y2); return; }
-  // Approximate with line segments along the arc path
   const segments = 24;
   for (let i = 1; i <= segments; i++) {
     const t = i / segments;
-    // Parametric approximation
     const angle = Math.PI * t;
     const mx = x1 + (x2 - x1) * t;
     const my = y1 + (y2 - y1) * t;
-    // Add curvature
     const bulge = Math.sin(angle) * Math.min(rx, ry) * 0.5 * (_sweep ? 1 : -1);
     const dx = -(y2 - y1);
     const dy = x2 - x1;

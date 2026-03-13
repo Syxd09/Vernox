@@ -4,9 +4,11 @@ import { ShapePanel } from '@/components/editor/ShapePanel';
 import { DesignCanvas } from '@/components/editor/DesignCanvas';
 import { ToolsPanel } from '@/components/editor/ToolsPanel';
 import { TopBar } from '@/components/editor/TopBar';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 function EditorLayout() {
-  const { addImage } = useEditor();
+  const { state, dispatch, addImage } = useEditor();
+  useKeyboardShortcuts(dispatch, state.selectedLayerId);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

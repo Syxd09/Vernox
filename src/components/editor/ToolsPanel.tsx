@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { removeBackgroundAuto, convertToClipart } from '@/lib/imageProcessing';
-import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette, Maximize } from 'lucide-react';
 import { useState } from 'react';
 
 export function ToolsPanel() {
@@ -61,6 +61,26 @@ export function ToolsPanel() {
     if (swapIdx < 0 || swapIdx >= newLayers.length) return;
     [newLayers[idx], newLayers[swapIdx]] = [newLayers[swapIdx], newLayers[idx]];
     dispatch({ type: 'REORDER_LAYERS', layers: newLayers });
+  };
+
+  const fitToShape = () => {
+    if (!selectedLayer) return;
+    const scaleX = state.shapeWidth / selectedLayer.width;
+    const scaleY = state.shapeHeight / selectedLayer.height;
+    const scale = Math.max(scaleX, scaleY);
+    const newW = selectedLayer.width * scale;
+    const newH = selectedLayer.height * scale;
+    dispatch({
+      type: 'UPDATE_LAYER',
+      id: selectedLayer.id,
+      updates: {
+        x: (state.shapeWidth - newW) / 2,
+        y: (state.shapeHeight - newH) / 2,
+        width: newW,
+        height: newH,
+      },
+    });
+    dispatch({ type: 'PUSH_HISTORY' });
   };
 
   return (
@@ -132,6 +152,9 @@ export function ToolsPanel() {
                         <ArrowDown className="w-3 h-3 mr-1" /> Down
                       </Button>
                     </div>
+                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={fitToShape}>
+                      <Maximize className="w-3 h-3 mr-1" /> Fit to Shape
+                    </Button>
                     <div className="space-y-2">
                       <Label className="text-xs">Opacity: {Math.round(selectedLayer.opacity * 100)}%</Label>
                       <Slider

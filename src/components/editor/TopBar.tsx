@@ -2,10 +2,11 @@ import { useRef, useCallback } from 'react';
 import { useEditor } from './EditorContext';
 import { getShapeById } from '@/lib/shapes';
 import { exportCanvasAsSVG } from '@/lib/imageProcessing';
+import { exportAsDXF } from '@/lib/exportDXF';
 import { Button } from '@/components/ui/button';
 import {
   Upload, Undo2, Redo2, Download, ZoomIn, ZoomOut,
-  Grid3X3, FileImage, FileCode
+  Grid3X3, FileImage, FileCode, Scissors
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -171,6 +172,19 @@ export function TopBar() {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExportSVG}>
             <FileCode className="w-4 h-4 mr-2" /> Export as SVG
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => {
+            const shape = getShapeById(state.selectedShapeId);
+            if (!shape) return;
+            const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
+            const dxfContent = exportAsDXF(shapePath, state.shapeWidth, state.shapeHeight);
+            const blob = new Blob([dxfContent], { type: 'application/dxf' });
+            const link = document.createElement('a');
+            link.download = `metal-shape-${state.selectedShapeId}.dxf`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+          }}>
+            <Scissors className="w-4 h-4 mr-2" /> Export as DXF (Laser)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
