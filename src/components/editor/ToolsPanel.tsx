@@ -152,6 +152,9 @@ export function ToolsPanel() {
                         <ArrowDown className="w-3 h-3 mr-1" /> Down
                       </Button>
                     </div>
+                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={fitToShape}>
+                      <Maximize className="w-3 h-3 mr-1" /> Fit to Shape
+                    </Button>
                     <div className="space-y-2">
                       <Label className="text-xs">Opacity: {Math.round(selectedLayer.opacity * 100)}%</Label>
                       <Slider
