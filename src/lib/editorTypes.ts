@@ -29,6 +29,8 @@ export interface EditorState {
   history: EditorLayer[][];
   historyIndex: number;
   showGrid: boolean;
+  metalPreview: boolean;
+  metalFinish: 'steel' | 'brass' | 'copper' | 'gold';
 }
 
 export type EditorAction =
@@ -44,6 +46,9 @@ export type EditorAction =
   | { type: 'REORDER_LAYERS'; layers: EditorLayer[] }
   | { type: 'SET_ZOOM'; zoom: number }
   | { type: 'TOGGLE_GRID' }
+  | { type: 'TOGGLE_METAL_PREVIEW' }
+  | { type: 'SET_METAL_FINISH'; finish: 'steel' | 'brass' | 'copper' | 'gold' }
+  | { type: 'LOAD_PROJECT'; state: Partial<EditorState> }
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'PUSH_HISTORY' };
