@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useEditor } from './EditorContext';
 import { getShapeById } from '@/lib/shapes';
 import { exportCanvasAsSVG } from '@/lib/imageProcessing';
@@ -6,18 +6,57 @@ import { exportAsDXF } from '@/lib/exportDXF';
 import { Button } from '@/components/ui/button';
 import {
   Upload, Undo2, Redo2, Download, ZoomIn, ZoomOut,
-  Grid3X3, FileImage, FileCode, Scissors
+  Grid3X3, FileImage, FileCode, Scissors, Sparkles, Save, FolderOpen, Trash2
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { listProjects, saveProject, loadProject, deleteProject, SavedProject } from '@/lib/projectStorage';
+import { toast } from '@/hooks/use-toast';
 
 export function TopBar() {
   const { state, dispatch, addImage } = useEditor();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [loadOpen, setLoadOpen] = useState(false);
+  const [projectName, setProjectName] = useState('');
+  const [projects, setProjects] = useState<SavedProject[]>([]);
+
+  useEffect(() => {
+    if (saveOpen || loadOpen) setProjects(listProjects());
+  }, [saveOpen, loadOpen]);
+
+  const handleSave = () => {
+    const name = projectName.trim() || `Project ${new Date().toLocaleString()}`;
+    saveProject(name, state);
+    toast({ title: 'Project saved', description: name });
+    setSaveOpen(false);
+    setProjectName('');
+  };
+
+  const handleLoad = (id: string) => {
+    const project = loadProject(id);
+    if (!project) return;
+    dispatch({ type: 'LOAD_PROJECT', state: project.state });
+    toast({ title: 'Project loaded', description: project.name });
+    setLoadOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteProject(id);
+    setProjects(listProjects());
+  };
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -156,6 +195,114 @@ export function TopBar() {
       >
         <Grid3X3 className="w-3.5 h-3.5" />
       </Button>
+
+      <div className="h-6 w-px bg-border" />
+
+      {/* Metal preview toggle + finish picker */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            variant={state.metalPreview ? 'secondary' : 'ghost'}
+            className="h-8 text-xs gap-1.5"
+            title="Metal Preview"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden md:inline capitalize">{state.metalPreview ? state.metalFinish : 'Preview'}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => dispatch({ type: 'TOGGLE_METAL_PREVIEW' })}>
+            {state.metalPreview ? 'Exit metal preview' : 'Enable metal preview'}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs">Finish</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={state.metalFinish}
+            onValueChange={(v) => dispatch({ type: 'SET_METAL_FINISH', finish: v as 'steel' | 'brass' | 'copper' | 'gold' })}
+          >
+            <DropdownMenuRadioItem value="steel">Brushed Steel</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="brass">Brass</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="copper">Copper</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="gold">Gold</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <div className="h-6 w-px bg-border" />
+
+      {/* Save / Load */}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogTrigger asChild>
+          <Button size="icon" variant="ghost" className="h-8 w-8" title="Save Project">
+            <Save className="w-3.5 h-3.5" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <label className="text-xs text-muted-foreground">Project name</label>
+            <Input
+              autoFocus
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="My metal sign"
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={loadOpen} onOpenChange={setLoadOpen}>
+        <DialogTrigger asChild>
+          <Button size="icon" variant="ghost" className="h-8 w-8" title="Open Project">
+            <FolderOpen className="w-3.5 h-3.5" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Open Project</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto -mx-2 px-2">
+            {projects.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No saved projects yet.</p>
+            ) : (
+              <ul className="space-y-1">
+                {projects.sort((a, b) => b.updatedAt - a.updatedAt).map(p => (
+                  <li
+                    key={p.id}
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-muted group"
+                  >
+                    <button
+                      onClick={() => handleLoad(p.id)}
+                      className="flex-1 text-left"
+                    >
+                      <div className="text-sm font-medium truncate">{p.name}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {new Date(p.updatedAt).toLocaleString()} · {(p.state.layers?.length ?? 0)} layers
+                      </div>
+                    </button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                      onClick={() => handleDelete(p.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex-1" />
 
