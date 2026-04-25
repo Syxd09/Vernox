@@ -31,6 +31,8 @@ export interface EditorState {
   showGrid: boolean;
   metalPreview: boolean;
   metalFinish: 'steel' | 'brass' | 'copper' | 'gold';
+  metalType: 'steel' | 'stainless' | 'aluminum' | 'brass' | 'copper' | 'gold' | 'corten';
+  metalThickness: number; // in mm
 }
 
 export type EditorAction =
@@ -49,6 +51,8 @@ export type EditorAction =
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_METAL_PREVIEW' }
   | { type: 'SET_METAL_FINISH'; finish: 'steel' | 'brass' | 'copper' | 'gold' }
+  | { type: 'SET_METAL_TYPE'; metalType: EditorState['metalType'] }
+  | { type: 'SET_METAL_THICKNESS'; thickness: number }
   | { type: 'LOAD_PROJECT'; state: Partial<EditorState> }
   | { type: 'UNDO' }
   | { type: 'REDO' }
