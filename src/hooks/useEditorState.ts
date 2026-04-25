@@ -16,6 +16,8 @@ const initialState: EditorState = {
   history: [[]],
   historyIndex: 0,
   showGrid: true,
+  metalPreview: false,
+  metalFinish: 'steel',
 };
 
 function reducer(state: EditorState, action: EditorAction): EditorState {
@@ -55,6 +57,12 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, zoom: Math.max(0.1, Math.min(5, action.zoom)) };
     case 'TOGGLE_GRID':
       return { ...state, showGrid: !state.showGrid };
+    case 'TOGGLE_METAL_PREVIEW':
+      return { ...state, metalPreview: !state.metalPreview };
+    case 'SET_METAL_FINISH':
+      return { ...state, metalFinish: action.finish };
+    case 'LOAD_PROJECT':
+      return { ...state, ...action.state, history: [JSON.parse(JSON.stringify(action.state.layers ?? []))], historyIndex: 0 };
     case 'PUSH_HISTORY': {
       const newHistory = state.history.slice(0, state.historyIndex + 1);
       newHistory.push(JSON.parse(JSON.stringify(state.layers)));
