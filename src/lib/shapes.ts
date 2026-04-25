@@ -271,6 +271,129 @@ export const shapeDefinitions: ShapeDefinition[] = [
       return `M${rx},0 A${rx},${ry} 0 1,1 ${rx},${h} A${rx * 0.6},${ry * 0.8} 0 1,0 ${rx},0 Z`;
     },
   },
+  {
+    id: 'lightning',
+    name: 'Lightning',
+    category: 'decorative',
+    icon: '⚡',
+    getPath: (w, h) =>
+      `M${w * 0.55},0 L${w * 0.15},${h * 0.55} L${w * 0.45},${h * 0.55} L${w * 0.3},${h} L${w * 0.85},${h * 0.4} L${w * 0.55},${h * 0.4} L${w * 0.75},0 Z`,
+  },
+  {
+    id: 'house',
+    name: 'House',
+    category: 'decorative',
+    icon: '⌂',
+    getPath: (w, h) =>
+      `M0,${h * 0.4} L${w / 2},0 L${w},${h * 0.4} L${w},${h} L0,${h} Z`,
+  },
+  {
+    id: 'tag',
+    name: 'Tag',
+    category: 'decorative',
+    icon: '🏷',
+    getPath: (w, h) =>
+      `M0,${h * 0.2} L${w * 0.75},${h * 0.2} L${w},${h / 2} L${w * 0.75},${h * 0.8} L0,${h * 0.8} Z`,
+  },
+  {
+    id: 'speech',
+    name: 'Speech',
+    category: 'decorative',
+    icon: '💬',
+    getPath: (w, h) =>
+      `M0,0 L${w},0 L${w},${h * 0.7} L${w * 0.55},${h * 0.7} L${w * 0.4},${h} L${w * 0.4},${h * 0.7} L0,${h * 0.7} Z`,
+  },
+  {
+    id: 'starburst',
+    name: 'Starburst',
+    category: 'decorative',
+    icon: '✷',
+    getPath: (w, h) => starPath(w / 2, h / 2, Math.min(w, h) / 2, Math.min(w, h) * 0.3, 12),
+  },
+  {
+    id: 'plaque',
+    name: 'Plaque',
+    category: 'decorative',
+    icon: '▭',
+    getPath: (w, h) => {
+      const r = Math.min(w, h) * 0.18;
+      return `M${r},0 L${w - r},0 Q${w},0 ${w},${r} L${w},${h - r} Q${w},${h} ${w - r},${h} L${r},${h} Q0,${h} 0,${h - r} L0,${r} Q0,0 ${r},0 Z`;
+    },
+  },
+  {
+    id: 'bone',
+    name: 'Bone',
+    category: 'decorative',
+    icon: '🦴',
+    getPath: (w, h) => {
+      const r = h * 0.25;
+      return `M${r},${h / 2 - r} A${r},${r} 0 1,0 ${r},${h / 2 + r} L${w - r},${h / 2 + r} A${r},${r} 0 1,0 ${w - r},${h / 2 - r} Z`;
+    },
+  },
+  {
+    id: 'paw',
+    name: 'Paw',
+    category: 'decorative',
+    icon: '🐾',
+    getPath: (w, h) => {
+      const cx = w / 2, cy = h * 0.65;
+      const padR = Math.min(w, h) * 0.28;
+      const toeR = Math.min(w, h) * 0.13;
+      const pad = `M${cx},${cy - padR} A${padR},${padR * 0.85} 0 1,1 ${cx},${cy + padR} A${padR},${padR * 0.85} 0 1,1 ${cx},${cy - padR} Z`;
+      const toe = (tx: number, ty: number) =>
+        `M${tx},${ty - toeR} A${toeR},${toeR} 0 1,1 ${tx},${ty + toeR} A${toeR},${toeR} 0 1,1 ${tx},${ty - toeR} Z`;
+      return [
+        pad,
+        toe(cx - padR * 0.95, cy - padR * 0.7),
+        toe(cx - padR * 0.35, cy - padR * 1.2),
+        toe(cx + padR * 0.35, cy - padR * 1.2),
+        toe(cx + padR * 0.95, cy - padR * 0.7),
+      ].join(' ');
+    },
+  },
+  {
+    id: 'hexnut',
+    name: 'Hex Nut',
+    category: 'decorative',
+    icon: '⬢',
+    getPath: (w, h) => {
+      const outer = polygonPath(w / 2, h / 2, Math.min(w, h) / 2, 6);
+      const r = Math.min(w, h) * 0.18;
+      const cx = w / 2, cy = h / 2;
+      const hole = `M${cx + r},${cy} A${r},${r} 0 1,1 ${cx - r},${cy} A${r},${r} 0 1,1 ${cx + r},${cy} Z`;
+      return `${outer} ${hole}`;
+    },
+  },
+  {
+    id: 'keyhole',
+    name: 'Keyhole',
+    category: 'decorative',
+    icon: '🔑',
+    getPath: (w, h) => {
+      const cx = w / 2, cy = h * 0.35, r = Math.min(w, h) * 0.22;
+      return `M${cx - r * 0.4},${cy + r * 0.7} L${cx - r * 0.6},${h} L${cx + r * 0.6},${h} L${cx + r * 0.4},${cy + r * 0.7} A${r},${r} 0 1,0 ${cx - r * 0.4},${cy + r * 0.7} Z`;
+    },
+  },
+  {
+    id: 'medal',
+    name: 'Medal',
+    category: 'decorative',
+    icon: '🏅',
+    getPath: (w, h) => {
+      const cx = w / 2, cy = h * 0.6, r = Math.min(w, h) * 0.38;
+      const ribbon = `M${cx - r * 0.6},0 L${cx - r * 0.2},${cy} L${cx + r * 0.2},${cy} L${cx + r * 0.6},0 Z`;
+      const circle = `M${cx},${cy - r} A${r},${r} 0 1,1 ${cx},${cy + r} A${r},${r} 0 1,1 ${cx},${cy - r} Z`;
+      return `${ribbon} ${circle}`;
+    },
+  },
+  {
+    id: 'wave',
+    name: 'Wave',
+    category: 'decorative',
+    icon: '〜',
+    getPath: (w, h) =>
+      `M0,${h * 0.2} Q${w * 0.25},0 ${w * 0.5},${h * 0.2} T${w},${h * 0.2} L${w},${h * 0.8} Q${w * 0.75},${h} ${w * 0.5},${h * 0.8} T0,${h * 0.8} Z`,
+  },
 ];
 
 export const getShapeById = (id: string) => shapeDefinitions.find(s => s.id === id);

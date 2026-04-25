@@ -41,6 +41,7 @@ export type EditorAction =
   | { type: 'SET_UNIT'; unit: 'mm' | 'inch' }
   | { type: 'ADD_LAYER'; layer: EditorLayer }
   | { type: 'UPDATE_LAYER'; id: string; updates: Partial<EditorLayer> }
+  | { type: 'DUPLICATE_LAYER'; id: string }
   | { type: 'REMOVE_LAYER'; id: string }
   | { type: 'SELECT_LAYER'; id: string | null }
   | { type: 'REORDER_LAYERS'; layers: EditorLayer[] }

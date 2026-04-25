@@ -28,6 +28,10 @@ export function useKeyboardShortcuts(dispatch: React.Dispatch<EditorAction>, sel
       } else if (ctrl && e.key === 'g') {
         e.preventDefault();
         dispatch({ type: 'TOGGLE_GRID' });
+      } else if (ctrl && e.key === 'd' && selectedLayerId) {
+        e.preventDefault();
+        dispatch({ type: 'DUPLICATE_LAYER', id: selectedLayerId });
+        dispatch({ type: 'PUSH_HISTORY' });
       }
     };
 

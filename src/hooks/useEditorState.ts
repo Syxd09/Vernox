@@ -43,6 +43,18 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
         ...state,
         layers: state.layers.map(l => l.id === action.id ? { ...l, ...action.updates } : l),
       };
+    case 'DUPLICATE_LAYER': {
+      const original = state.layers.find(l => l.id === action.id);
+      if (!original) return state;
+      const copy: EditorLayer = {
+        ...original,
+        id: crypto.randomUUID(),
+        name: `${original.name} copy`,
+        x: original.x + 20,
+        y: original.y + 20,
+      };
+      return { ...state, layers: [...state.layers, copy], selectedLayerId: copy.id };
+    }
     case 'REMOVE_LAYER':
       return {
         ...state,

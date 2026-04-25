@@ -7,8 +7,9 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { removeBackgroundAuto, convertToClipart } from '@/lib/imageProcessing';
-import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette, Maximize } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette, Maximize, Sliders } from 'lucide-react';
 import { useState } from 'react';
+import { PropertiesPanel } from './PropertiesPanel';
 
 export function ToolsPanel() {
   const { state, dispatch } = useEditor();
@@ -93,6 +94,9 @@ export function ToolsPanel() {
           <Tabs defaultValue="layers">
             <TabsList className="w-full">
               <TabsTrigger value="layers" className="flex-1 text-xs">Layers</TabsTrigger>
+              <TabsTrigger value="properties" className="flex-1 text-xs">
+                <Sliders className="w-3 h-3 mr-1" />Props
+              </TabsTrigger>
               <TabsTrigger value="edit" className="flex-1 text-xs">Edit</TabsTrigger>
               <TabsTrigger value="clipart" className="flex-1 text-xs">Clipart</TabsTrigger>
             </TabsList>
@@ -168,6 +172,10 @@ export function ToolsPanel() {
                   </div>
                 </>
               )}
+            </TabsContent>
+
+            <TabsContent value="properties" className="mt-4">
+              <PropertiesPanel />
             </TabsContent>
 
             <TabsContent value="edit" className="mt-4 space-y-4">
