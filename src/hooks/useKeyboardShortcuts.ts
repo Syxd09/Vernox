@@ -32,14 +32,6 @@ export function useKeyboardShortcuts(dispatch: React.Dispatch<EditorAction>, sel
         e.preventDefault();
         dispatch({ type: 'DUPLICATE_LAYER', id: selectedLayerId });
         dispatch({ type: 'PUSH_HISTORY' });
-      } else if (!ctrl && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') && selectedLayerId) {
-        e.preventDefault();
-        const step = e.shiftKey ? 10 : 1;
-        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
-        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        dispatch({ type: 'UPDATE_LAYER', id: selectedLayerId, updates: { x: undefined as any, y: undefined as any } });
-        // Use a custom delta action via UPDATE_LAYER would need current values; emit via event
-        window.dispatchEvent(new CustomEvent('layer-nudge', { detail: { dx, dy } }));
       }
     };
 
