@@ -18,6 +18,8 @@ const initialState: EditorState = {
   showGrid: true,
   metalPreview: false,
   metalFinish: 'steel',
+  metalType: 'steel',
+  metalThickness: 3,
 };
 
 function reducer(state: EditorState, action: EditorAction): EditorState {
@@ -73,6 +75,10 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, metalPreview: !state.metalPreview };
     case 'SET_METAL_FINISH':
       return { ...state, metalFinish: action.finish };
+    case 'SET_METAL_TYPE':
+      return { ...state, metalType: action.metalType, metalFinish: action.metalType === 'stainless' || action.metalType === 'aluminum' || action.metalType === 'corten' ? state.metalFinish : action.metalType as EditorState['metalFinish'] };
+    case 'SET_METAL_THICKNESS':
+      return { ...state, metalThickness: action.thickness };
     case 'LOAD_PROJECT':
       return { ...state, ...action.state, history: [JSON.parse(JSON.stringify(action.state.layers ?? []))], historyIndex: 0 };
     case 'PUSH_HISTORY': {
