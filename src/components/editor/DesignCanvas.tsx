@@ -4,6 +4,13 @@ import { useEditor } from './EditorContext';
 import { getShapeById } from '@/lib/shapes';
 import Konva from 'konva';
 
+const METAL_FINISHES: Record<string, { base: string; highlight: string; shadow: string; border: string }> = {
+  steel:  { base: '#9ea4ad', highlight: '#e8ecf1', shadow: '#4a4f57', border: '#2c3036' },
+  brass:  { base: '#b8923d', highlight: '#f5dc8a', shadow: '#5e4516', border: '#3a2c0e' },
+  copper: { base: '#b8693d', highlight: '#f0a877', shadow: '#5e2e16', border: '#3a1c0e' },
+  gold:   { base: '#d4a93a', highlight: '#fceb95', shadow: '#7a5a10', border: '#4a3608' },
+};
+
 export function DesignCanvas() {
   const { state, dispatch } = useEditor();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -160,12 +167,20 @@ export function DesignCanvas() {
     </>
   );
 
+  const finish = METAL_FINISHES[state.metalFinish] ?? METAL_FINISHES.steel;
+
   return (
     <div ref={containerRef} className="flex-1 bg-muted/30 overflow-hidden relative cursor-crosshair">
       {/* Zoom indicator */}
       <div className="absolute bottom-4 left-4 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground shadow-sm">
         {Math.round(state.zoom * 100)}%
       </div>
+
+      {state.metalPreview && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-medium text-foreground shadow-sm capitalize">
+          {state.metalFinish} Preview
+        </div>
+      )}
 
       {/* Keyboard shortcuts hint */}
       <div className="absolute bottom-4 right-4 z-10 bg-card/80 border border-border rounded-md px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm space-x-3">
@@ -196,15 +211,33 @@ export function DesignCanvas() {
             y={offsetY - 10}
             width={state.shapeWidth + 20}
             height={state.shapeHeight + 20}
-            fill="white"
-            shadowColor="rgba(0,0,0,0.1)"
-            shadowBlur={25}
-            shadowOffsetY={6}
+            fill={state.metalPreview ? 'transparent' : 'white'}
+            shadowColor={state.metalPreview ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)'}
+            shadowBlur={state.metalPreview ? 35 : 25}
+            shadowOffsetY={state.metalPreview ? 12 : 6}
             cornerRadius={4}
           />
 
+          {/* Metal base fill */}
+          {state.metalPreview && (
+            <Path
+              x={offsetX}
+              y={offsetY}
+              data={shapePath}
+              fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+              fillLinearGradientEndPoint={{ x: state.shapeWidth, y: state.shapeHeight }}
+              fillLinearGradientColorStops={[
+                0, finish.highlight,
+                0.35, finish.base,
+                0.7, finish.shadow,
+                1, finish.base,
+              ]}
+              listening={false}
+            />
+          )}
+
           {/* Center guides */}
-          {centerGuides}
+          {!state.metalPreview && centerGuides}
 
           {/* Clipped image group */}
           <Group
@@ -214,8 +247,10 @@ export function DesignCanvas() {
               drawSVGPathOnContext(ctx, shapePath);
             }}
           >
-            {/* White fill inside shape */}
-            <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill="white" />
+            {/* Inner fill — white in design mode, transparent over metal in preview */}
+            {!state.metalPreview && (
+              <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill="white" />
+            )}
 
             {state.layers.map(layer => {
               if (!layer.visible || !loadedImages[layer.id]) return null;
@@ -229,7 +264,7 @@ export function DesignCanvas() {
                   width={layer.width}
                   height={layer.height}
                   rotation={layer.rotation}
-                  opacity={layer.opacity}
+                  opacity={layer.opacity * (state.metalPreview ? 0.92 : 1)}
                   draggable={!layer.locked}
                   onDragEnd={(e) => handleDragEnd(layer.id, e)}
                   onTransformEnd={(e) => handleTransformEnd(layer.id, e)}
@@ -238,6 +273,41 @@ export function DesignCanvas() {
                 />
               );
             })}
+
+            {/* Metallic sheen overlay inside shape */}
+            {state.metalPreview && (
+              <>
+                <Rect
+                  x={0}
+                  y={0}
+                  width={state.shapeWidth}
+                  height={state.shapeHeight}
+                  fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+                  fillLinearGradientEndPoint={{ x: state.shapeWidth, y: state.shapeHeight }}
+                  fillLinearGradientColorStops={[
+                    0, 'rgba(255,255,255,0.45)',
+                    0.4, 'rgba(255,255,255,0)',
+                    0.6, 'rgba(0,0,0,0)',
+                    1, 'rgba(0,0,0,0.35)',
+                  ]}
+                  listening={false}
+                />
+                <Rect
+                  x={0}
+                  y={0}
+                  width={state.shapeWidth}
+                  height={state.shapeHeight}
+                  fillLinearGradientStartPoint={{ x: state.shapeWidth, y: 0 }}
+                  fillLinearGradientEndPoint={{ x: 0, y: state.shapeHeight }}
+                  fillLinearGradientColorStops={[
+                    0, 'rgba(255,255,255,0.2)',
+                    0.5, 'rgba(255,255,255,0)',
+                    1, 'rgba(0,0,0,0.15)',
+                  ]}
+                  listening={false}
+                />
+              </>
+            )}
           </Group>
 
           {/* Shape border */}
@@ -245,8 +315,8 @@ export function DesignCanvas() {
             x={offsetX}
             y={offsetY}
             data={shapePath}
-            stroke="hsl(220, 20%, 30%)"
-            strokeWidth={state.shapeBorderThickness}
+            stroke={state.metalPreview ? finish.border : 'hsl(220, 20%, 30%)'}
+            strokeWidth={state.metalPreview ? Math.max(state.shapeBorderThickness, 1.5) : state.shapeBorderThickness}
             fill="transparent"
             listening={false}
           />
