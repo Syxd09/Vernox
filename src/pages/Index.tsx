@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { EditorProvider, useEditor } from '@/components/editor/EditorContext';
 import { ShapePanel } from '@/components/editor/ShapePanel';
 import { DesignCanvas } from '@/components/editor/DesignCanvas';
@@ -9,6 +9,26 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 function EditorLayout() {
   const { state, dispatch, addImage } = useEditor();
   useKeyboardShortcuts(dispatch, state.selectedLayerId);
+
+  // Arrow-key nudge for selected layer (Shift = 10px)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!state.selectedLayerId) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      const arrows = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+      if (!arrows.includes(e.key)) return;
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      const layer = state.layers.find(l => l.id === state.selectedLayerId);
+      if (!layer) return;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+      dispatch({ type: 'UPDATE_LAYER', id: layer.id, updates: { x: layer.x + dx, y: layer.y + dy } });
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [state.layers, state.selectedLayerId, dispatch]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
