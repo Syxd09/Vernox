@@ -187,13 +187,15 @@ export function TopBar() {
 
       {/* Grid toggle */}
       <Button
-        size="icon"
+        size="sm"
         variant={state.showGrid ? 'secondary' : 'ghost'}
         onClick={() => dispatch({ type: 'TOGGLE_GRID' })}
-        className="h-8 w-8"
+        className="h-8 text-xs gap-1.5"
         title="Toggle Grid"
+        aria-pressed={state.showGrid}
       >
         <Grid3X3 className="w-3.5 h-3.5" />
+        <span className="hidden md:inline">Grid</span>
       </Button>
 
       <div className="h-6 w-px bg-border" />
@@ -206,9 +208,10 @@ export function TopBar() {
           className="h-8 text-xs gap-1.5 rounded-r-none border-r-0"
           title="Toggle Metal Preview"
           onClick={() => dispatch({ type: 'TOGGLE_METAL_PREVIEW' })}
+          aria-pressed={state.metalPreview}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Preview</span>
+          <span className="hidden md:inline">{state.metalPreview ? `${state.metalFinish} preview` : 'Preview'}</span>
         </Button>
 
         <DropdownMenu>
