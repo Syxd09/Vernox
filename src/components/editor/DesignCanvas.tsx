@@ -244,17 +244,11 @@ export function DesignCanvas() {
             x={offsetX}
             y={offsetY}
             clipFunc={(ctx: any) => {
-              const path2d = new Path2D(shapePath);
-              // Konva expects the path to be defined on ctx; Path2D works via clip(path2d)
-              // But Konva's clipFunc relies on the current path. So we replay via addPath.
-              ctx.beginPath();
-              // @ts-ignore - addPath exists on CanvasRenderingContext2D in browsers
-              if (typeof (ctx as CanvasRenderingContext2D).addPath === 'function' || (ctx._context && ctx._context.addPath)) {
-                const target = (ctx._context ?? ctx) as any;
-                target.addPath?.(path2d);
-              } else {
-                drawSVGPathOnContext(ctx, shapePath);
-              }
+              // Konva's clipFunc receives a wrapped context; the underlying CanvasRenderingContext2D
+              // is at ctx._context. We trace the SVG path onto it so Konva's subsequent clip() uses it.
+              const target: CanvasRenderingContext2D = ctx._context ?? ctx;
+              target.beginPath();
+              drawSVGPathOnContext(target, shapePath);
             }}
           >
             {/* Inner fill — white in design mode, transparent over metal in preview */}
