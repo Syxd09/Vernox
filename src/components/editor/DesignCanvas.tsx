@@ -52,17 +52,22 @@ export function DesignCanvas() {
     canvas.height = 50;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.15)';
-      ctx.lineWidth = 0.5;
+      // Use much higher contrast for the grid lines
+      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.2)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      // Draw grid cell lines
       ctx.moveTo(0, 0);
       ctx.lineTo(50, 0);
       ctx.moveTo(0, 0);
       ctx.lineTo(0, 50);
       ctx.stroke();
     }
-    setGridImage(canvas);
+    
+    const img = new Image();
+    img.src = canvas.toDataURL();
+    img.onload = () => {
+      setGridImage(img);
+    };
   }, [theme]);
 
 
@@ -165,6 +170,20 @@ export function DesignCanvas() {
   const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
   const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
 
+  // Global background grid
+  const backgroundGrid = state.showGrid && gridImage && (
+    <Rect
+      x={-10000}
+      y={-10000}
+      width={20000}
+      height={20000}
+      fillPatternImage={gridImage as any}
+      fillPatternScale={{ x: 1, y: 1 }}
+      listening={false}
+      opacity={theme === 'dark' ? 0.15 : 0.08}
+    />
+  );
+
   // Grid pattern rect - sized to the shape and drawn inside the clipped group
   const gridRect = state.showGrid && gridImage && (
     <Rect
@@ -173,8 +192,9 @@ export function DesignCanvas() {
       width={state.shapeWidth}
       height={state.shapeHeight}
       fillPatternImage={gridImage as any}
+      fillPatternScale={{ x: 1, y: 1 }}
       listening={false}
-      opacity={theme === 'dark' ? 0.6 : 0.4}
+      opacity={theme === 'dark' ? 0.5 : 0.3}
     />
   );
 
@@ -238,6 +258,8 @@ export function DesignCanvas() {
         onMouseUp={handleMouseUp}
       >
         <Layer>
+          {backgroundGrid}
+          
           {/* Shape drop-shadow — drawn as the shape itself so grid stays visible around it */}
           <Path
             x={offsetX}
