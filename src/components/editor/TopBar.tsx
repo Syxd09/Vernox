@@ -109,7 +109,7 @@ export function TopBar() {
       ctx.stroke(path2d);
 
       const link = document.createElement('a');
-      link.download = `metal-shape-${state.selectedShapeId}.png`;
+      link.download = `vernox-design-${state.selectedShapeId}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     });
@@ -127,7 +127,7 @@ export function TopBar() {
     );
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     const link = document.createElement('a');
-    link.download = `metal-shape-${state.selectedShapeId}.svg`;
+    link.download = `vernox-design-${state.selectedShapeId}.svg`;
     link.href = URL.createObjectURL(blob);
     link.click();
   }, [state]);
@@ -173,7 +173,7 @@ export function TopBar() {
       ctx.stroke(path2d);
 
       const link = document.createElement('a');
-      link.download = `metal-shape-${state.selectedShapeId}.jpg`;
+      link.download = `vernox-design-${state.selectedShapeId}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.92);
       link.click();
     });
@@ -222,7 +222,7 @@ export function TopBar() {
       });
 
       pdf.addImage(imgData, 'PNG', 0, 0, state.shapeWidth, state.shapeHeight);
-      pdf.save(`metal-shape-${state.selectedShapeId}.pdf`);
+      pdf.save(`vernox-design-${state.selectedShapeId}.pdf`);
     });
   }, [state]);
 
@@ -231,10 +231,10 @@ export function TopBar() {
     <div className="h-12 bg-card border-b border-border flex items-center px-4 gap-2 flex-shrink-0">
       {/* Logo */}
       <div className="flex items-center gap-2 mr-4">
-        <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-xs">MS</span>
+        <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center overflow-hidden">
+          <img src="/favicon.png" alt="Vernox" className="w-full h-full object-cover" />
         </div>
-        <span className="text-sm font-semibold text-foreground hidden sm:block">MetalShape</span>
+        <span className="text-sm font-semibold text-foreground hidden sm:block">Vernox</span>
       </div>
 
       <div className="h-6 w-px bg-border" />
@@ -485,7 +485,7 @@ export function TopBar() {
             const dxfContent = exportAsDXF(shapePath, state.shapeWidth, state.shapeHeight);
             const blob = new Blob([dxfContent], { type: 'application/dxf' });
             const link = document.createElement('a');
-            link.download = `metal-shape-${state.selectedShapeId}.dxf`;
+            link.download = `vernox-design-${state.selectedShapeId}.dxf`;
             link.href = URL.createObjectURL(blob);
             link.click();
           }}>
