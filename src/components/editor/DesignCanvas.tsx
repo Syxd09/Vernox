@@ -52,7 +52,7 @@ export function DesignCanvas() {
     canvas.height = 50;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
+      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.15)';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       // Draw grid cell lines
@@ -165,20 +165,16 @@ export function DesignCanvas() {
   const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
   const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
 
-  // Grid pattern rect
+  // Grid pattern rect - sized to the shape and drawn inside the clipped group
   const gridRect = state.showGrid && gridImage && (
     <Rect
       x={0}
       y={0}
-      width={containerSize.width / state.zoom}
-      height={containerSize.height / state.zoom}
+      width={state.shapeWidth}
+      height={state.shapeHeight}
       fillPatternImage={gridImage as any}
-      fillPatternOffset={{ 
-        x: -panOffset.x / state.zoom, 
-        y: -panOffset.y / state.zoom 
-      }}
       listening={false}
-      opacity={state.metalPreview ? 0.4 : 1}
+      opacity={theme === 'dark' ? 0.6 : 0.4}
     />
   );
 
@@ -242,9 +238,6 @@ export function DesignCanvas() {
         onMouseUp={handleMouseUp}
       >
         <Layer>
-          {gridRect}
-
-
           {/* Shape drop-shadow — drawn as the shape itself so grid stays visible around it */}
           <Path
             x={offsetX}
@@ -314,7 +307,10 @@ export function DesignCanvas() {
           >
             {/* Inner fill — white/black in design mode, transparent over metal in preview */}
             {!state.metalPreview && (
-              <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill={theme === 'dark' ? '#000000' : '#ffffff'} />
+              <>
+                <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill={theme === 'dark' ? '#000000' : '#ffffff'} />
+                {gridRect}
+              </>
             )}
 
             {state.layers.map(layer => {
