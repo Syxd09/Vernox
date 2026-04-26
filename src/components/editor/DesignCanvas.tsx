@@ -507,3 +507,65 @@ function arcToCanvas(
     ctx.lineTo(px, py);
   }
 }
+
+/* ---------- Filtered image subcomponent ---------- */
+interface FilteredLayerImageProps {
+  layer: EditorLayer;
+  image: HTMLImageElement;
+  metalPreview: boolean;
+  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
+  onSelect: () => void;
+}
+
+function FilteredLayerImage({ layer, image, metalPreview, onDragEnd, onTransformEnd, onSelect }: FilteredLayerImageProps) {
+  const ref = useRef<Konva.Image>(null);
+
+  const filters: any[] = [];
+  if ((layer.brightness ?? 0) !== 0) filters.push(Konva.Filters.Brighten);
+  if ((layer.contrast ?? 0) !== 0) filters.push(Konva.Filters.Contrast);
+  if ((layer.saturation ?? 0) !== 0 || (layer.hue ?? 0) !== 0) filters.push(Konva.Filters.HSL);
+  if (layer.grayscale) filters.push(Konva.Filters.Grayscale);
+  if (layer.invert) filters.push(Konva.Filters.Invert);
+  if ((layer.blur ?? 0) > 0) filters.push(Konva.Filters.Blur);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (filters.length) {
+      node.cache();
+      node.getLayer()?.batchDraw();
+    } else {
+      try { node.clearCache(); } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    layer.brightness, layer.contrast, layer.saturation, layer.hue,
+    layer.grayscale, layer.invert, layer.blur, layer.width, layer.height, image,
+  ]);
+
+  return (
+    <KonvaImage
+      ref={ref}
+      id={`layer-${layer.id}`}
+      image={image}
+      x={layer.x}
+      y={layer.y}
+      width={layer.width}
+      height={layer.height}
+      rotation={layer.rotation}
+      opacity={layer.opacity * (metalPreview ? 0.92 : 1)}
+      draggable={!layer.locked}
+      filters={filters.length ? filters : undefined}
+      brightness={layer.brightness ?? 0}
+      contrast={layer.contrast ?? 0}
+      saturation={layer.saturation ?? 0}
+      hue={layer.hue ?? 0}
+      blurRadius={layer.blur ?? 0}
+      onDragEnd={onDragEnd}
+      onTransformEnd={onTransformEnd}
+      onClick={(e) => { e.cancelBubble = true; onSelect(); }}
+      onTap={onSelect}
+    />
+  );
+}
