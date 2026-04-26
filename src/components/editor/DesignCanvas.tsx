@@ -170,13 +170,13 @@ export function DesignCanvas() {
   const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
   const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
 
-  // Global background grid
+  // Global background grid - covers the whole stage and stays synced with panning
   const backgroundGrid = state.showGrid && gridImage && (
     <Rect
-      x={-10000}
-      y={-10000}
-      width={20000}
-      height={20000}
+      x={-panOffset.x / state.zoom - 5000}
+      y={-panOffset.y / state.zoom - 5000}
+      width={containerSize.width / state.zoom + 10000}
+      height={containerSize.height / state.zoom + 10000}
       fillPatternImage={gridImage as any}
       fillPatternScale={{ x: 1, y: 1 }}
       listening={false}
