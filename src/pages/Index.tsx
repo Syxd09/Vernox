@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
-import { EditorProvider, useEditor } from '@/components/editor/EditorContext';
+import { EditorProvider } from '@/components/editor/EditorContext';
+import { useEditor } from '@/hooks/useEditor';
 import { ShapePanel } from '@/components/editor/ShapePanel';
 import { DesignCanvas } from '@/components/editor/DesignCanvas';
 import { ToolsPanel } from '@/components/editor/ToolsPanel';
