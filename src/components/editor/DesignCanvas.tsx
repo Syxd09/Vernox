@@ -50,7 +50,7 @@ export function DesignCanvas() {
     canvas.height = 50;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       // Draw grid cell lines
@@ -61,7 +61,7 @@ export function DesignCanvas() {
       ctx.stroke();
     }
     setGridImage(canvas);
-  }, []);
+  }, [theme]);
 
 
   // Load images
@@ -248,8 +248,8 @@ export function DesignCanvas() {
             x={offsetX}
             y={offsetY}
             data={shapePath}
-            fill={state.metalPreview ? 'transparent' : 'white'}
-            shadowColor={state.metalPreview ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.18)'}
+            fill={state.metalPreview ? 'transparent' : (theme === 'dark' ? '#000000' : '#ffffff')}
+            shadowColor={state.metalPreview ? 'rgba(0,0,0,0.45)' : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.18)')}
             shadowBlur={state.metalPreview ? 30 : 20}
             shadowOffsetY={state.metalPreview ? 10 : 5}
             shadowOpacity={1}
@@ -310,9 +310,9 @@ export function DesignCanvas() {
             }}
 
           >
-            {/* Inner fill — white in design mode, transparent over metal in preview */}
+            {/* Inner fill — white/black in design mode, transparent over metal in preview */}
             {!state.metalPreview && (
-              <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill="white" />
+              <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill={theme === 'dark' ? '#000000' : '#ffffff'} />
             )}
 
             {state.layers.map(layer => {
@@ -371,7 +371,7 @@ export function DesignCanvas() {
             x={offsetX}
             y={offsetY}
             data={shapePath}
-            stroke={state.metalPreview ? finish.border : 'hsl(220, 20%, 30%)'}
+            stroke={state.metalPreview ? finish.border : (theme === 'dark' ? '#ffffff' : 'hsl(220, 20%, 30%)')}
             strokeWidth={state.metalPreview ? Math.max(state.shapeBorderThickness, 1.5) : state.shapeBorderThickness}
             fill="transparent"
             listening={false}
