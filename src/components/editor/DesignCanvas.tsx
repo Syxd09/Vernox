@@ -307,10 +307,7 @@ export function DesignCanvas() {
           >
             {/* Inner fill — white/black in design mode, transparent over metal in preview */}
             {!state.metalPreview && (
-              <>
-                <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill={theme === 'dark' ? '#000000' : '#ffffff'} />
-                {gridRect}
-              </>
+              <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill={theme === 'dark' ? '#000000' : '#ffffff'} />
             )}
 
             {state.layers.map(layer => {
@@ -362,6 +359,9 @@ export function DesignCanvas() {
                 />
               </>
             )}
+
+            {/* Grid rendered last in group to stay on top */}
+            {gridRect}
           </Group>
 
           {/* Shape border */}
