@@ -141,10 +141,10 @@ export function DesignCanvas() {
     const w = containerSize.width / state.zoom;
     const h = containerSize.height / state.zoom;
     for (let x = 0; x < w; x += gridSize) {
-      gridLines.push(<Line key={`gv-${x}`} points={[x, 0, x, h]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.2} />);
+      gridLines.push(<Line key={`gv-${x}`} points={[x, 0, x, h]} stroke="hsl(var(--border))" strokeWidth={0.6} opacity={0.45} />);
     }
     for (let y = 0; y < h; y += gridSize) {
-      gridLines.push(<Line key={`gh-${y}`} points={[0, y, w, y]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.2} />);
+      gridLines.push(<Line key={`gh-${y}`} points={[0, y, w, y]} stroke="hsl(var(--border))" strokeWidth={0.6} opacity={0.45} />);
     }
   }
 
