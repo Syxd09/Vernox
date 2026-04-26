@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { removeBackgroundAuto, convertToClipart } from '@/lib/imageProcessing';
-import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette, Maximize, Sliders } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, ArrowUp, ArrowDown, Wand2, Eraser, Palette, Maximize, Minimize, Sliders, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { PropertiesPanel } from './PropertiesPanel';
 
@@ -64,31 +64,42 @@ export function ToolsPanel() {
     dispatch({ type: 'REORDER_LAYERS', layers: newLayers });
   };
 
-  const fitLayer = (mode: 'cover' | 'contain' | 'center') => {
+  const fitToShape = (mode: 'contain' | 'cover' | 'stretch') => {
     if (!selectedLayer) return;
-    const updates: Partial<typeof selectedLayer> = {};
-    
-    if (mode === 'center') {
-      updates.x = (state.shapeWidth - selectedLayer.width) / 2;
-      updates.y = (state.shapeHeight - selectedLayer.height) / 2;
+    const scaleX = state.shapeWidth / selectedLayer.width;
+    const scaleY = state.shapeHeight / selectedLayer.height;
+    let newW: number, newH: number;
+    if (mode === 'stretch') {
+      newW = state.shapeWidth;
+      newH = state.shapeHeight;
     } else {
-      const scaleX = state.shapeWidth / selectedLayer.width;
-      const scaleY = state.shapeHeight / selectedLayer.height;
-      const scale = mode === 'cover' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
-      
-      const newW = selectedLayer.width * scale;
-      const newH = selectedLayer.height * scale;
-      
-      updates.width = newW;
-      updates.height = newH;
-      updates.x = (state.shapeWidth - newW) / 2;
-      updates.y = (state.shapeHeight - newH) / 2;
+      const scale = mode === 'contain' ? Math.min(scaleX, scaleY) : Math.max(scaleX, scaleY);
+      newW = selectedLayer.width * scale;
+      newH = selectedLayer.height * scale;
     }
-
-    dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates });
+    dispatch({
+      type: 'UPDATE_LAYER',
+      id: selectedLayer.id,
+      updates: {
+        x: (state.shapeWidth - newW) / 2,
+        y: (state.shapeHeight - newH) / 2,
+        width: newW,
+        height: newH,
+        rotation: 0,
+      },
+    });
     dispatch({ type: 'PUSH_HISTORY' });
   };
 
+  const resetFilters = () => {
+    if (!selectedLayer) return;
+    dispatch({
+      type: 'UPDATE_LAYER',
+      id: selectedLayer.id,
+      updates: { brightness: 0, contrast: 0, saturation: 0, hue: 0, blur: 0, grayscale: false, invert: false },
+    });
+    dispatch({ type: 'PUSH_HISTORY' });
+  };
 
   return (
     <div className="w-72 border-l border-border bg-card flex flex-col h-full">
@@ -162,17 +173,17 @@ export function ToolsPanel() {
                         <ArrowDown className="w-3 h-3 mr-1" /> Down
                       </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => fitLayer('cover')}>
-                        Fill Shape
+                    <div className="grid grid-cols-3 gap-1">
+                      <Button size="sm" variant="outline" className="text-[10px] px-1" onClick={() => fitToShape('contain')} title="Fit fully inside">
+                        <Minimize className="w-3 h-3 mr-1" /> Fit
                       </Button>
-                      <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => fitLayer('contain')}>
-                        Fit Inside
+                      <Button size="sm" variant="outline" className="text-[10px] px-1" onClick={() => fitToShape('cover')} title="Fill shape (may crop)">
+                        <Maximize className="w-3 h-3 mr-1" /> Fill
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-[10px] px-1" onClick={() => fitToShape('stretch')} title="Stretch to bounds">
+                        Stretch
                       </Button>
                     </div>
-                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => fitLayer('center')}>
-                      <Maximize className="w-3 h-3 mr-1" /> Center Photo
-                    </Button>
 
                     <div className="space-y-2">
                       <Label className="text-xs">Opacity: {Math.round(selectedLayer.opacity * 100)}%</Label>
@@ -183,6 +194,80 @@ export function ToolsPanel() {
                         max={1}
                         step={0.01}
                       />
+                    </div>
+
+                    <Separator />
+
+                    {/* Image filters */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filters</h4>
+                        <button onClick={resetFilters} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+                          <RotateCcw className="w-3 h-3" /> Reset
+                        </button>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Brightness: {((selectedLayer.brightness ?? 0) * 100).toFixed(0)}%</Label>
+                        <Slider
+                          value={[selectedLayer.brightness ?? 0]}
+                          onValueChange={([v]) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { brightness: v } })}
+                          onValueCommit={() => dispatch({ type: 'PUSH_HISTORY' })}
+                          min={-1} max={1} step={0.01}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Contrast: {selectedLayer.contrast ?? 0}</Label>
+                        <Slider
+                          value={[selectedLayer.contrast ?? 0]}
+                          onValueChange={([v]) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { contrast: v } })}
+                          onValueCommit={() => dispatch({ type: 'PUSH_HISTORY' })}
+                          min={-100} max={100} step={1}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Saturation: {(selectedLayer.saturation ?? 0).toFixed(1)}</Label>
+                        <Slider
+                          value={[selectedLayer.saturation ?? 0]}
+                          onValueChange={([v]) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { saturation: v } })}
+                          onValueCommit={() => dispatch({ type: 'PUSH_HISTORY' })}
+                          min={-2} max={5} step={0.1}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Hue: {selectedLayer.hue ?? 0}°</Label>
+                        <Slider
+                          value={[selectedLayer.hue ?? 0]}
+                          onValueChange={([v]) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { hue: v } })}
+                          onValueCommit={() => dispatch({ type: 'PUSH_HISTORY' })}
+                          min={0} max={360} step={1}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px]">Blur: {selectedLayer.blur ?? 0}px</Label>
+                        <Slider
+                          value={[selectedLayer.blur ?? 0]}
+                          onValueChange={([v]) => dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { blur: v } })}
+                          onValueCommit={() => dispatch({ type: 'PUSH_HISTORY' })}
+                          min={0} max={40} step={1}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={!!selectedLayer.grayscale}
+                            onCheckedChange={(v) => { dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { grayscale: v } }); dispatch({ type: 'PUSH_HISTORY' }); }}
+                          />
+                          <Label className="text-[10px]">Grayscale</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={!!selectedLayer.invert}
+                            onCheckedChange={(v) => { dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates: { invert: v } }); dispatch({ type: 'PUSH_HISTORY' }); }}
+                          />
+                          <Label className="text-[10px]">Invert</Label>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </>

@@ -12,6 +12,14 @@ export interface EditorLayer {
   locked: boolean;
   imageData: string; // data URL
   originalImageData: string;
+  // Filters
+  brightness?: number;   // -1..1 (Konva: -1..1)
+  contrast?: number;     // -100..100
+  saturation?: number;   // -2..10
+  hue?: number;          // 0..360
+  grayscale?: boolean;
+  invert?: boolean;
+  blur?: number;         // px
 }
 
 export interface EditorState {

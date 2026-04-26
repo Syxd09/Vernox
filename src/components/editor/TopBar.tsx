@@ -289,7 +289,7 @@ export function TopBar() {
 
       {/* Grid toggle */}
       <Button
-        size="icon"
+        size="sm"
         variant={state.showGrid ? 'secondary' : 'ghost'}
         onClick={() => {
           const nextState = !state.showGrid;
@@ -299,18 +299,18 @@ export function TopBar() {
             description: nextState ? "Guidelines are now visible" : "Guidelines are now hidden"
           });
         }}
-        className="h-8 w-8"
+        className="h-8 text-xs gap-1.5"
         title="Toggle Grid"
+        aria-pressed={state.showGrid}
       >
         <Grid3X3 className="w-3.5 h-3.5" />
+        <span className="hidden md:inline">Grid</span>
       </Button>
-
-
 
       <div className="h-6 w-px bg-border" />
 
       {/* Metal preview toggle + finish picker */}
-      <div className="flex items-center gap-0">
+      <div className="flex items-center">
         <Button
           size="sm"
           variant={state.metalPreview ? 'secondary' : 'ghost'}
@@ -327,41 +327,40 @@ export function TopBar() {
             });
           }}
           title="Toggle Metal Preview"
-
+          aria-pressed={state.metalPreview}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span className="hidden md:inline capitalize">{state.metalPreview ? state.metalFinish : 'Preview'}</span>
+          <span className="hidden md:inline">{state.metalPreview ? `${state.metalFinish} preview` : 'Preview'}</span>
         </Button>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 
               size="icon" 
               variant={state.metalPreview ? 'secondary' : 'ghost'} 
-              className="h-8 w-5 px-0 rounded-l-none border-l-0"
+              className="h-8 w-8 rounded-l-none"
+              title="Choose Finish"
             >
-              <ChevronDown className="w-3 h-3" />
+              <ChevronDown className="w-3.5 h-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold">Select Material Finish</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel className="text-xs">Finish</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={state.metalFinish}
               onValueChange={(v) => {
-                dispatch({ type: 'SET_METAL_FINISH', finish: v as any });
+                dispatch({ type: 'SET_METAL_FINISH', finish: v as 'steel' | 'brass' | 'copper' | 'gold' });
                 if (!state.metalPreview) dispatch({ type: 'TOGGLE_METAL_PREVIEW' });
               }}
             >
-              <DropdownMenuRadioItem value="steel" className="text-xs">Brushed Steel</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="brass" className="text-xs">Brass</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="copper" className="text-xs">Copper</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="gold" className="text-xs">Gold</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="steel">Brushed Steel</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="brass">Brass</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="copper">Copper</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="gold">Gold</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
 
       <div className="h-6 w-px bg-border" />
 
