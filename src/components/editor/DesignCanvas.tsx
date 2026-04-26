@@ -206,17 +206,17 @@ export function DesignCanvas() {
         <Layer>
           {gridLines}
 
-          {/* Shape background shadow */}
-          <Rect
-            x={offsetX - 10}
-            y={offsetY - 10}
-            width={state.shapeWidth + 20}
-            height={state.shapeHeight + 20}
+          {/* Shape drop-shadow — drawn as the shape itself so grid stays visible around it */}
+          <Path
+            x={offsetX}
+            y={offsetY}
+            data={shapePath}
             fill={state.metalPreview ? 'transparent' : 'white'}
-            shadowColor={state.metalPreview ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)'}
-            shadowBlur={state.metalPreview ? 35 : 25}
-            shadowOffsetY={state.metalPreview ? 12 : 6}
-            cornerRadius={4}
+            shadowColor={state.metalPreview ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.18)'}
+            shadowBlur={state.metalPreview ? 30 : 20}
+            shadowOffsetY={state.metalPreview ? 10 : 5}
+            shadowOpacity={1}
+            listening={false}
           />
 
           {/* Metal base fill */}
