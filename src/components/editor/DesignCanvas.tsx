@@ -244,7 +244,17 @@ export function DesignCanvas() {
             x={offsetX}
             y={offsetY}
             clipFunc={(ctx: any) => {
-              drawSVGPathOnContext(ctx, shapePath);
+              const path2d = new Path2D(shapePath);
+              // Konva expects the path to be defined on ctx; Path2D works via clip(path2d)
+              // But Konva's clipFunc relies on the current path. So we replay via addPath.
+              ctx.beginPath();
+              // @ts-ignore - addPath exists on CanvasRenderingContext2D in browsers
+              if (typeof (ctx as CanvasRenderingContext2D).addPath === 'function' || (ctx._context && ctx._context.addPath)) {
+                const target = (ctx._context ?? ctx) as any;
+                target.addPath?.(path2d);
+              } else {
+                drawSVGPathOnContext(ctx, shapePath);
+              }
             }}
           >
             {/* Inner fill — white in design mode, transparent over metal in preview */}
@@ -343,66 +353,8 @@ export function DesignCanvas() {
 }
 
 function drawSVGPathOnContext(ctx: CanvasRenderingContext2D, pathData: string) {
-  const commands = pathData.match(/[MLHVCSQTAZ][^MLHVCSQTAZ]*/gi) || [];
-  let x = 0, y = 0;
-
-  for (const cmd of commands) {
-    const type = cmd[0];
-    const args = cmd.slice(1).trim().split(/[\s,]+/).map(Number);
-
-    switch (type.toUpperCase()) {
-      case 'M':
-        ctx.moveTo(args[0], args[1]);
-        x = args[0]; y = args[1];
-        break;
-      case 'L':
-        ctx.lineTo(args[0], args[1]);
-        x = args[0]; y = args[1];
-        break;
-      case 'H':
-        x = args[0]; ctx.lineTo(x, y);
-        break;
-      case 'V':
-        y = args[0]; ctx.lineTo(x, y);
-        break;
-      case 'C':
-        ctx.bezierCurveTo(args[0], args[1], args[2], args[3], args[4], args[5]);
-        x = args[4]; y = args[5];
-        break;
-      case 'Q':
-        ctx.quadraticCurveTo(args[0], args[1], args[2], args[3]);
-        x = args[2]; y = args[3];
-        break;
-      case 'A': {
-        approximateArc(ctx, x, y, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-        x = args[5]; y = args[6];
-        break;
-      }
-      case 'Z':
-        ctx.closePath();
-        break;
-    }
-  }
-}
-
-function approximateArc(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  rx: number, ry: number,
-  _rotation: number, _largeArc: number, _sweep: number,
-  x2: number, y2: number
-) {
-  if (rx === 0 || ry === 0) { ctx.lineTo(x2, y2); return; }
-  const segments = 24;
-  for (let i = 1; i <= segments; i++) {
-    const t = i / segments;
-    const angle = Math.PI * t;
-    const mx = x1 + (x2 - x1) * t;
-    const my = y1 + (y2 - y1) * t;
-    const bulge = Math.sin(angle) * Math.min(rx, ry) * 0.5 * (_sweep ? 1 : -1);
-    const dx = -(y2 - y1);
-    const dy = x2 - x1;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    ctx.lineTo(mx + (dx / len) * bulge, my + (dy / len) * bulge);
-  }
+  // Fallback only — modern browsers use Path2D + addPath above
+  const path2d = new Path2D(pathData);
+  // @ts-ignore
+  ctx.addPath?.(path2d);
 }
