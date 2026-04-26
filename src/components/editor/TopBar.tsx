@@ -343,10 +343,12 @@ export function TopBar() {
           onClick={() => {
             const nextState = !state.metalPreview;
             dispatch({ type: 'TOGGLE_METAL_PREVIEW' });
-            toast({ 
-              title: nextState ? "Metal Preview Enabled" : "Metal Preview Disabled",
-              description: nextState ? `Visualizing with ${state.metalFinish} finish` : "Returned to design mode"
-            });
+            if (nextState) {
+              toast({ 
+                title: "Disclaimer",
+                description: "This representation may differ in real life and this is just for reference.",
+              });
+            }
           }}
           title="Toggle Metal Preview"
           aria-pressed={state.metalPreview}
@@ -373,6 +375,10 @@ export function TopBar() {
               value={state.metalFinish}
               onValueChange={(v) => {
                 dispatch({ type: 'SET_METAL_TYPE', metalType: v as any });
+                toast({
+                  title: "Material Preview",
+                  description: "Note: This representation may differ in real life and is for reference only.",
+                });
               }}
             >
               <DropdownMenuRadioItem value="steel" className="text-xs">Mild Steel</DropdownMenuRadioItem>
