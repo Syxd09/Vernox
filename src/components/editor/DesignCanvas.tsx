@@ -52,8 +52,8 @@ export function DesignCanvas() {
     canvas.height = 50;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Use much higher contrast for the grid lines
-      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.2)';
+      // High contrast grid lines
+      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.4)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -170,17 +170,17 @@ export function DesignCanvas() {
   const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
   const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
 
-  // Global background grid - covers the whole stage and stays synced with panning
+  // Global background grid - covers a massive area to ensure it's always visible
   const backgroundGrid = state.showGrid && gridImage && (
     <Rect
-      x={-panOffset.x / state.zoom - 5000}
-      y={-panOffset.y / state.zoom - 5000}
-      width={containerSize.width / state.zoom + 10000}
-      height={containerSize.height / state.zoom + 10000}
+      x={-20000}
+      y={-20000}
+      width={40000}
+      height={40000}
       fillPatternImage={gridImage as any}
       fillPatternScale={{ x: 1, y: 1 }}
       listening={false}
-      opacity={theme === 'dark' ? 0.15 : 0.08}
+      opacity={theme === 'dark' ? 0.25 : 0.15}
     />
   );
 
@@ -194,7 +194,7 @@ export function DesignCanvas() {
       fillPatternImage={gridImage as any}
       fillPatternScale={{ x: 1, y: 1 }}
       listening={false}
-      opacity={theme === 'dark' ? 0.5 : 0.3}
+      opacity={theme === 'dark' ? 0.6 : 0.4}
     />
   );
 
