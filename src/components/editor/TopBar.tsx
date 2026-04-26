@@ -32,8 +32,12 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 
+import { useTheme } from 'next-themes';
+import { Sun, Moon } from 'lucide-react';
+
 export function TopBar() {
   const { state, dispatch, addImage } = useEditor();
+  const { theme, setTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
@@ -285,6 +289,21 @@ export function TopBar() {
       <span className="text-xs font-mono text-muted-foreground w-10 text-center">{Math.round(state.zoom * 100)}%</span>
       <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'SET_ZOOM', zoom: state.zoom + 0.1 })} className="h-8 w-8">
         <ZoomIn className="w-3.5 h-3.5" />
+      </Button>
+
+      <div className="h-6 w-px bg-border" />
+
+      {/* Theme Toggle */}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        title="Toggle theme"
+      >
+        <Sun className="h-3.5 w-3.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+        <Moon className="absolute h-3.5 w-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        <span className="sr-only">Toggle theme</span>
       </Button>
 
       {/* Grid toggle */}
