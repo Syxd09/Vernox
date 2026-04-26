@@ -6,7 +6,7 @@ import { exportAsDXF } from '@/lib/exportDXF';
 import { Button } from '@/components/ui/button';
 import {
   Upload, Undo2, Redo2, Download, ZoomIn, ZoomOut,
-  Grid3X3, FileImage, FileCode, Scissors, Sparkles, Save, FolderOpen, Trash2
+  Grid3X3, FileImage, FileCode, Scissors, Sparkles, Save, FolderOpen, Trash2, ChevronDown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -199,35 +199,43 @@ export function TopBar() {
       <div className="h-6 w-px bg-border" />
 
       {/* Metal preview toggle + finish picker */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="sm"
-            variant={state.metalPreview ? 'secondary' : 'ghost'}
-            className="h-8 text-xs gap-1.5"
-            title="Metal Preview"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden md:inline capitalize">{state.metalPreview ? state.metalFinish : 'Preview'}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => dispatch({ type: 'TOGGLE_METAL_PREVIEW' })}>
-            {state.metalPreview ? 'Exit metal preview' : 'Enable metal preview'}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs">Finish</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={state.metalFinish}
-            onValueChange={(v) => dispatch({ type: 'SET_METAL_FINISH', finish: v as 'steel' | 'brass' | 'copper' | 'gold' })}
-          >
-            <DropdownMenuRadioItem value="steel">Brushed Steel</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="brass">Brass</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="copper">Copper</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="gold">Gold</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center">
+        <Button
+          size="sm"
+          variant={state.metalPreview ? 'secondary' : 'ghost'}
+          className="h-8 text-xs gap-1.5 rounded-r-none border-r-0"
+          title="Toggle Metal Preview"
+          onClick={() => dispatch({ type: 'TOGGLE_METAL_PREVIEW' })}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Preview</span>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant={state.metalPreview ? 'secondary' : 'ghost'}
+              className="h-8 w-8 rounded-l-none"
+              title="Choose Finish"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel className="text-xs">Finish</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={state.metalFinish}
+              onValueChange={(v) => dispatch({ type: 'SET_METAL_FINISH', finish: v as 'steel' | 'brass' | 'copper' | 'gold' })}
+            >
+              <DropdownMenuRadioItem value="steel">Brushed Steel</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="brass">Brass</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="copper">Copper</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="gold">Gold</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <div className="h-6 w-px bg-border" />
 
