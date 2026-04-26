@@ -43,7 +43,7 @@ export function ShapePanel() {
   const unitLabel = state.unit === 'inch' ? 'in' : 'mm';
 
   return (
-    <div className="w-72 border-r border-border bg-card flex flex-col h-full">
+    <div className="w-full md:w-72 md:border-r border-border bg-card flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Shape Library</h2>
       </div>

@@ -35,9 +35,12 @@ import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { Sun, Moon } from 'lucide-react';
 
+import { useIsMobile } from '@/hooks/use-mobile';
+
 export function TopBar() {
   const { state, dispatch, addImage } = useEditor();
   const { theme, setTheme } = useTheme();
+  const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
@@ -238,7 +241,7 @@ export function TopBar() {
         <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center overflow-hidden">
           <img src="/favicon.png" alt="Vernox" className="w-full h-full object-cover" />
         </div>
-        <span className="text-sm font-semibold text-foreground hidden sm:block">Vernox</span>
+        <span className="text-sm font-semibold text-foreground hidden md:block">Vernox</span>
       </div>
 
       <div className="h-6 w-px bg-border" />
@@ -252,8 +255,8 @@ export function TopBar() {
         onChange={handleFileChange}
         className="hidden"
       />
-      <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} className="text-xs gap-1.5">
-        <Upload className="w-3.5 h-3.5" /> Upload
+      <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} className="text-xs gap-1.5 h-8 px-2 md:px-3">
+        <Upload className="w-3.5 h-3.5" /> <span className="hidden md:inline">Upload</span>
       </Button>
 
       <div className="h-6 w-px bg-border" />

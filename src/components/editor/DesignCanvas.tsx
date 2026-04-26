@@ -15,8 +15,11 @@ const METAL_FINISHES: Record<string, { base: string; highlight: string; shadow: 
   corten:    { base: '#92400e', highlight: '#d97706', shadow: '#451a03', border: '#2d0f02' },
 };
 
+import { useIsMobile } from '@/hooks/use-mobile';
+
 export function DesignCanvas() {
   const { state, dispatch } = useEditor();
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -202,9 +205,11 @@ export function DesignCanvas() {
   return (
     <div ref={containerRef} className="flex-1 bg-muted/30 overflow-hidden relative cursor-crosshair">
       {/* Zoom indicator */}
-      <div className="absolute bottom-4 left-4 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground shadow-sm">
-        {Math.round(state.zoom * 100)}%
-      </div>
+      {!isMobile && (
+        <div className="absolute bottom-4 left-4 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground shadow-sm">
+          {Math.round(state.zoom * 100)}%
+        </div>
+      )}
 
       {state.metalPreview && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-medium text-foreground shadow-sm capitalize">
@@ -213,12 +218,14 @@ export function DesignCanvas() {
       )}
 
       {/* Keyboard shortcuts hint */}
-      <div className="absolute bottom-4 right-4 z-10 bg-card/80 border border-border rounded-md px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm space-x-3">
-        <span>Ctrl+Z Undo</span>
-        <span>Del Remove</span>
-        <span>Scroll Zoom</span>
-        <span>Alt+Drag Pan</span>
-      </div>
+      {!isMobile && (
+        <div className="absolute bottom-4 right-4 z-10 bg-card/80 border border-border rounded-md px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm space-x-3">
+          <span>Ctrl+Z Undo</span>
+          <span>Del Remove</span>
+          <span>Scroll Zoom</span>
+          <span>Alt+Drag Pan</span>
+        </div>
+      )}
 
       <Stage
         ref={stageRef}

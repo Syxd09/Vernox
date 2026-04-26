@@ -102,7 +102,7 @@ export function ToolsPanel() {
   };
 
   return (
-    <div className="w-72 border-l border-border bg-card flex flex-col h-full">
+    <div className="w-full md:w-80 md:border-l border-border bg-card flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Tools & Layers</h2>
       </div>
