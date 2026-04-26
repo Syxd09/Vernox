@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Group, Path, Image as KonvaImage, Transformer, Line, Rect } from 'react-konva';
 import { useEditor } from './EditorContext';
 import { getShapeById } from '@/lib/shapes';
+import type { EditorLayer } from '@/lib/editorTypes';
 import Konva from 'konva';
 
 const METAL_FINISHES: Record<string, { base: string; highlight: string; shadow: string; border: string }> = {
@@ -244,7 +245,11 @@ export function DesignCanvas() {
             x={offsetX}
             y={offsetY}
             clipFunc={(ctx: any) => {
-              drawSVGPathOnContext(ctx, shapePath);
+              // Konva's clipFunc receives a wrapped context; the underlying CanvasRenderingContext2D
+              // is at ctx._context. We trace the SVG path onto it so Konva's subsequent clip() uses it.
+              const target: CanvasRenderingContext2D = ctx._context ?? ctx;
+              target.beginPath();
+              drawSVGPathOnContext(target, shapePath);
             }}
           >
             {/* Inner fill — white in design mode, transparent over metal in preview */}
@@ -255,21 +260,14 @@ export function DesignCanvas() {
             {state.layers.map(layer => {
               if (!layer.visible || !loadedImages[layer.id]) return null;
               return (
-                <KonvaImage
+                <FilteredLayerImage
                   key={layer.id}
-                  id={`layer-${layer.id}`}
+                  layer={layer}
                   image={loadedImages[layer.id]}
-                  x={layer.x}
-                  y={layer.y}
-                  width={layer.width}
-                  height={layer.height}
-                  rotation={layer.rotation}
-                  opacity={layer.opacity * (state.metalPreview ? 0.92 : 1)}
-                  draggable={!layer.locked}
+                  metalPreview={state.metalPreview}
                   onDragEnd={(e) => handleDragEnd(layer.id, e)}
                   onTransformEnd={(e) => handleTransformEnd(layer.id, e)}
-                  onClick={(e) => { e.cancelBubble = true; dispatch({ type: 'SELECT_LAYER', id: layer.id }); }}
-                  onTap={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
+                  onSelect={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
                 />
               );
             })}
@@ -342,67 +340,232 @@ export function DesignCanvas() {
   );
 }
 
+/** Parse an SVG path data string and trace it onto a Canvas2D context. */
 function drawSVGPathOnContext(ctx: CanvasRenderingContext2D, pathData: string) {
-  const commands = pathData.match(/[MLHVCSQTAZ][^MLHVCSQTAZ]*/gi) || [];
-  let x = 0, y = 0;
+  const tokens = pathData.match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
+  let i = 0;
+  let cx = 0, cy = 0;     // current point
+  let sx = 0, sy = 0;     // subpath start
+  let lastCmd = '';
+  let lastCtrlX = 0, lastCtrlY = 0; // for smooth bezier (S/T)
 
-  for (const cmd of commands) {
-    const type = cmd[0];
-    const args = cmd.slice(1).trim().split(/[\s,]+/).map(Number);
+  const num = () => parseFloat(tokens[i++]);
+  const isCmd = (t: string) => /^[a-zA-Z]$/.test(t);
 
-    switch (type.toUpperCase()) {
-      case 'M':
-        ctx.moveTo(args[0], args[1]);
-        x = args[0]; y = args[1];
-        break;
-      case 'L':
-        ctx.lineTo(args[0], args[1]);
-        x = args[0]; y = args[1];
-        break;
-      case 'H':
-        x = args[0]; ctx.lineTo(x, y);
-        break;
-      case 'V':
-        y = args[0]; ctx.lineTo(x, y);
-        break;
-      case 'C':
-        ctx.bezierCurveTo(args[0], args[1], args[2], args[3], args[4], args[5]);
-        x = args[4]; y = args[5];
-        break;
-      case 'Q':
-        ctx.quadraticCurveTo(args[0], args[1], args[2], args[3]);
-        x = args[2]; y = args[3];
-        break;
-      case 'A': {
-        approximateArc(ctx, x, y, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-        x = args[5]; y = args[6];
+  while (i < tokens.length) {
+    let cmd = tokens[i];
+    if (isCmd(cmd)) { i++; } else { cmd = lastCmd === 'M' ? 'L' : lastCmd === 'm' ? 'l' : lastCmd; }
+    const rel = cmd === cmd.toLowerCase();
+    const C = cmd.toUpperCase();
+
+    switch (C) {
+      case 'M': {
+        let x = num(), y = num();
+        if (rel) { x += cx; y += cy; }
+        ctx.moveTo(x, y); cx = sx = x; cy = sy = y;
+        // subsequent pairs are implicit L
+        while (i < tokens.length && !isCmd(tokens[i])) {
+          let nx = num(), ny = num();
+          if (rel) { nx += cx; ny += cy; }
+          ctx.lineTo(nx, ny); cx = nx; cy = ny;
+        }
         break;
       }
-      case 'Z':
-        ctx.closePath();
+      case 'L': {
+        do {
+          let x = num(), y = num();
+          if (rel) { x += cx; y += cy; }
+          ctx.lineTo(x, y); cx = x; cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
         break;
+      }
+      case 'H': {
+        do {
+          let x = num();
+          if (rel) x += cx;
+          ctx.lineTo(x, cy); cx = x;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'V': {
+        do {
+          let y = num();
+          if (rel) y += cy;
+          ctx.lineTo(cx, y); cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'C': {
+        do {
+          let x1 = num(), y1 = num(), x2 = num(), y2 = num(), x = num(), y = num();
+          if (rel) { x1 += cx; y1 += cy; x2 += cx; y2 += cy; x += cx; y += cy; }
+          ctx.bezierCurveTo(x1, y1, x2, y2, x, y);
+          lastCtrlX = x2; lastCtrlY = y2;
+          cx = x; cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'S': {
+        do {
+          let x2 = num(), y2 = num(), x = num(), y = num();
+          if (rel) { x2 += cx; y2 += cy; x += cx; y += cy; }
+          const prev = lastCmd.toUpperCase();
+          const x1 = (prev === 'C' || prev === 'S') ? 2 * cx - lastCtrlX : cx;
+          const y1 = (prev === 'C' || prev === 'S') ? 2 * cy - lastCtrlY : cy;
+          ctx.bezierCurveTo(x1, y1, x2, y2, x, y);
+          lastCtrlX = x2; lastCtrlY = y2;
+          cx = x; cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'Q': {
+        do {
+          let x1 = num(), y1 = num(), x = num(), y = num();
+          if (rel) { x1 += cx; y1 += cy; x += cx; y += cy; }
+          ctx.quadraticCurveTo(x1, y1, x, y);
+          lastCtrlX = x1; lastCtrlY = y1;
+          cx = x; cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'T': {
+        do {
+          let x = num(), y = num();
+          if (rel) { x += cx; y += cy; }
+          const prev = lastCmd.toUpperCase();
+          const x1 = (prev === 'Q' || prev === 'T') ? 2 * cx - lastCtrlX : cx;
+          const y1 = (prev === 'Q' || prev === 'T') ? 2 * cy - lastCtrlY : cy;
+          ctx.quadraticCurveTo(x1, y1, x, y);
+          lastCtrlX = x1; lastCtrlY = y1;
+          cx = x; cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'A': {
+        do {
+          const rx = num(), ry = num(), rot = num(), large = num(), sweep = num();
+          let x = num(), y = num();
+          if (rel) { x += cx; y += cy; }
+          arcToCanvas(ctx, cx, cy, rx, ry, rot, large !== 0, sweep !== 0, x, y);
+          cx = x; cy = y;
+        } while (i < tokens.length && !isCmd(tokens[i]));
+        break;
+      }
+      case 'Z': {
+        ctx.closePath();
+        cx = sx; cy = sy;
+        break;
+      }
     }
+    lastCmd = cmd;
   }
 }
 
-function approximateArc(
+/** Convert SVG elliptical arc to a series of canvas bezier segments. */
+function arcToCanvas(
   ctx: CanvasRenderingContext2D,
   x1: number, y1: number,
   rx: number, ry: number,
-  _rotation: number, _largeArc: number, _sweep: number,
-  x2: number, y2: number
+  angleDeg: number, largeArc: boolean, sweep: boolean,
+  x2: number, y2: number,
 ) {
   if (rx === 0 || ry === 0) { ctx.lineTo(x2, y2); return; }
-  const segments = 24;
-  for (let i = 1; i <= segments; i++) {
-    const t = i / segments;
-    const angle = Math.PI * t;
-    const mx = x1 + (x2 - x1) * t;
-    const my = y1 + (y2 - y1) * t;
-    const bulge = Math.sin(angle) * Math.min(rx, ry) * 0.5 * (_sweep ? 1 : -1);
-    const dx = -(y2 - y1);
-    const dy = x2 - x1;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    ctx.lineTo(mx + (dx / len) * bulge, my + (dy / len) * bulge);
+  const rad = (angleDeg * Math.PI) / 180;
+  const cosA = Math.cos(rad), sinA = Math.sin(rad);
+  const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
+  const x1p =  cosA * dx + sinA * dy;
+  const y1p = -sinA * dx + cosA * dy;
+  let rxs = rx * rx, rys = ry * ry;
+  const x1ps = x1p * x1p, y1ps = y1p * y1p;
+  const radiiCheck = x1ps / rxs + y1ps / rys;
+  if (radiiCheck > 1) { const s = Math.sqrt(radiiCheck); rx *= s; ry *= s; rxs = rx * rx; rys = ry * ry; }
+  const sign = largeArc === sweep ? -1 : 1;
+  const sq = Math.max(0, (rxs * rys - rxs * y1ps - rys * x1ps) / (rxs * y1ps + rys * x1ps));
+  const coef = sign * Math.sqrt(sq);
+  const cxp =  coef * (rx * y1p) / ry;
+  const cyp = -coef * (ry * x1p) / rx;
+  const ccx = cosA * cxp - sinA * cyp + (x1 + x2) / 2;
+  const ccy = sinA * cxp + cosA * cyp + (y1 + y2) / 2;
+  const ang = (ux: number, uy: number, vx: number, vy: number) => {
+    const dot = ux * vx + uy * vy;
+    const len = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
+    let a = Math.acos(Math.max(-1, Math.min(1, dot / len)));
+    if (ux * vy - uy * vx < 0) a = -a;
+    return a;
+  };
+  const theta = ang(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+  let delta = ang((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+  if (!sweep && delta > 0) delta -= 2 * Math.PI;
+  else if (sweep && delta < 0) delta += 2 * Math.PI;
+
+  const segments = Math.max(2, Math.ceil(Math.abs(delta) / (Math.PI / 8)));
+  const step = delta / segments;
+  for (let s = 1; s <= segments; s++) {
+    const a = theta + step * s;
+    const px = cosA * rx * Math.cos(a) - sinA * ry * Math.sin(a) + ccx;
+    const py = sinA * rx * Math.cos(a) + cosA * ry * Math.sin(a) + ccy;
+    ctx.lineTo(px, py);
   }
+}
+
+/* ---------- Filtered image subcomponent ---------- */
+interface FilteredLayerImageProps {
+  layer: EditorLayer;
+  image: HTMLImageElement;
+  metalPreview: boolean;
+  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
+  onSelect: () => void;
+}
+
+function FilteredLayerImage({ layer, image, metalPreview, onDragEnd, onTransformEnd, onSelect }: FilteredLayerImageProps) {
+  const ref = useRef<Konva.Image>(null);
+
+  const filters: any[] = [];
+  if ((layer.brightness ?? 0) !== 0) filters.push(Konva.Filters.Brighten);
+  if ((layer.contrast ?? 0) !== 0) filters.push(Konva.Filters.Contrast);
+  if ((layer.saturation ?? 0) !== 0 || (layer.hue ?? 0) !== 0) filters.push(Konva.Filters.HSL);
+  if (layer.grayscale) filters.push(Konva.Filters.Grayscale);
+  if (layer.invert) filters.push(Konva.Filters.Invert);
+  if ((layer.blur ?? 0) > 0) filters.push(Konva.Filters.Blur);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (filters.length) {
+      node.cache();
+      node.getLayer()?.batchDraw();
+    } else {
+      try { node.clearCache(); } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    layer.brightness, layer.contrast, layer.saturation, layer.hue,
+    layer.grayscale, layer.invert, layer.blur, layer.width, layer.height, image,
+  ]);
+
+  return (
+    <KonvaImage
+      ref={ref}
+      id={`layer-${layer.id}`}
+      image={image}
+      x={layer.x}
+      y={layer.y}
+      width={layer.width}
+      height={layer.height}
+      rotation={layer.rotation}
+      opacity={layer.opacity * (metalPreview ? 0.92 : 1)}
+      draggable={!layer.locked}
+      filters={filters.length ? filters : undefined}
+      brightness={layer.brightness ?? 0}
+      contrast={layer.contrast ?? 0}
+      saturation={layer.saturation ?? 0}
+      hue={layer.hue ?? 0}
+      blurRadius={layer.blur ?? 0}
+      onDragEnd={onDragEnd}
+      onTransformEnd={onTransformEnd}
+      onClick={(e) => { e.cancelBubble = true; onSelect(); }}
+      onTap={onSelect}
+    />
+  );
 }
