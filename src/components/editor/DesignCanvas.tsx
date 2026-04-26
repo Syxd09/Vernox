@@ -15,10 +15,12 @@ const METAL_FINISHES: Record<string, { base: string; highlight: string; shadow: 
   corten:    { base: '#92400e', highlight: '#d97706', shadow: '#451a03', border: '#2d0f02' },
 };
 
+import { useTheme } from 'next-themes';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export function DesignCanvas() {
   const { state, dispatch } = useEditor();
+  const { theme } = useTheme();
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
