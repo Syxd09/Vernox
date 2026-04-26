@@ -258,6 +258,14 @@ export function DesignCanvas() {
 
             {state.layers.map(layer => {
               if (!layer.visible || !loadedImages[layer.id]) return null;
+              const filters: any[] = [];
+              if (layer.brightness !== undefined && layer.brightness !== 0) filters.push(Konva.Filters.Brighten);
+              if (layer.contrast !== undefined && layer.contrast !== 0) filters.push(Konva.Filters.Contrast);
+              if (layer.saturation !== undefined && layer.saturation !== 0) filters.push(Konva.Filters.HSL);
+              if (layer.hue !== undefined && layer.hue !== 0 && !filters.includes(Konva.Filters.HSL)) filters.push(Konva.Filters.HSL);
+              if (layer.grayscale) filters.push(Konva.Filters.Grayscale);
+              if (layer.invert) filters.push(Konva.Filters.Invert);
+              if (layer.blur && layer.blur > 0) filters.push(Konva.Filters.Blur);
               return (
                 <KonvaImage
                   key={layer.id}
@@ -270,6 +278,13 @@ export function DesignCanvas() {
                   rotation={layer.rotation}
                   opacity={layer.opacity * (state.metalPreview ? 0.92 : 1)}
                   draggable={!layer.locked}
+                  filters={filters.length ? filters : undefined}
+                  brightness={layer.brightness ?? 0}
+                  contrast={layer.contrast ?? 0}
+                  saturation={layer.saturation ?? 0}
+                  hue={layer.hue ?? 0}
+                  blurRadius={layer.blur ?? 0}
+                  ref={(node: any) => { if (node && filters.length) node.cache(); }}
                   onDragEnd={(e) => handleDragEnd(layer.id, e)}
                   onTransformEnd={(e) => handleTransformEnd(layer.id, e)}
                   onClick={(e) => { e.cancelBubble = true; dispatch({ type: 'SELECT_LAYER', id: layer.id }); }}
