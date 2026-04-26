@@ -1,15 +1,18 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Group, Path, Image as KonvaImage, Transformer, Line, Rect } from 'react-konva';
-import { useEditor } from './EditorContext';
+import { useEditor } from '@/hooks/useEditor';
 import { getShapeById } from '@/lib/shapes';
 import type { EditorLayer } from '@/lib/editorTypes';
 import Konva from 'konva';
 
 const METAL_FINISHES: Record<string, { base: string; highlight: string; shadow: string; border: string }> = {
-  steel:  { base: '#9ea4ad', highlight: '#e8ecf1', shadow: '#4a4f57', border: '#2c3036' },
-  brass:  { base: '#b8923d', highlight: '#f5dc8a', shadow: '#5e4516', border: '#3a2c0e' },
-  copper: { base: '#b8693d', highlight: '#f0a877', shadow: '#5e2e16', border: '#3a1c0e' },
-  gold:   { base: '#d4a93a', highlight: '#fceb95', shadow: '#7a5a10', border: '#4a3608' },
+  steel:     { base: '#71717a', highlight: '#a1a1aa', shadow: '#3f3f46', border: '#27272a' },
+  stainless: { base: '#94a3b8', highlight: '#cbd5e1', shadow: '#475569', border: '#1e293b' },
+  aluminum:  { base: '#cbd5e1', highlight: '#f1f5f9', shadow: '#94a3b8', border: '#64748b' },
+  brass:     { base: '#b8923d', highlight: '#f5dc8a', shadow: '#5e4516', border: '#3a2c0e' },
+  copper:    { base: '#b8693d', highlight: '#f0a877', shadow: '#5e2e16', border: '#3a1c0e' },
+  gold:      { base: '#d4a93a', highlight: '#fceb95', shadow: '#7a5a10', border: '#4a3608' },
+  corten:    { base: '#92400e', highlight: '#d97706', shadow: '#451a03', border: '#2d0f02' },
 };
 
 export function DesignCanvas() {
@@ -533,7 +536,7 @@ function arcToCanvas(
   const cxp =  coef * (rx * y1p) / ry;
   const cyp = -coef * (ry * x1p) / rx;
   const ccx = cosA * cxp - sinA * cyp + (x1 + x2) / 2;
-  const ccy = sign * sinA * cxp + cosA * cyp + (y1 + y2) / 2; // Fixed ccy calculation
+  const ccy = sinA * cxp + cosA * cyp + (y1 + y2) / 2;
   const ang = (ux: number, uy: number, vx: number, vy: number) => {
     const dot = ux * vx + uy * vy;
     const len = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));

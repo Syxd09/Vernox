@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 
-import { useEditor } from './EditorContext';
+import { useEditor } from '@/hooks/useEditor';
 import { getShapeById } from '@/lib/shapes';
 import { exportCanvasAsSVG } from '@/lib/imageProcessing';
 import { exportAsDXF } from '@/lib/exportDXF';
@@ -338,25 +338,28 @@ export function TopBar() {
             <Button 
               size="icon" 
               variant={state.metalPreview ? 'secondary' : 'ghost'} 
-              className="h-8 w-8 rounded-l-none"
+              className="h-8 w-8 rounded-l-none border-l border-white/10"
               title="Choose Finish"
             >
               <ChevronDown className="w-3.5 h-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel className="text-xs">Finish</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-xs">Select Material</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <DropdownMenuRadioGroup
               value={state.metalFinish}
               onValueChange={(v) => {
-                dispatch({ type: 'SET_METAL_FINISH', finish: v as 'steel' | 'brass' | 'copper' | 'gold' });
-                if (!state.metalPreview) dispatch({ type: 'TOGGLE_METAL_PREVIEW' });
+                dispatch({ type: 'SET_METAL_TYPE', metalType: v as any });
               }}
             >
-              <DropdownMenuRadioItem value="steel">Brushed Steel</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="brass">Brass</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="copper">Copper</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="gold">Gold</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="steel" className="text-xs">Mild Steel</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="stainless" className="text-xs">Stainless Steel</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="aluminum" className="text-xs">Aluminum</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="brass" className="text-xs">Brass</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="copper" className="text-xs">Copper</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="gold" className="text-xs">Gold</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="corten" className="text-xs">Corten (Rust)</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>

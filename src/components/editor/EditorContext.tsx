@@ -8,15 +8,9 @@ interface EditorContextType {
   addImage: (file: File) => void;
 }
 
-const EditorContext = createContext<EditorContextType | null>(null);
+export const EditorContext = createContext<EditorContextType | null>(null);
 
 export function EditorProvider({ children }: { children: ReactNode }) {
   const editor = useEditorState();
   return <EditorContext.Provider value={editor}>{children}</EditorContext.Provider>;
-}
-
-export function useEditor() {
-  const ctx = useContext(EditorContext);
-  if (!ctx) throw new Error('useEditor must be used within EditorProvider');
-  return ctx;
 }

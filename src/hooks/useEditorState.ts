@@ -74,9 +74,9 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
     case 'TOGGLE_METAL_PREVIEW':
       return { ...state, metalPreview: !state.metalPreview };
     case 'SET_METAL_FINISH':
-      return { ...state, metalFinish: action.finish };
+      return { ...state, metalFinish: action.finish, metalType: action.finish };
     case 'SET_METAL_TYPE':
-      return { ...state, metalType: action.metalType, metalFinish: action.metalType === 'stainless' || action.metalType === 'aluminum' || action.metalType === 'corten' ? state.metalFinish : action.metalType as EditorState['metalFinish'] };
+      return { ...state, metalType: action.metalType, metalFinish: action.metalType, metalPreview: true };
     case 'SET_METAL_THICKNESS':
       return { ...state, metalThickness: action.thickness };
     case 'LOAD_PROJECT':

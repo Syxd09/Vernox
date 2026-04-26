@@ -38,7 +38,7 @@ export interface EditorState {
   historyIndex: number;
   showGrid: boolean;
   metalPreview: boolean;
-  metalFinish: 'steel' | 'brass' | 'copper' | 'gold';
+  metalFinish: 'steel' | 'stainless' | 'aluminum' | 'brass' | 'copper' | 'gold' | 'corten';
   metalType: 'steel' | 'stainless' | 'aluminum' | 'brass' | 'copper' | 'gold' | 'corten';
   metalThickness: number; // in mm
 }
@@ -58,7 +58,7 @@ export type EditorAction =
   | { type: 'SET_ZOOM'; zoom: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_METAL_PREVIEW' }
-  | { type: 'SET_METAL_FINISH'; finish: 'steel' | 'brass' | 'copper' | 'gold' }
+  | { type: 'SET_METAL_FINISH'; finish: EditorState['metalFinish'] }
   | { type: 'SET_METAL_TYPE'; metalType: EditorState['metalType'] }
   | { type: 'SET_METAL_THICKNESS'; thickness: number }
   | { type: 'LOAD_PROJECT'; state: Partial<EditorState> }
