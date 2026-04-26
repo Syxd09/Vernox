@@ -1,4 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+
 import { useEditor } from './EditorContext';
 import { getShapeById } from '@/lib/shapes';
 import { exportCanvasAsSVG } from '@/lib/imageProcessing';
@@ -6,8 +8,11 @@ import { exportAsDXF } from '@/lib/exportDXF';
 import { Button } from '@/components/ui/button';
 import {
   Upload, Undo2, Redo2, Download, ZoomIn, ZoomOut,
-  Grid3X3, FileImage, FileCode, Scissors, Sparkles, Save, FolderOpen, Trash2
+  Grid3X3, FileImage, FileCode, Scissors, Sparkles, Save, FolderOpen, Trash2,
+  FileText, FileJson, Layers, ChevronDown
 } from 'lucide-react';
+
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +29,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { listProjects, saveProject, loadProject, deleteProject, SavedProject } from '@/lib/projectStorage';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
 
 export function TopBar() {
   const { state, dispatch, addImage } = useEditor();
@@ -125,6 +132,101 @@ export function TopBar() {
     link.click();
   }, [state]);
 
+  const handleExportJPG = useCallback(() => {
+    const shape = getShapeById(state.selectedShapeId);
+    if (!shape) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = state.shapeWidth;
+    canvas.height = state.shapeHeight;
+    const ctx = canvas.getContext('2d')!;
+
+    // Fill white background for JPG
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Clip to shape
+    const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
+    const path2d = new Path2D(shapePath);
+    ctx.clip(path2d);
+
+    // Draw layers
+    const promises = state.layers
+      .filter(l => l.visible)
+      .map(layer => new Promise<void>(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          ctx.save();
+          ctx.globalAlpha = layer.opacity;
+          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
+          ctx.rotate((layer.rotation * Math.PI) / 180);
+          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
+          ctx.restore();
+          resolve();
+        };
+        img.src = layer.imageData;
+      }));
+
+    Promise.all(promises).then(() => {
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = state.shapeBorderThickness;
+      ctx.stroke(path2d);
+
+      const link = document.createElement('a');
+      link.download = `metal-shape-${state.selectedShapeId}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.92);
+      link.click();
+    });
+  }, [state]);
+
+  const handleExportPDF = useCallback(() => {
+    const shape = getShapeById(state.selectedShapeId);
+    if (!shape) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = state.shapeWidth * 2; // Higher resolution for PDF
+    canvas.height = state.shapeHeight * 2;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(2, 2);
+
+    const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
+    const path2d = new Path2D(shapePath);
+    ctx.clip(path2d);
+
+    const promises = state.layers
+      .filter(l => l.visible)
+      .map(layer => new Promise<void>(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          ctx.save();
+          ctx.globalAlpha = layer.opacity;
+          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
+          ctx.rotate((layer.rotation * Math.PI) / 180);
+          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
+          ctx.restore();
+          resolve();
+        };
+        img.src = layer.imageData;
+      }));
+
+    Promise.all(promises).then(() => {
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = state.shapeBorderThickness;
+      ctx.stroke(path2d);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: state.shapeWidth > state.shapeHeight ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [state.shapeWidth, state.shapeHeight]
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, state.shapeWidth, state.shapeHeight);
+      pdf.save(`metal-shape-${state.selectedShapeId}.pdf`);
+    });
+  }, [state]);
+
+
   return (
     <div className="h-12 bg-card border-b border-border flex items-center px-4 gap-2 flex-shrink-0">
       {/* Logo */}
@@ -189,55 +291,91 @@ export function TopBar() {
       <Button
         size="icon"
         variant={state.showGrid ? 'secondary' : 'ghost'}
-        onClick={() => dispatch({ type: 'TOGGLE_GRID' })}
+        onClick={() => {
+          const nextState = !state.showGrid;
+          dispatch({ type: 'TOGGLE_GRID' });
+          toast({ 
+            title: nextState ? "Grid Enabled" : "Grid Disabled",
+            description: nextState ? "Guidelines are now visible" : "Guidelines are now hidden"
+          });
+        }}
         className="h-8 w-8"
         title="Toggle Grid"
       >
         <Grid3X3 className="w-3.5 h-3.5" />
       </Button>
 
+
+
       <div className="h-6 w-px bg-border" />
 
       {/* Metal preview toggle + finish picker */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="sm"
-            variant={state.metalPreview ? 'secondary' : 'ghost'}
-            className="h-8 text-xs gap-1.5"
-            title="Metal Preview"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden md:inline capitalize">{state.metalPreview ? state.metalFinish : 'Preview'}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => dispatch({ type: 'TOGGLE_METAL_PREVIEW' })}>
-            {state.metalPreview ? 'Exit metal preview' : 'Enable metal preview'}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs">Finish</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={state.metalFinish}
-            onValueChange={(v) => dispatch({ type: 'SET_METAL_FINISH', finish: v as 'steel' | 'brass' | 'copper' | 'gold' })}
-          >
-            <DropdownMenuRadioItem value="steel">Brushed Steel</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="brass">Brass</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="copper">Copper</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="gold">Gold</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-0">
+        <Button
+          size="sm"
+          variant={state.metalPreview ? 'secondary' : 'ghost'}
+          className={cn(
+            "h-8 text-xs gap-1.5 px-2 rounded-r-none border-r-0",
+            state.metalPreview && "bg-secondary text-secondary-foreground"
+          )}
+          onClick={() => {
+            const nextState = !state.metalPreview;
+            dispatch({ type: 'TOGGLE_METAL_PREVIEW' });
+            toast({ 
+              title: nextState ? "Metal Preview Enabled" : "Metal Preview Disabled",
+              description: nextState ? `Visualizing with ${state.metalFinish} finish` : "Returned to design mode"
+            });
+          }}
+          title="Toggle Metal Preview"
+
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="hidden md:inline capitalize">{state.metalPreview ? state.metalFinish : 'Preview'}</span>
+        </Button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              size="icon" 
+              variant={state.metalPreview ? 'secondary' : 'ghost'} 
+              className="h-8 w-5 px-0 rounded-l-none border-l-0"
+            >
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground font-bold">Select Material Finish</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuRadioGroup
+              value={state.metalFinish}
+              onValueChange={(v) => {
+                dispatch({ type: 'SET_METAL_FINISH', finish: v as any });
+                if (!state.metalPreview) dispatch({ type: 'TOGGLE_METAL_PREVIEW' });
+              }}
+            >
+              <DropdownMenuRadioItem value="steel" className="text-xs">Brushed Steel</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="brass" className="text-xs">Brass</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="copper" className="text-xs">Copper</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="gold" className="text-xs">Gold</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
 
       <div className="h-6 w-px bg-border" />
 
       {/* Save / Load */}
+      <Button 
+        size="icon" 
+        variant="ghost" 
+        className="h-8 w-8" 
+        title="Save Project"
+        onClick={() => setSaveOpen(true)}
+      >
+        <Save className="w-3.5 h-3.5" />
+      </Button>
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogTrigger asChild>
-          <Button size="icon" variant="ghost" className="h-8 w-8" title="Save Project">
-            <Save className="w-3.5 h-3.5" />
-          </Button>
-        </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Project</DialogTitle>
@@ -254,21 +392,29 @@ export function TopBar() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave}>Save Project</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      <Button 
+        size="icon" 
+        variant="ghost" 
+        className="h-8 w-8" 
+        title="Open Project"
+        onClick={() => {
+          setProjects(listProjects());
+          setLoadOpen(true);
+        }}
+      >
+        <FolderOpen className="w-3.5 h-3.5" />
+      </Button>
       <Dialog open={loadOpen} onOpenChange={setLoadOpen}>
-        <DialogTrigger asChild>
-          <Button size="icon" variant="ghost" className="h-8 w-8" title="Open Project">
-            <FolderOpen className="w-3.5 h-3.5" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Open Project</DialogTitle>
           </DialogHeader>
+
           <div className="max-h-80 overflow-y-auto -mx-2 px-2">
             {projects.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No saved projects yet.</p>
@@ -317,9 +463,19 @@ export function TopBar() {
           <DropdownMenuItem onClick={handleExportPNG}>
             <FileImage className="w-4 h-4 mr-2" /> Export as PNG
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJPG}>
+            <FileImage className="w-4 h-4 mr-2 text-orange-500" /> Export as JPG
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExportSVG}>
             <FileCode className="w-4 h-4 mr-2" /> Export as SVG
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportPDF}>
+            <FileText className="w-4 h-4 mr-2 text-red-500" /> Export as PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportSVG}>
+            <Layers className="w-4 h-4 mr-2 text-blue-500" /> Export for CorelDRAW (SVG)
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => {
             const shape = getShapeById(state.selectedShapeId);
             if (!shape) return;
@@ -333,6 +489,7 @@ export function TopBar() {
           }}>
             <Scissors className="w-4 h-4 mr-2" /> Export as DXF (Laser)
           </DropdownMenuItem>
+
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

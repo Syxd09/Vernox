@@ -64,25 +64,31 @@ export function ToolsPanel() {
     dispatch({ type: 'REORDER_LAYERS', layers: newLayers });
   };
 
-  const fitToShape = () => {
+  const fitLayer = (mode: 'cover' | 'contain' | 'center') => {
     if (!selectedLayer) return;
-    const scaleX = state.shapeWidth / selectedLayer.width;
-    const scaleY = state.shapeHeight / selectedLayer.height;
-    const scale = Math.max(scaleX, scaleY);
-    const newW = selectedLayer.width * scale;
-    const newH = selectedLayer.height * scale;
-    dispatch({
-      type: 'UPDATE_LAYER',
-      id: selectedLayer.id,
-      updates: {
-        x: (state.shapeWidth - newW) / 2,
-        y: (state.shapeHeight - newH) / 2,
-        width: newW,
-        height: newH,
-      },
-    });
+    const updates: Partial<typeof selectedLayer> = {};
+    
+    if (mode === 'center') {
+      updates.x = (state.shapeWidth - selectedLayer.width) / 2;
+      updates.y = (state.shapeHeight - selectedLayer.height) / 2;
+    } else {
+      const scaleX = state.shapeWidth / selectedLayer.width;
+      const scaleY = state.shapeHeight / selectedLayer.height;
+      const scale = mode === 'cover' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY);
+      
+      const newW = selectedLayer.width * scale;
+      const newH = selectedLayer.height * scale;
+      
+      updates.width = newW;
+      updates.height = newH;
+      updates.x = (state.shapeWidth - newW) / 2;
+      updates.y = (state.shapeHeight - newH) / 2;
+    }
+
+    dispatch({ type: 'UPDATE_LAYER', id: selectedLayer.id, updates });
     dispatch({ type: 'PUSH_HISTORY' });
   };
+
 
   return (
     <div className="w-72 border-l border-border bg-card flex flex-col h-full">
@@ -156,9 +162,18 @@ export function ToolsPanel() {
                         <ArrowDown className="w-3 h-3 mr-1" /> Down
                       </Button>
                     </div>
-                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={fitToShape}>
-                      <Maximize className="w-3 h-3 mr-1" /> Fit to Shape
+                    <div className="grid grid-cols-2 gap-1">
+                      <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => fitLayer('cover')}>
+                        Fill Shape
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => fitLayer('contain')}>
+                        Fit Inside
+                      </Button>
+                    </div>
+                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => fitLayer('center')}>
+                      <Maximize className="w-3 h-3 mr-1" /> Center Photo
                     </Button>
+
                     <div className="space-y-2">
                       <Label className="text-xs">Opacity: {Math.round(selectedLayer.opacity * 100)}%</Label>
                       <Slider

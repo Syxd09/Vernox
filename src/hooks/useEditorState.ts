@@ -110,16 +110,24 @@ export function useEditorState() {
       const dataUrl = e.target?.result as string;
       const img = new Image();
       img.onload = () => {
-        const maxSize = 300;
-        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        // Calculate scale to cover the shape by default
+        const targetW = state.shapeWidth;
+        const targetH = state.shapeHeight;
+        const scaleX = targetW / img.width;
+        const scaleY = targetH / img.height;
+        const scale = Math.max(scaleX, scaleY);
+        
+        const layerWidth = img.width * scale;
+        const layerHeight = img.height * scale;
+
         const layer: EditorLayer = {
           id: crypto.randomUUID(),
           type: 'image',
           name: file.name,
-          x: state.shapeWidth / 2 - (img.width * scale) / 2,
-          y: state.shapeHeight / 2 - (img.height * scale) / 2,
-          width: img.width * scale,
-          height: img.height * scale,
+          x: (targetW - layerWidth) / 2,
+          y: (targetH - layerHeight) / 2,
+          width: layerWidth,
+          height: layerHeight,
           rotation: 0,
           opacity: 1,
           visible: true,
@@ -131,6 +139,7 @@ export function useEditorState() {
         dispatch({ type: 'PUSH_HISTORY' });
       };
       img.src = dataUrl;
+
     };
     reader.readAsDataURL(file);
   }, [state.shapeWidth, state.shapeHeight]);

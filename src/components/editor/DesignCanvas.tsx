@@ -19,6 +19,8 @@ export function DesignCanvas() {
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [gridImage, setGridImage] = useState<HTMLCanvasElement | null>(null);
+
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
 
@@ -33,6 +35,27 @@ export function DesignCanvas() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // Initialize grid pattern
+  useEffect(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 50;
+    canvas.height = 50;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      // Draw grid cell lines
+      ctx.moveTo(0, 0);
+      ctx.lineTo(50, 0);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 50);
+      ctx.stroke();
+    }
+    setGridImage(canvas);
+  }, []);
+
 
   // Load images
   useEffect(() => {
@@ -133,19 +156,24 @@ export function DesignCanvas() {
   const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
   const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
 
-  // Grid lines
-  const gridLines: React.ReactNode[] = [];
-  if (state.showGrid) {
-    const gridSize = 20;
-    const w = containerSize.width / state.zoom;
-    const h = containerSize.height / state.zoom;
-    for (let x = 0; x < w; x += gridSize) {
-      gridLines.push(<Line key={`gv-${x}`} points={[x, 0, x, h]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.2} />);
-    }
-    for (let y = 0; y < h; y += gridSize) {
-      gridLines.push(<Line key={`gh-${y}`} points={[0, y, w, y]} stroke="hsl(220, 14%, 86%)" strokeWidth={0.5} opacity={0.2} />);
-    }
-  }
+  // Grid pattern rect
+  const gridRect = state.showGrid && gridImage && (
+    <Rect
+      x={0}
+      y={0}
+      width={containerSize.width / state.zoom}
+      height={containerSize.height / state.zoom}
+      fillPatternImage={gridImage as any}
+      fillPatternOffset={{ 
+        x: -panOffset.x / state.zoom, 
+        y: -panOffset.y / state.zoom 
+      }}
+      listening={false}
+      opacity={state.metalPreview ? 0.4 : 1}
+    />
+  );
+
+
 
   // Center guides for shape
   const centerGuides = (
@@ -203,7 +231,8 @@ export function DesignCanvas() {
         onMouseUp={handleMouseUp}
       >
         <Layer>
-          {gridLines}
+          {gridRect}
+
 
           {/* Shape background shadow */}
           <Rect
@@ -239,13 +268,35 @@ export function DesignCanvas() {
           {/* Center guides */}
           {!state.metalPreview && centerGuides}
 
+          {/* Ghost image (unclipped) - only for selected layer to show cropping area */}
+          <Group x={offsetX} y={offsetY} listening={false}>
+            {state.layers.map(layer => {
+              if (state.selectedLayerId !== layer.id || !layer.visible || !loadedImages[layer.id]) return null;
+              return (
+                <KonvaImage
+                  key={`ghost-${layer.id}`}
+                  image={loadedImages[layer.id]}
+                  x={layer.x}
+                  y={layer.y}
+                  width={layer.width}
+                  height={layer.height}
+                  rotation={layer.rotation}
+                  opacity={0.15}
+                />
+              );
+            })}
+          </Group>
+
           {/* Clipped image group */}
+
           <Group
             x={offsetX}
             y={offsetY}
             clipFunc={(ctx: any) => {
-              drawSVGPathOnContext(ctx, shapePath);
+              const p = new Path2D(shapePath);
+              ctx.clip(p);
             }}
+
           >
             {/* Inner fill — white in design mode, transparent over metal in preview */}
             {!state.metalPreview && (
@@ -342,67 +393,4 @@ export function DesignCanvas() {
   );
 }
 
-function drawSVGPathOnContext(ctx: CanvasRenderingContext2D, pathData: string) {
-  const commands = pathData.match(/[MLHVCSQTAZ][^MLHVCSQTAZ]*/gi) || [];
-  let x = 0, y = 0;
 
-  for (const cmd of commands) {
-    const type = cmd[0];
-    const args = cmd.slice(1).trim().split(/[\s,]+/).map(Number);
-
-    switch (type.toUpperCase()) {
-      case 'M':
-        ctx.moveTo(args[0], args[1]);
-        x = args[0]; y = args[1];
-        break;
-      case 'L':
-        ctx.lineTo(args[0], args[1]);
-        x = args[0]; y = args[1];
-        break;
-      case 'H':
-        x = args[0]; ctx.lineTo(x, y);
-        break;
-      case 'V':
-        y = args[0]; ctx.lineTo(x, y);
-        break;
-      case 'C':
-        ctx.bezierCurveTo(args[0], args[1], args[2], args[3], args[4], args[5]);
-        x = args[4]; y = args[5];
-        break;
-      case 'Q':
-        ctx.quadraticCurveTo(args[0], args[1], args[2], args[3]);
-        x = args[2]; y = args[3];
-        break;
-      case 'A': {
-        approximateArc(ctx, x, y, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-        x = args[5]; y = args[6];
-        break;
-      }
-      case 'Z':
-        ctx.closePath();
-        break;
-    }
-  }
-}
-
-function approximateArc(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  rx: number, ry: number,
-  _rotation: number, _largeArc: number, _sweep: number,
-  x2: number, y2: number
-) {
-  if (rx === 0 || ry === 0) { ctx.lineTo(x2, y2); return; }
-  const segments = 24;
-  for (let i = 1; i <= segments; i++) {
-    const t = i / segments;
-    const angle = Math.PI * t;
-    const mx = x1 + (x2 - x1) * t;
-    const my = y1 + (y2 - y1) * t;
-    const bulge = Math.sin(angle) * Math.min(rx, ry) * 0.5 * (_sweep ? 1 : -1);
-    const dx = -(y2 - y1);
-    const dy = x2 - x1;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    ctx.lineTo(mx + (dx / len) * bulge, my + (dy / len) * bulge);
-  }
-}
