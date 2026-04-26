@@ -28,7 +28,7 @@ export function DesignCanvas() {
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [gridImage, setGridImage] = useState<HTMLCanvasElement | null>(null);
+  const [gridImage, setGridImage] = useState<HTMLImageElement | HTMLCanvasElement | null>(null);
 
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
