@@ -90,7 +90,7 @@ export const products: Product[] = [
   {
     id: 'p-06', slug: 'compass-star8', name: 'Compass Rose',
     tagline: 'Eight-point compass', category: 'geometric', price: 159,
-    shapeId: pickShape('star8'), finishes: ['stainless', 'gold', 'steel'],
+    shapeId: pickShape('starburst'), finishes: ['stainless', 'gold', 'steel'],
     sizes: [
       { label: 'Medium · 45cm', widthMm: 450, heightMm: 450, priceDelta: 0 },
       { label: 'Large · 70cm', widthMm: 700, heightMm: 700, priceDelta: 160 },
@@ -101,7 +101,7 @@ export const products: Product[] = [
   {
     id: 'p-07', slug: 'foliage-leaf', name: 'Foliage Leaf',
     tagline: 'Botanical cutout', category: 'nature', price: 119,
-    shapeId: pickShape('heart'), finishes: ['corten', 'brass', 'copper'],
+    shapeId: pickShape('leaf'), finishes: ['corten', 'brass', 'copper'],
     sizes: [
       { label: 'Medium · 40cm', widthMm: 400, heightMm: 500, priceDelta: 0 },
       { label: 'Large · 60cm', widthMm: 600, heightMm: 750, priceDelta: 90 },
@@ -112,7 +112,7 @@ export const products: Product[] = [
   {
     id: 'p-08', slug: 'harbor-wave', name: 'Harbor Wave',
     tagline: 'Layered coastal profile', category: 'nature', price: 175,
-    shapeId: pickShape('circle'), finishes: ['stainless', 'brass', 'steel'],
+    shapeId: pickShape('wave'), finishes: ['stainless', 'brass', 'steel'],
     sizes: [
       { label: 'Medium · 60cm', widthMm: 600, heightMm: 400, priceDelta: 0 },
       { label: 'Large · 90cm', widthMm: 900, heightMm: 600, priceDelta: 210 },
