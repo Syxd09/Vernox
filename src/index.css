@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,33 +6,34 @@
 
 @layer base {
   :root {
-    --background: 220 14% 96%;
-    --foreground: 220 20% 10%;
+    /* Dark luxe metal — site is dark-first. */
+    --background: 0 0% 4%;
+    --foreground: 40 20% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card: 0 0% 7%;
+    --card-foreground: 40 20% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 40 20% 92%;
 
-    --primary: 220 70% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 43 74% 52%;
+    --primary-foreground: 0 0% 6%;
 
-    --secondary: 220 14% 90%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 40 15% 90%;
 
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 40 8% 60%;
 
-    --accent: 30 90% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 43 74% 52%;
+    --accent-foreground: 0 0% 6%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 86%;
-    --input: 220 14% 86%;
-    --ring: 220 70% 50%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 43 74% 52%;
 
     --radius: 0.5rem;
 
@@ -45,10 +46,16 @@
     --sidebar-border: 220 16% 20%;
     --sidebar-ring: 220 70% 50%;
 
-    --surface: 220 14% 98%;
-    --surface-foreground: 220 20% 10%;
-    --toolbar: 220 20% 14%;
-    --toolbar-foreground: 220 10% 90%;
+    --surface: 0 0% 6%;
+    --surface-foreground: 40 20% 92%;
+    --toolbar: 0 0% 4%;
+    --toolbar-foreground: 40 15% 92%;
+
+    --gold: 43 74% 52%;
+    --gold-soft: 43 55% 68%;
+    --gradient-gold: linear-gradient(135deg, hsl(43 74% 52%), hsl(38 60% 40%));
+    --gradient-metal: linear-gradient(160deg, #2a2520 0%, #4a3f30 40%, #d4af37 55%, #7a6338 75%, #201a15 100%);
+    --shadow-luxe: 0 20px 60px -20px hsl(43 74% 52% / 0.25);
   }
 
   .dark {
@@ -102,12 +109,32 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Space Grotesk', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.01em;
   }
 
   code, pre {
     font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .text-gold { color: hsl(var(--gold)); }
+  .bg-gold { background-color: hsl(var(--gold)); }
+  .border-gold { border-color: hsl(var(--gold)); }
+  .bg-gradient-gold { background: var(--gradient-gold); }
+  .bg-gradient-metal { background: var(--gradient-metal); }
+  .shadow-luxe { box-shadow: var(--shadow-luxe); }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(43 80% 65%), hsl(43 74% 45%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }
 
