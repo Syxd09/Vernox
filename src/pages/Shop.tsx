@@ -22,7 +22,7 @@ export default function Shop() {
       <SiteHeader />
       <section className="border-b border-border/60 bg-card/30">
         <div className="max-w-7xl mx-auto px-6 py-16">
-          <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">{active ? 'Collection' : 'Full catalog'}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-brass mb-3">{active ? 'Collection' : 'Full catalog'}</p>
           <h1 className="font-display text-5xl mb-3">{active ? active.name : 'The Shop'}</h1>
           <p className="text-muted-foreground max-w-2xl">
             {active ? active.description : 'Every piece is cut, finished, and inspected in-house before it ships.'}
@@ -32,10 +32,10 @@ export default function Shop() {
       <section className="max-w-7xl mx-auto w-full px-6 py-10 flex-1">
         <div className="flex flex-wrap items-center gap-2 mb-8">
           <Link to="/shop" className={cn('px-4 py-1.5 text-xs uppercase tracking-widest rounded-full border transition-colors',
-            !category ? 'bg-gold text-primary-foreground border-gold' : 'border-border hover:border-gold')}>All</Link>
+            !category ? 'bg-oxblood text-primary-foreground border-oxblood' : 'border-border hover:border-oxblood')}>All</Link>
           {categories.map(c => (
             <Link key={c.id} to={`/shop/${c.id}`} className={cn('px-4 py-1.5 text-xs uppercase tracking-widest rounded-full border transition-colors',
-              category === c.id ? 'bg-gold text-primary-foreground border-gold' : 'border-border hover:border-gold')}>{c.name}</Link>
+              category === c.id ? 'bg-oxblood text-primary-foreground border-oxblood' : 'border-border hover:border-oxblood')}>{c.name}</Link>
           ))}
           <div className="ml-auto flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Sort</span>
