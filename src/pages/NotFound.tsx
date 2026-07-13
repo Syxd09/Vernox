@@ -29,24 +29,28 @@ const NotFound = () => {
       <SiteHeader onOpenStudio={() => setStudioOpen(true)} />
 
       <section className="relative flex-1 overflow-hidden">
-        {/* Drifting decorative shapes */}
-        <div aria-hidden className="absolute inset-0 pointer-events-none">
-          {driftShapes.map((s, i) => (
-            <motion.div
-              key={s}
-              className="absolute opacity-[0.07]"
-              style={{
-                left: `${8 + i * 19}%`,
-                top: `${15 + (i % 3) * 22}%`,
-                width: 90 + i * 22,
-                height: 90 + i * 22,
-              }}
-              animate={{ y: [0, -18, 0], rotate: [0, 6, 0] }}
-              transition={{ duration: 9 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.4 }}
-            >
-              <ShapeThumb shapeId={s} finish="Oxblood" className="w-full h-full" />
-            </motion.div>
-          ))}
+        {/* Drifting decorative shapes — confined to edges so they never cover content */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden">
+          {driftShapes.map((s, i) => {
+            const edge = i % 2 === 0 ? "left" : "right";
+            const size = 70 + (i % 3) * 20;
+            return (
+              <motion.div
+                key={s}
+                className="absolute opacity-[0.06]"
+                style={{
+                  [edge]: `${-size / 4}px`,
+                  top: `${8 + i * 17}%`,
+                  width: size,
+                  height: size,
+                }}
+                animate={{ y: [0, -14, 0], rotate: [0, 5, 0] }}
+                transition={{ duration: 9 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.4 }}
+              >
+                <ShapeThumb shapeId={s} finish="Oxblood" className="w-full h-full" />
+              </motion.div>
+            );
+          })}
         </div>
 
         <div className="relative max-w-5xl mx-auto px-6 py-20 md:py-28">
