@@ -163,6 +163,52 @@ export function DesignCanvas() {
     isPanning.current = false;
   }, []);
 
+  // Touch panning + pinch zoom for mobile
+  const lastTouchDist = useRef<number | null>(null);
+  const handleTouchStart = useCallback((e: Konva.KonvaEventObject<TouchEvent>) => {
+    const touches = e.evt.touches;
+    if (touches.length === 1 && e.target === e.target.getStage()) {
+      isPanning.current = true;
+      lastPointer.current = { x: touches[0].clientX, y: touches[0].clientY };
+    } else if (touches.length === 2) {
+      isPanning.current = false;
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      lastTouchDist.current = Math.hypot(dx, dy);
+    }
+  }, []);
+  const handleTouchMove = useCallback((e: Konva.KonvaEventObject<TouchEvent>) => {
+    const touches = e.evt.touches;
+    if (touches.length === 2 && lastTouchDist.current != null) {
+      e.evt.preventDefault();
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const delta = (dist - lastTouchDist.current) / 200;
+      lastTouchDist.current = dist;
+      dispatch({ type: 'SET_ZOOM', zoom: state.zoom + delta });
+      return;
+    }
+    if (!isPanning.current || touches.length !== 1) return;
+    e.evt.preventDefault();
+    const dx = touches[0].clientX - lastPointer.current.x;
+    const dy = touches[0].clientY - lastPointer.current.y;
+    setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    lastPointer.current = { x: touches[0].clientX, y: touches[0].clientY };
+  }, [dispatch, state.zoom]);
+  const handleTouchEnd = useCallback(() => {
+    isPanning.current = false;
+    lastTouchDist.current = null;
+  }, []);
+
+  const zoomBy = useCallback((delta: number) => {
+    dispatch({ type: 'SET_ZOOM', zoom: state.zoom + delta });
+  }, [dispatch, state.zoom]);
+  const resetView = useCallback(() => {
+    dispatch({ type: 'SET_ZOOM', zoom: 1 });
+    setPanOffset({ x: 0, y: 0 });
+  }, [dispatch]);
+
   const shape = getShapeById(state.selectedShapeId);
   if (!shape) return <div className="flex-1 flex items-center justify-center text-muted-foreground">No shape selected</div>;
 
@@ -245,6 +291,27 @@ export function DesignCanvas() {
         </div>
       )}
 
+      {/* Mobile zoom / pan controls */}
+      {isMobile && (
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+          <button
+            onClick={() => zoomBy(0.1)}
+            aria-label="Zoom in"
+            className="w-11 h-11 rounded-md bg-card border border-border shadow-sm text-lg font-medium active:scale-95 transition"
+          >+</button>
+          <button
+            onClick={() => zoomBy(-0.1)}
+            aria-label="Zoom out"
+            className="w-11 h-11 rounded-md bg-card border border-border shadow-sm text-lg font-medium active:scale-95 transition"
+          >−</button>
+          <button
+            onClick={resetView}
+            aria-label="Reset view"
+            className="w-11 h-11 rounded-md bg-card border border-border shadow-sm text-[10px] font-mono active:scale-95 transition"
+          >{Math.round(state.zoom * 100)}%</button>
+        </div>
+      )}
+
       <Stage
         ref={stageRef}
         width={containerSize.width}
@@ -256,6 +323,9 @@ export function DesignCanvas() {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <Layer>
           {backgroundGrid}
