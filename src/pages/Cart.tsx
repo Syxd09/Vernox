@@ -20,7 +20,7 @@ export default function Cart() {
           <div className="text-center py-20 border border-dashed border-border rounded-lg">
             <ShoppingBag className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground mb-6">Your cart is empty.</p>
-            <Link to="/shop" className="inline-flex bg-gradient-gold text-primary-foreground font-semibold px-6 py-3 rounded-full">
+            <Link to="/shop" className="inline-flex bg-gradient-oxblood text-primary-foreground font-semibold px-6 py-3 rounded-full">
               Browse the shop
             </Link>
           </div>
@@ -37,7 +37,7 @@ export default function Cart() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Link to={`/product/${item.productSlug}`} className="font-display text-lg hover:text-gold">
+                    <Link to={`/product/${item.productSlug}`} className="font-display text-lg hover:text-brass">
                       {item.productName}
                     </Link>
                     <div className="text-sm text-muted-foreground">{item.sizeLabel} · {item.finish}</div>
@@ -67,10 +67,10 @@ export default function Cart() {
                 </div>
               </div>
               <button onClick={() => navigate('/checkout')}
-                className="w-full mt-6 bg-gradient-gold text-primary-foreground font-semibold py-3 rounded-full hover:shadow-luxe">
+                className="w-full mt-6 bg-gradient-oxblood text-primary-foreground font-semibold py-3 rounded-full hover:shadow-luxe">
                 Checkout
               </button>
-              <Link to="/shop" className="block text-center text-sm text-muted-foreground hover:text-gold mt-3">Continue shopping</Link>
+              <Link to="/shop" className="block text-center text-sm text-muted-foreground hover:text-brass mt-3">Continue shopping</Link>
             </aside>
           </div>
         )}

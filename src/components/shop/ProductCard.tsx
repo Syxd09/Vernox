@@ -7,7 +7,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       to={`/product/${product.slug}`}
-      className="group relative flex flex-col rounded-lg overflow-hidden bg-card border border-border/60 hover:border-gold/50 transition-all duration-500 hover:shadow-luxe"
+      className="group relative flex flex-col rounded-lg overflow-hidden bg-card border border-border/60 hover:border-oxblood/50 transition-all duration-500 hover:shadow-luxe"
     >
       <div className="relative aspect-square bg-gradient-to-br from-background via-card to-black overflow-hidden">
         <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.15),transparent_60%)]" />
@@ -15,12 +15,12 @@ export function ProductCard({ product }: { product: Product }) {
           <ShapeThumb shapeId={product.shapeId} finish={defaultFinish} className="w-full h-full" />
         </div>
         <div className="absolute top-3 left-3 flex flex-col gap-1">
-          {product.bestseller && <span className="text-[10px] tracking-widest uppercase bg-gold text-primary-foreground px-2 py-0.5 rounded">Bestseller</span>}
+          {product.bestseller && <span className="text-[10px] tracking-widest uppercase bg-oxblood text-primary-foreground px-2 py-0.5 rounded">Bestseller</span>}
           {product.isNew && <span className="text-[10px] tracking-widest uppercase bg-foreground text-background px-2 py-0.5 rounded">New</span>}
         </div>
       </div>
       <div className="p-5 flex flex-col gap-1">
-        <h3 className="font-display text-lg group-hover:text-gold transition-colors">{product.name}</h3>
+        <h3 className="font-display text-lg group-hover:text-brass transition-colors">{product.name}</h3>
         <p className="text-xs text-muted-foreground uppercase tracking-wider">{product.tagline}</p>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-sm font-medium">From ${product.price}</span>

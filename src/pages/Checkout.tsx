@@ -77,7 +77,7 @@ export default function Checkout() {
             <p className="text-xs text-muted-foreground">Demo checkout — no real payment is processed.</p>
           </div>
           <button disabled={placing}
-            className="w-full bg-gradient-gold text-primary-foreground font-semibold py-4 rounded-full hover:shadow-luxe disabled:opacity-60">
+            className="w-full bg-gradient-oxblood text-primary-foreground font-semibold py-4 rounded-full hover:shadow-luxe disabled:opacity-60">
             {placing ? 'Placing order…' : `Place order · $${total.toFixed(2)}`}
           </button>
         </form>
@@ -102,7 +102,7 @@ export default function Checkout() {
               <span>Total</span><span>${total.toFixed(2)}</span>
             </div>
           </div>
-          <Link to="/cart" className="block text-center text-sm text-muted-foreground hover:text-gold mt-4">Edit cart</Link>
+          <Link to="/cart" className="block text-center text-sm text-muted-foreground hover:text-brass mt-4">Edit cart</Link>
         </aside>
       </section>
       <SiteFooter />
