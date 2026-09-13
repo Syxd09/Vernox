@@ -1,47 +1,43 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { jsPDF } from 'jspdf';
-
+import { Link, useNavigate } from 'react-router-dom';
 import { useEditor } from '@/hooks/useEditor';
+import { useVectorDocument } from '@/hooks/useVectorDocument';
 import { getShapeById } from '@/lib/shapes';
-import { exportCanvasAsSVG } from '@/lib/imageProcessing';
-import { exportAsDXF } from '@/lib/exportDXF';
+import { exportDocumentAsSVG, exportDocumentAsDXF, exportDocumentAsPDF } from '@/lib/exportCAM';
 import { Button } from '@/components/ui/button';
 import {
-  Upload, Undo2, Redo2, Download, ZoomIn, ZoomOut,
-  Grid3X3, FileImage, FileCode, Scissors, Sparkles, Save, FolderOpen, Trash2,
-  FileText, FileJson, Layers, ChevronDown
+  Undo2, Redo2, Download, ZoomIn, ZoomOut,
+  FileCode, Scissors, Save, FolderOpen, Trash2,
+  FileText, ShoppingBag, Sun, Moon, ArrowLeft, Store, X
 } from 'lucide-react';
-
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { listProjects, saveProject, loadProject, deleteProject, SavedProject } from '@/lib/projectStorage';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-
-
+import { useCart } from '@/lib/cartContext';
 import { useTheme } from 'next-themes';
-import { Sun, Moon } from 'lucide-react';
 
-import { useIsMobile } from '@/hooks/use-mobile';
+interface TopBarProps {
+  onClose?: () => void;
+}
 
-export function TopBar() {
-  const { state, dispatch, addImage } = useEditor();
+export function TopBar({ onClose }: TopBarProps = {}) {
+  const { state, dispatch } = useEditor();
+  const { doc, canUndo, canRedo, undo, redo } = useVectorDocument();
   const { theme, setTheme } = useTheme();
-  const isMobile = useIsMobile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { add, count } = useCart();
+  const navigate = useNavigate();
+
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
   const [projectName, setProjectName] = useState('');
@@ -50,6 +46,40 @@ export function TopBar() {
   useEffect(() => {
     if (saveOpen || loadOpen) setProjects(listProjects());
   }, [saveOpen, loadOpen]);
+
+  const handleAddToCart = () => {
+    // Generate compact 1:1 metric vector SVG thumbnail for cart preview (< 4KB)
+    const svgStr = exportDocumentAsSVG(doc);
+    const compactSvgDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+
+    // Calculate dynamic price based on surface area and material gauge
+    const areaSqM = (doc.boundary.widthMm * doc.boundary.heightMm) / 1000000;
+    const basePrice = 149;
+    const areaRate = doc.material.substrate === 'brass_cz108' || doc.material.substrate === 'copper_c101' ? 450 : 250;
+    const unitPrice = Math.round(basePrice + areaSqM * areaRate);
+
+    // Serialize compact VectorDocument JSON (< 20KB)
+    const designJson = JSON.stringify(doc);
+
+    add({
+      productId: 'custom-bespoke',
+      productName: 'Bespoke Architectural Metal Sign',
+      productSlug: 'custom-bespoke',
+      shapeId: doc.boundary.shapeTemplateId || 'rectangle',
+      sizeLabel: `${doc.boundary.widthMm}mm × ${doc.boundary.heightMm}mm`,
+      widthMm: doc.boundary.widthMm,
+      heightMm: doc.boundary.heightMm,
+      finish: doc.material.finish,
+      unitPrice,
+      customDesignThumb: compactSvgDataUri,
+      customDesignRef: designJson,
+    });
+
+    toast({
+      title: 'Added Laser Design to Cart',
+      description: `${doc.boundary.widthMm} × ${doc.boundary.heightMm}mm ${doc.material.substrate.replace(/_/g, ' ')} (${doc.material.thicknessMm}mm plate).`,
+    });
+  };
 
   const handleSave = () => {
     const name = projectName.trim() || `Project ${new Date().toLocaleString()}`;
@@ -72,192 +102,81 @@ export function TopBar() {
     setProjects(listProjects());
   };
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    files.forEach(f => addImage(f));
-    e.target.value = '';
-  }, [addImage]);
-
-  const handleExportPNG = useCallback(() => {
-    const shape = getShapeById(state.selectedShapeId);
-    if (!shape) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = state.shapeWidth;
-    canvas.height = state.shapeHeight;
-    const ctx = canvas.getContext('2d')!;
-
-    // Clip to shape
-    const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-    const path2d = new Path2D(shapePath);
-    ctx.clip(path2d);
-
-    // Draw layers
-    const promises = state.layers
-      .filter(l => l.visible)
-      .map(layer => new Promise<void>(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          ctx.save();
-          ctx.globalAlpha = layer.opacity;
-          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
-          ctx.rotate((layer.rotation * Math.PI) / 180);
-          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
-          ctx.restore();
-          resolve();
-        };
-        img.src = layer.imageData;
-      }));
-
-    Promise.all(promises).then(() => {
-      // Draw border
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = state.shapeBorderThickness;
-      ctx.stroke(path2d);
-
-      const link = document.createElement('a');
-      link.download = `vernox-design-${state.selectedShapeId}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
-  }, [state]);
-
+  // 1. Export 1:1 Metric Vector SVG
   const handleExportSVG = useCallback(() => {
-    const shape = getShapeById(state.selectedShapeId);
-    if (!shape) return;
-    const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-    const svgContent = exportCanvasAsSVG(
-      shapePath,
-      state.shapeWidth,
-      state.shapeHeight,
-      state.layers.filter(l => l.visible)
-    );
+    const svgContent = exportDocumentAsSVG(doc, { applyKerfOffset: true });
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     const link = document.createElement('a');
-    link.download = `vernox-design-${state.selectedShapeId}.svg`;
+    link.download = `vernox-cnc-toolpath-${doc.id || 'design'}.svg`;
     link.href = URL.createObjectURL(blob);
     link.click();
-  }, [state]);
-
-  const handleExportJPG = useCallback(() => {
-    const shape = getShapeById(state.selectedShapeId);
-    if (!shape) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = state.shapeWidth;
-    canvas.height = state.shapeHeight;
-    const ctx = canvas.getContext('2d')!;
-
-    // Fill white background for JPG
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Clip to shape
-    const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-    const path2d = new Path2D(shapePath);
-    ctx.clip(path2d);
-
-    // Draw layers
-    const promises = state.layers
-      .filter(l => l.visible)
-      .map(layer => new Promise<void>(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          ctx.save();
-          ctx.globalAlpha = layer.opacity;
-          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
-          ctx.rotate((layer.rotation * Math.PI) / 180);
-          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
-          ctx.restore();
-          resolve();
-        };
-        img.src = layer.imageData;
-      }));
-
-    Promise.all(promises).then(() => {
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = state.shapeBorderThickness;
-      ctx.stroke(path2d);
-
-      const link = document.createElement('a');
-      link.download = `vernox-design-${state.selectedShapeId}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.92);
-      link.click();
+    toast({
+      title: 'Vector SVG Exported',
+      description: '1:1 metric toolpath with 0_CUT_INTERNAL and 1_CUT_PERIMETER layers.',
     });
-  }, [state]);
+  }, [doc]);
 
+  // 2. Export AutoCAD 2000 (AC1015) DXF
+  const handleExportDXF = useCallback(() => {
+    const dxfContent = exportDocumentAsDXF(doc);
+    const blob = new Blob([dxfContent], { type: 'application/dxf' });
+    const link = document.createElement('a');
+    link.download = `vernox-laser-cam-${doc.id || 'design'}.dxf`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    toast({
+      title: 'AutoCAD 2000 DXF Exported',
+      description: 'AC1015 closed LWPOLYLINE toolpath with topological cut ordering.',
+    });
+  }, [doc]);
+
+  // 3. Export Workshop Spec Sheet PDF
   const handleExportPDF = useCallback(() => {
-    const shape = getShapeById(state.selectedShapeId);
-    if (!shape) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = state.shapeWidth * 2; // Higher resolution for PDF
-    canvas.height = state.shapeHeight * 2;
-    const ctx = canvas.getContext('2d')!;
-    ctx.scale(2, 2);
-
-    const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-    const path2d = new Path2D(shapePath);
-    ctx.clip(path2d);
-
-    const promises = state.layers
-      .filter(l => l.visible)
-      .map(layer => new Promise<void>(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          ctx.save();
-          ctx.globalAlpha = layer.opacity;
-          ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
-          ctx.rotate((layer.rotation * Math.PI) / 180);
-          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
-          ctx.restore();
-          resolve();
-        };
-        img.src = layer.imageData;
-      }));
-
-    Promise.all(promises).then(() => {
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = state.shapeBorderThickness;
-      ctx.stroke(path2d);
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: state.shapeWidth > state.shapeHeight ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [state.shapeWidth, state.shapeHeight]
-      });
-
-      pdf.addImage(imgData, 'PNG', 0, 0, state.shapeWidth, state.shapeHeight);
-      pdf.save(`vernox-design-${state.selectedShapeId}.pdf`);
+    const pdf = exportDocumentAsPDF(doc, {
+      orderNumber: `SPEC-${Date.now().toString(36).toUpperCase()}`,
     });
-  }, [state]);
-
+    pdf.save(`vernox-workshop-spec-${doc.id || 'design'}.pdf`);
+    toast({
+      title: 'Workshop Spec Sheet PDF Generated',
+      description: 'Includes material specs, laser telemetry, scaled schematic, and QC traveler.',
+    });
+  }, [doc]);
 
   return (
-    <div className="h-12 bg-card border-b border-border flex items-center px-4 gap-2 flex-shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2 mr-4">
+    <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-2 flex-shrink-0">
+      {/* Return to Store / Atelier */}
+      {onClose ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          className="h-8 px-2.5 text-xs font-semibold gap-1.5 border-oxblood/40 hover:bg-oxblood/10 text-oxblood hover:text-oxblood-deep shadow-sm"
+          title="Return to the store"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Store</span>
+        </Button>
+      ) : (
+        <Link
+          to="/shop"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold border border-oxblood/40 hover:bg-oxblood/10 text-oxblood hover:text-oxblood-deep transition-colors shadow-sm"
+          title="Return to Atelier Catalog"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Store</span>
+        </Link>
+      )}
+
+      {/* Brand Logo (clickable home link) */}
+      <Link to="/" className="flex items-center gap-2 mr-2 hover:opacity-85 transition group" title="Vernox Home">
         <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center overflow-hidden">
           <img src="/favicon.png" alt="Vernox" className="w-full h-full object-cover" />
         </div>
-        <span className="text-sm font-semibold text-foreground hidden md:block">Vernox</span>
-      </div>
-
-      <div className="h-6 w-px bg-border" />
-
-      {/* Upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/svg+xml,image/webp,.pdf"
-        multiple
-        onChange={handleFileChange}
-        className="hidden"
-      />
-      <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} className="text-xs gap-1.5 h-8 px-2 md:px-3">
-        <Upload className="w-3.5 h-3.5" /> <span className="hidden md:inline">Upload</span>
-      </Button>
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-foreground hidden md:block leading-none">Vernox</span>
+          <span className="text-[9px] font-mono text-muted-foreground hidden md:block">CAD/CAM Studio</span>
+        </div>
+      </Link>
 
       <div className="h-6 w-px bg-border" />
 
@@ -265,33 +184,22 @@ export function TopBar() {
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => dispatch({ type: 'UNDO' })}
-        disabled={state.historyIndex <= 0}
+        onClick={undo}
+        disabled={!canUndo}
         className="h-8 w-8"
-        title="Undo"
+        title="Undo (Ctrl+Z)"
       >
         <Undo2 className="w-3.5 h-3.5" />
       </Button>
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => dispatch({ type: 'REDO' })}
-        disabled={state.historyIndex >= state.history.length - 1}
+        onClick={redo}
+        disabled={!canRedo}
         className="h-8 w-8"
-        title="Redo"
+        title="Redo (Ctrl+Y)"
       >
         <Redo2 className="w-3.5 h-3.5" />
-      </Button>
-
-      <div className="h-6 w-px bg-border" />
-
-      {/* Zoom */}
-      <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'SET_ZOOM', zoom: state.zoom - 0.1 })} className="h-8 w-8">
-        <ZoomOut className="w-3.5 h-3.5" />
-      </Button>
-      <span className="text-xs font-mono text-muted-foreground w-10 text-center">{Math.round(state.zoom * 100)}%</span>
-      <Button size="icon" variant="ghost" onClick={() => dispatch({ type: 'SET_ZOOM', zoom: state.zoom + 0.1 })} className="h-8 w-8">
-        <ZoomIn className="w-3.5 h-3.5" />
       </Button>
 
       <div className="h-6 w-px bg-border" />
@@ -302,100 +210,15 @@ export function TopBar() {
         variant="ghost"
         className="h-8 w-8"
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        title="Toggle theme"
+        title="Toggle Theme"
       >
         <Sun className="h-3.5 w-3.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
         <Moon className="absolute h-3.5 w-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        <span className="sr-only">Toggle theme</span>
-      </Button>
-
-      {/* Grid toggle */}
-      <Button
-        size="sm"
-        variant={state.showGrid ? 'secondary' : 'ghost'}
-        onClick={() => {
-          const nextState = !state.showGrid;
-          dispatch({ type: 'TOGGLE_GRID' });
-          toast({ 
-            title: nextState ? "Grid Enabled" : "Grid Disabled",
-            description: nextState ? "Guidelines are now visible" : "Guidelines are now hidden"
-          });
-        }}
-        className="h-8 text-xs gap-1.5"
-        title="Toggle Grid"
-        aria-pressed={state.showGrid}
-      >
-        <Grid3X3 className="w-3.5 h-3.5" />
-        <span className="hidden md:inline">Grid</span>
       </Button>
 
       <div className="h-6 w-px bg-border" />
 
-      {/* Metal preview toggle + finish picker */}
-      <div className="flex items-center">
-        <Button
-          size="sm"
-          variant={state.metalPreview ? 'secondary' : 'ghost'}
-          className={cn(
-            "h-8 text-xs gap-1.5 px-2 rounded-r-none border-r-0",
-            state.metalPreview && "bg-secondary text-secondary-foreground"
-          )}
-          onClick={() => {
-            const nextState = !state.metalPreview;
-            dispatch({ type: 'TOGGLE_METAL_PREVIEW' });
-            if (nextState) {
-              toast({ 
-                title: "Disclaimer",
-                description: "This representation may differ in real life and this is just for reference.",
-              });
-            }
-          }}
-          title="Toggle Metal Preview"
-          aria-pressed={state.metalPreview}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">{state.metalPreview ? `${state.metalFinish} preview` : 'Preview'}</span>
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              size="icon" 
-              variant={state.metalPreview ? 'secondary' : 'ghost'} 
-              className="h-8 w-8 rounded-l-none border-l border-white/10"
-              title="Choose Finish"
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-xs">Select Material</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup
-              value={state.metalFinish}
-              onValueChange={(v) => {
-                dispatch({ type: 'SET_METAL_TYPE', metalType: v as any });
-                toast({
-                  title: "Material Preview",
-                  description: "Note: This representation may differ in real life and is for reference only.",
-                });
-              }}
-            >
-              <DropdownMenuRadioItem value="steel" className="text-xs">Mild Steel</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="stainless" className="text-xs">Stainless Steel</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="aluminum" className="text-xs">Aluminum</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="brass" className="text-xs">Brass</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="copper" className="text-xs">Copper</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="gold" className="text-xs">Gold</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="corten" className="text-xs">Corten (Rust)</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="h-6 w-px bg-border" />
-
-      {/* Save / Load */}
+      {/* Save Project */}
       <Button 
         size="icon" 
         variant="ghost" 
@@ -409,14 +232,17 @@ export function TopBar() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Project</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Save your current CAD vector design locally to continue editing later.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <label className="text-xs text-muted-foreground">Project name</label>
+            <label className="text-xs text-muted-foreground">Project Name</label>
             <Input
               autoFocus
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="My metal sign"
+              placeholder="e.g. Modern Address Sign"
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             />
           </div>
@@ -427,6 +253,7 @@ export function TopBar() {
         </DialogContent>
       </Dialog>
 
+      {/* Load Project */}
       <Button 
         size="icon" 
         variant="ghost" 
@@ -443,11 +270,14 @@ export function TopBar() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Open Project</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Select a previously saved CAD vector design to open in the studio.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="max-h-80 overflow-y-auto -mx-2 px-2">
             {projects.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No saved projects yet.</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No saved projects found.</p>
             ) : (
               <ul className="space-y-1">
                 {projects.sort((a, b) => b.updatedAt - a.updatedAt).map(p => (
@@ -482,46 +312,85 @@ export function TopBar() {
 
       <div className="flex-1" />
 
-      {/* Export */}
+      {/* CAM Export Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" className="text-xs gap-1.5">
-            <Download className="w-3.5 h-3.5" /> Export
+          <Button size="sm" variant="outline" className="text-xs gap-1.5 h-8">
+            <Download className="w-3.5 h-3.5" /> Export CAM
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleExportPNG}>
-            <FileImage className="w-4 h-4 mr-2" /> Export as PNG
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportJPG}>
-            <FileImage className="w-4 h-4 mr-2 text-orange-500" /> Export as JPG
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportSVG}>
-            <FileCode className="w-4 h-4 mr-2" /> Export as SVG
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportPDF}>
-            <FileText className="w-4 h-4 mr-2 text-red-500" /> Export as PDF
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportSVG}>
-            <Layers className="w-4 h-4 mr-2 text-blue-500" /> Export for CorelDRAW (SVG)
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => {
-            const shape = getShapeById(state.selectedShapeId);
-            if (!shape) return;
-            const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-            const dxfContent = exportAsDXF(shapePath, state.shapeWidth, state.shapeHeight);
-            const blob = new Blob([dxfContent], { type: 'application/dxf' });
-            const link = document.createElement('a');
-            link.download = `vernox-design-${state.selectedShapeId}.dxf`;
-            link.href = URL.createObjectURL(blob);
-            link.click();
-          }}>
-            <Scissors className="w-4 h-4 mr-2" /> Export as DXF (Laser)
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={handleExportDXF} className="cursor-pointer">
+            <Scissors className="w-4 h-4 mr-2 text-primary" />
+            <div className="flex flex-col">
+              <span className="font-medium text-xs">Laser DXF (AC1015)</span>
+              <span className="text-[10px] text-muted-foreground">AutoCAD 2000 LWPOLYLINE</span>
+            </div>
           </DropdownMenuItem>
 
+          <DropdownMenuItem onClick={handleExportSVG} className="cursor-pointer">
+            <FileCode className="w-4 h-4 mr-2 text-cyan-500" />
+            <div className="flex flex-col">
+              <span className="font-medium text-xs">1:1 Metric Vector SVG</span>
+              <span className="text-[10px] text-muted-foreground">Millimeter CNC toolpath layers</span>
+            </div>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
+            <FileText className="w-4 h-4 mr-2 text-amber-500" />
+            <div className="flex flex-col">
+              <span className="font-medium text-xs">Workshop Spec Sheet</span>
+              <span className="text-[10px] text-muted-foreground">PDF CAM traveler & QC sign-off</span>
+            </div>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Quick Link to Shop Catalog */}
+      <Link
+        to="/shop"
+        className="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-md hover:bg-muted/60 transition"
+      >
+        <Store className="w-3.5 h-3.5" /> Atelier Catalog
+      </Link>
+
+      {/* Cart Button */}
+      <Link
+        to="/cart"
+        className="relative inline-flex items-center justify-center h-8 px-2.5 rounded-md text-xs font-medium border border-border hover:bg-muted/60 text-foreground transition-colors ml-1"
+        title="View Shopping Cart"
+      >
+        <ShoppingBag className="w-3.5 h-3.5" />
+        {count > 0 && (
+          <span className="ml-1.5 bg-primary text-primary-foreground text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+            {count}
+          </span>
+        )}
+      </Link>
+
+      {/* Add to Cart */}
+      <Button 
+        size="sm" 
+        onClick={handleAddToCart}
+        className="text-xs gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition ml-1 h-8 font-medium shadow-sm"
+      >
+        <ShoppingBag className="w-3.5 h-3.5" /> Add to Cart
+      </Button>
+
+      {/* Explicit Close Studio Button when inside dialog */}
+      {onClose && (
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={onClose}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground ml-1"
+          title="Close Studio"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+      )}
     </div>
   );
 }

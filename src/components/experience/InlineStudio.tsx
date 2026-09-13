@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { EditorProvider } from '@/components/editor/EditorContext';
 import { ShapePanel } from '@/components/editor/ShapePanel';
 import { DesignCanvas } from '@/components/editor/DesignCanvas';
@@ -34,13 +34,16 @@ function StudioBootstrap({ shapeId, w, h, finish }: { shapeId?: string; w?: numb
 export function InlineStudio({ open, onOpenChange, initialShapeId, initialWidthMm, initialHeightMm, initialFinish, productName }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] p-0 gap-0 bg-background border-oxblood/30 overflow-hidden">
-        <VisuallyHidden><DialogTitle>Design Studio {productName ? `— ${productName}` : ''}</DialogTitle></VisuallyHidden>
+      <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] p-0 gap-0 bg-background border-oxblood/30 overflow-hidden [&>button]:hidden">
+        <VisuallyHidden>
+          <DialogTitle>Design Studio {productName ? `— ${productName}` : ''}</DialogTitle>
+          <DialogDescription>Interactive 2D Vector CAD/CAM Studio Workspace</DialogDescription>
+        </VisuallyHidden>
         <EditorProvider>
           <StudioBootstrap shapeId={initialShapeId} w={initialWidthMm} h={initialHeightMm} finish={initialFinish} />
           <div className="flex flex-col h-full overflow-hidden">
-            <TopBar />
-            <div className="flex flex-1 overflow-hidden">
+            <TopBar onClose={() => onOpenChange(false)} />
+            <div className="flex flex-1 overflow-hidden min-w-0">
               <ShapePanel />
               <DesignCanvas />
               <ToolsPanel />

@@ -1,42 +1,90 @@
-// Simple DXF export for laser cutting / CNC workflows
-// Generates DXF R12 format with LINE and ARC entities from SVG path data
+/**
+ * AutoCAD 2000 (AC1015) DXF CAM Exporter
+ * Emits continuous LWPOLYLINE closed toolpaths with topological ordering
+ */
 
-export function exportAsDXF(shapePath: string, shapeWidth: number, shapeHeight: number): string {
+import { VectorGeometryEngine } from './vectorGeometry';
+import type { PathCommand } from './cadEngineTypes';
+
+export interface DXFExportOptions {
+  shapeWidthMm?: number;
+  shapeHeightMm?: number;
+  outerPerimeterPath?: string;
+  innerCutPaths?: string[];
+  scorePaths?: string[];
+}
+
+export function exportAsDXF(
+  shapePath: string, 
+  shapeWidth = 300, 
+  shapeHeight = 200, 
+  options?: Partial<DXFExportOptions>
+): string {
   const lines: string[] = [];
 
-  // Header
+  // 1. Header Section
   lines.push('0', 'SECTION', '2', 'HEADER');
-  lines.push('9', '$ACADVER', '1', 'AC1009'); // R12
-  lines.push('9', '$INSUNITS', '70', '4'); // mm
+  lines.push('9', '$ACADVER', '1', 'AC1015'); // AutoCAD 2000
+  lines.push('9', '$INSUNITS', '70', '4');    // 4 = Millimetres
+  lines.push('9', '$MEASUREMENT', '70', '1'); // 1 = Metric
   lines.push('9', '$EXTMIN', '10', '0.0', '20', '0.0', '30', '0.0');
   lines.push('9', '$EXTMAX', '10', String(shapeWidth), '20', String(shapeHeight), '30', '0.0');
   lines.push('0', 'ENDSEC');
 
-  // Tables
+  // 2. Tables & Layer Definitions
   lines.push('0', 'SECTION', '2', 'TABLES');
-  lines.push('0', 'TABLE', '2', 'LAYER');
-  lines.push('70', '1');
-  lines.push('0', 'LAYER', '2', 'CUT', '70', '0', '62', '7', '6', 'CONTINUOUS');
+  lines.push('0', 'TABLE', '2', 'LAYER', '70', '3');
+  // Layer 0_CUT_INNER: Red (Color 1)
+  lines.push('0', 'LAYER', '2', '0_CUT_INNER', '70', '0', '62', '1', '6', 'CONTINUOUS');
+  // Layer 1_CUT_OUTER: White (Color 7)
+  lines.push('0', 'LAYER', '2', '1_CUT_OUTER', '70', '0', '62', '7', '6', 'CONTINUOUS');
+  // Layer 2_SCORE_VECTOR: Blue (Color 5)
+  lines.push('0', 'LAYER', '2', '2_SCORE_VECTOR', '70', '0', '62', '5', '6', 'CONTINUOUS');
   lines.push('0', 'ENDTAB');
   lines.push('0', 'ENDSEC');
 
-  // Entities
+  // 3. Entities Section
   lines.push('0', 'SECTION', '2', 'ENTITIES');
 
-  const points = svgPathToPoints(shapePath, shapeWidth, shapeHeight);
-  for (let i = 0; i < points.length - 1; i++) {
-    const [x1, y1] = points[i];
-    const [x2, y2] = points[i + 1];
-    lines.push(
-      '0', 'LINE',
-      '8', 'CUT',
-      '10', x1.toFixed(4),
-      '20', (shapeHeight - y1).toFixed(4), // Flip Y for DXF
-      '30', '0.0',
-      '11', x2.toFixed(4),
-      '21', (shapeHeight - y2).toFixed(4),
-      '31', '0.0'
-    );
+  let entityHandle = 100;
+
+  const emitLwPolyline = (points: [number, number][], layerName: string, isClosed: boolean) => {
+    if (points.length < 2) return;
+    lines.push('0', 'LWPOLYLINE');
+    lines.push('5', (entityHandle++).toString(16).toUpperCase());
+    lines.push('8', layerName);
+    lines.push('90', String(points.length));
+    lines.push('70', isClosed ? '1' : '0'); // 1 = closed polyline
+    lines.push('43', '0.0');                // Constant width 0
+
+    for (const [x, y] of points) {
+      lines.push('10', x.toFixed(4));
+      lines.push('20', (shapeHeight - y).toFixed(4)); // Standard CAD Cartesian coordinates
+    }
+  };
+
+  // Topological ordering:
+  // Step 1: Internal cuts first (holes, inner counters)
+  if (options?.innerCutPaths && options.innerCutPaths.length > 0) {
+    for (const innerPath of options.innerCutPaths) {
+      const pts = pathToDiscretePoints(innerPath);
+      emitLwPolyline(pts, '0_CUT_INNER', true);
+    }
+  }
+
+  // Step 2: Surface scoring lines
+  if (options?.scorePaths && options.scorePaths.length > 0) {
+    for (const scorePath of options.scorePaths) {
+      const pts = pathToDiscretePoints(scorePath);
+      emitLwPolyline(pts, '2_SCORE_VECTOR', false);
+    }
+  }
+
+  // Step 3: Outer perimeter cut last
+  const outer = options?.outerPerimeterPath || shapePath;
+  if (outer) {
+    const pts = pathToDiscretePoints(outer);
+    emitLwPolyline(pts, '1_CUT_OUTER', true);
   }
 
   lines.push('0', 'ENDSEC');
@@ -45,87 +93,73 @@ export function exportAsDXF(shapePath: string, shapeWidth: number, shapeHeight: 
   return lines.join('\n');
 }
 
-function svgPathToPoints(pathData: string, _w: number, _h: number): [number, number][] {
+/**
+ * Discretize SVG path commands into sampled 2D metric vertices
+ */
+function pathToDiscretePoints(pathData: string): [number, number][] {
+  const commands = VectorGeometryEngine.parsePath(pathData);
   const points: [number, number][] = [];
-  const commands = pathData.match(/[MLHVCSQTAZ][^MLHVCSQTAZ]*/gi) || [];
-  let x = 0, y = 0;
+  let curX = 0, curY = 0;
   let startX = 0, startY = 0;
 
   for (const cmd of commands) {
-    const type = cmd[0];
-    const args = cmd.slice(1).trim().split(/[\s,]+/).map(Number);
-
-    switch (type.toUpperCase()) {
-      case 'M':
-        x = args[0]; y = args[1];
-        startX = x; startY = y;
-        points.push([x, y]);
-        break;
-      case 'L':
-        x = args[0]; y = args[1];
-        points.push([x, y]);
-        break;
-      case 'H':
-        x = args[0];
-        points.push([x, y]);
-        break;
-      case 'V':
-        y = args[0];
-        points.push([x, y]);
-        break;
-      case 'C': {
-        // Approximate cubic bezier with line segments
-        const [x1, y1, x2, y2, ex, ey] = args;
-        const sx = x, sy = y;
-        const segs = 16;
-        for (let i = 1; i <= segs; i++) {
-          const t = i / segs;
-          const mt = 1 - t;
-          const px = mt * mt * mt * sx + 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t * ex;
-          const py = mt * mt * mt * sy + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * ey;
-          points.push([px, py]);
-        }
-        x = ex; y = ey;
-        break;
+    if (cmd.op === 'M') {
+      curX = cmd.p[0];
+      curY = cmd.p[1];
+      startX = curX;
+      startY = curY;
+      points.push([curX, curY]);
+    } else if (cmd.op === 'L') {
+      curX = cmd.p[0];
+      curY = cmd.p[1];
+      points.push([curX, curY]);
+    } else if (cmd.op === 'C') {
+      const [cp1x, cp1y, cp2x, cp2y, endx, endy] = cmd.p;
+      const segs = 16;
+      for (let i = 1; i <= segs; i++) {
+        const t = i / segs;
+        const pt = VectorGeometryEngine.sampleCubicBezier(
+          { x: curX, y: curY },
+          { x: cp1x, y: cp1y },
+          { x: cp2x, y: cp2y },
+          { x: endx, y: endy },
+          t
+        );
+        points.push([pt.x, pt.y]);
       }
-      case 'Q': {
-        const [qx1, qy1, qex, qey] = args;
-        const sqx = x, sqy = y;
-        const qsegs = 12;
-        for (let i = 1; i <= qsegs; i++) {
-          const t = i / qsegs;
-          const mt = 1 - t;
-          const px = mt * mt * sqx + 2 * mt * t * qx1 + t * t * qex;
-          const py = mt * mt * sqy + 2 * mt * t * qy1 + t * t * qey;
-          points.push([px, py]);
-        }
-        x = qex; y = qey;
-        break;
+      curX = endx;
+      curY = endy;
+    } else if (cmd.op === 'Q') {
+      const [cpx, cpy, endx, endy] = cmd.p;
+      const segs = 12;
+      for (let i = 1; i <= segs; i++) {
+        const t = i / segs;
+        const mt = 1 - t;
+        const px = mt * mt * curX + 2 * mt * t * cpx + t * t * endx;
+        const py = mt * mt * curY + 2 * mt * t * cpy + t * t * endy;
+        points.push([px, py]);
       }
-      case 'A': {
-        // Approximate arc with line segments
-        const [, , , , , ax2, ay2] = args;
-        const segs = 24;
-        for (let i = 1; i <= segs; i++) {
-          const t = i / segs;
-          const angle = Math.PI * t;
-          const mx = x + (ax2 - x) * t;
-          const my = y + (ay2 - y) * t;
-          const bulge = Math.sin(angle) * Math.min(Math.abs(ax2 - x), Math.abs(ay2 - y)) * 0.5;
-          const dx = -(ay2 - y);
-          const dy = ax2 - x;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          points.push([mx + (dx / len) * bulge, my + (dy / len) * bulge]);
-        }
-        x = ax2; y = ay2;
-        break;
+      curX = endx;
+      curY = endy;
+    } else if (cmd.op === 'A') {
+      const [rx, ry, _rot, _large, _sweep, endx, endy] = cmd.p;
+      const segs = 16;
+      for (let i = 1; i <= segs; i++) {
+        const t = i / segs;
+        const px = (1 - t) * curX + t * endx;
+        const py = (1 - t) * curY + t * endy;
+        points.push([px, py]);
       }
-      case 'Z':
-        if (points.length > 0 && (x !== startX || y !== startY)) {
-          points.push([startX, startY]);
-        }
-        x = startX; y = startY;
-        break;
+      curX = endx;
+      curY = endy;
+    } else if (cmd.op === 'Z') {
+      // Avoid duplicate vertex if last point matches start
+      const last = points[points.length - 1];
+      if (last && (Math.hypot(last[0] - startX, last[1] - startY) > 1e-4)) {
+        points.push([startX, startY]);
+      }
+      curX = startX;
+      curY = startY;
     }
   }
 

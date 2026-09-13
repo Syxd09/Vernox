@@ -3,12 +3,14 @@ import { SiteHeader } from '@/components/shop/SiteHeader';
 import { SiteFooter } from '@/components/shop/SiteFooter';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { useCart } from '@/lib/cartContext';
+import { useCatalog } from '@/lib/catalogContext';
 import { Trash2, ShoppingBag } from 'lucide-react';
 
 export default function Cart() {
+  const { storeConfig } = useCatalog();
   const { items, updateQty, remove, subtotal } = useCart();
   const navigate = useNavigate();
-  const shipping = subtotal > 150 || subtotal === 0 ? 0 : 15;
+  const shipping = subtotal > storeConfig.freeShippingThreshold || subtotal === 0 ? 0 : storeConfig.shippingFee;
   const total = subtotal + shipping;
 
   return (
@@ -52,18 +54,18 @@ export default function Cart() {
                       </button>
                     </div>
                   </div>
-                  <div className="text-right font-medium">${(item.unitPrice * item.quantity).toFixed(2)}</div>
+                  <div className="text-right font-medium">{storeConfig.currency}{(item.unitPrice * item.quantity).toFixed(2)}</div>
                 </div>
               ))}
             </div>
             <aside className="bg-card border border-border/60 rounded-lg p-6 h-fit sticky top-24">
               <h2 className="font-display text-2xl mb-6">Order Summary</h2>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span></div>
-                {shipping > 0 && <div className="text-xs text-muted-foreground">Add ${(150 - subtotal).toFixed(2)} for free shipping.</div>}
+                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{storeConfig.currency}{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{shipping === 0 ? 'Free' : `${storeConfig.currency}${shipping.toFixed(2)}`}</span></div>
+                {shipping > 0 && <div className="text-xs text-muted-foreground">Add {storeConfig.currency}{(storeConfig.freeShippingThreshold - subtotal).toFixed(2)} for free shipping.</div>}
                 <div className="border-t border-border/60 pt-3 flex justify-between text-base font-semibold">
-                  <span>Total</span><span>${total.toFixed(2)}</span>
+                  <span>Total</span><span>{storeConfig.currency}{total.toFixed(2)}</span>
                 </div>
               </div>
               <button onClick={() => navigate('/checkout')}

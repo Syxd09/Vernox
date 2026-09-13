@@ -17,7 +17,20 @@ function EditorLayout() {
   const isMobile = useIsMobile();
   useKeyboardShortcuts(dispatch, state.selectedLayerId);
 
-  // ... (rest of the logic remains the same)
+  // Load custom inspection project if clicked by admin
+  useEffect(() => {
+    const inspectJson = localStorage.getItem('vernox-custom-inspect');
+    if (inspectJson) {
+      try {
+        const parsed = JSON.parse(inspectJson);
+        dispatch({ type: 'LOAD_PROJECT', state: parsed });
+      } catch (e) {
+        console.error('Failed to parse inspection design project', e);
+      }
+      localStorage.removeItem('vernox-custom-inspect');
+    }
+  }, [dispatch]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!state.selectedLayerId) return;
@@ -55,7 +68,7 @@ function EditorLayout() {
       onDragOver={handleDragOver}
     >
       <TopBar />
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative min-w-0">
         {/* Desktop Sidebars */}
         {!isMobile && <ShapePanel />}
         
@@ -85,7 +98,7 @@ function EditorLayout() {
                   <Layers className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="p-0 w-80">
+              <SheetContent side="right" className="p-0 w-80 sm:w-96">
                 <ToolsPanel />
               </SheetContent>
             </Sheet>

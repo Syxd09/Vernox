@@ -1,719 +1,801 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { Stage, Layer, Group, Path, Image as KonvaImage, Transformer, Line, Rect } from 'react-konva';
-import { useEditor } from '@/hooks/useEditor';
-import { getShapeById } from '@/lib/shapes';
-import type { EditorLayer } from '@/lib/editorTypes';
-import Konva from 'konva';
+/**
+ * Interactive 2D Vector CAD/CAM Drafting Studio Canvas
+ * Native SVG DOM implementation replacing raster Konva
+ * Supports 1:1 metric millimetre rendering, interactive transform handles,
+ * pan/zoom, metric grid, and Realistic Metal vs CNC Toolpath modes.
+ */
 
-const METAL_FINISHES: Record<string, { base: string; highlight: string; shadow: string; border: string }> = {
-  steel:     { base: '#71717a', highlight: '#a1a1aa', shadow: '#3f3f46', border: '#27272a' },
-  stainless: { base: '#94a3b8', highlight: '#cbd5e1', shadow: '#475569', border: '#1e293b' },
-  aluminum:  { base: '#cbd5e1', highlight: '#f1f5f9', shadow: '#94a3b8', border: '#64748b' },
-  brass:     { base: '#b8923d', highlight: '#f5dc8a', shadow: '#5e4516', border: '#3a2c0e' },
-  copper:    { base: '#b8693d', highlight: '#f0a877', shadow: '#5e2e16', border: '#3a1c0e' },
-  gold:      { base: '#d4a93a', highlight: '#fceb95', shadow: '#7a5a10', border: '#4a3608' },
-  corten:    { base: '#92400e', highlight: '#d97706', shadow: '#451a03', border: '#2d0f02' },
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useVectorDocument } from '@/hooks/useVectorDocument';
+import { useTheme } from 'next-themes';
+import { 
+  ZoomIn, ZoomOut, Maximize2, Grid3X3, Sparkles, Cpu, 
+  Move, RotateCw, CheckCircle2, AlertTriangle, Crosshair
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { AnyFeatureLayer, MetalSubstrate } from '@/lib/cadEngineTypes';
+
+// Metal gradients & finishes for realistic mode
+const METAL_SHADERS: Record<MetalSubstrate, {
+  gradientId: string;
+  stops: { offset: string; color: string; opacity?: number }[];
+  border: string;
+  specular: string;
+}> = {
+  mild_steel: {
+    gradientId: 'shader-mild-steel',
+    stops: [
+      { offset: '0%', color: '#3f3f46' },
+      { offset: '30%', color: '#71717a' },
+      { offset: '60%', color: '#52525b' },
+      { offset: '100%', color: '#27272a' },
+    ],
+    border: '#18181b',
+    specular: '#a1a1aa',
+  },
+  stainless_304: {
+    gradientId: 'shader-stainless',
+    stops: [
+      { offset: '0%', color: '#64748b' },
+      { offset: '25%', color: '#cbd5e1' },
+      { offset: '50%', color: '#94a3b8' },
+      { offset: '75%', color: '#f1f5f9' },
+      { offset: '100%', color: '#475569' },
+    ],
+    border: '#334155',
+    specular: '#ffffff',
+  },
+  aluminum_5052: {
+    gradientId: 'shader-aluminum',
+    stops: [
+      { offset: '0%', color: '#94a3b8' },
+      { offset: '35%', color: '#e2e8f0' },
+      { offset: '70%', color: '#cbd5e1' },
+      { offset: '100%', color: '#64748b' },
+    ],
+    border: '#475569',
+    specular: '#ffffff',
+  },
+  brass_cz108: {
+    gradientId: 'shader-brass',
+    stops: [
+      { offset: '0%', color: '#854d0e' },
+      { offset: '30%', color: '#fef08a' },
+      { offset: '65%', color: '#ca8a04' },
+      { offset: '100%', color: '#713f12' },
+    ],
+    border: '#583108',
+    specular: '#fef9c3',
+  },
+  copper_c101: {
+    gradientId: 'shader-copper',
+    stops: [
+      { offset: '0%', color: '#9a3412' },
+      { offset: '25%', color: '#fdba74' },
+      { offset: '60%', color: '#ea580c' },
+      { offset: '100%', color: '#7c2d12' },
+    ],
+    border: '#601e06',
+    specular: '#ffedd5',
+  },
+  corten_weathering: {
+    gradientId: 'shader-corten',
+    stops: [
+      { offset: '0%', color: '#451a03' },
+      { offset: '35%', color: '#b45309' },
+      { offset: '70%', color: '#7c2d12' },
+      { offset: '100%', color: '#2d0f02' },
+    ],
+    border: '#1c0701',
+    specular: '#d97706',
+  },
 };
 
-import { useTheme } from 'next-themes';
-import { useIsMobile } from '@/hooks/use-mobile';
-
 export function DesignCanvas() {
-  const { state, dispatch } = useEditor();
+  const { 
+    doc, 
+    analytics, 
+    selectedLayerId, 
+    selectLayer, 
+    updateTransform,
+    beginTransformGesture,
+    updateTransformLive,
+    commitTransform, 
+    removeLayer 
+  } = useVectorDocument();
+  
   const { theme } = useTheme();
-  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<Konva.Stage>(null);
-  const transformerRef = useRef<Konva.Transformer>(null);
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
-  const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [gridImage, setGridImage] = useState<HTMLImageElement | HTMLCanvasElement | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  const isPanning = useRef(false);
-  const lastPointer = useRef({ x: 0, y: 0 });
+  // Viewport transformation (zoom & pan)
+  const [zoom, setZoom] = useState(1.0);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [showGrid, setShowGrid] = useState(true);
+  const [viewMode, setViewMode] = useState<'realistic' | 'cam_toolpath'>('realistic');
 
-  // Measure container
+  // Dragging & Interaction State
+  const [dragState, setDragState] = useState<{
+    mode: 'pan' | 'move_layer' | 'rotate_layer';
+    startX: number;
+    startY: number;
+    layerInitialX?: number;
+    layerInitialY?: number;
+    layerInitialRot?: number;
+    layerCenterMm?: { x: number; y: number };
+  } | null>(null);
+
+  const selectedLayer = useMemo(() => {
+    return doc.layers.find(l => l.id === selectedLayerId);
+  }, [doc.layers, selectedLayerId]);
+
+  // Auto-fit to viewport on mount or document boundary change
+  const autoFit = useCallback(() => {
+    if (!containerRef.current) return;
+    const { clientWidth, clientHeight } = containerRef.current;
+    if (clientWidth === 0 || clientHeight === 0) return;
+
+    const padding = 80;
+    const availableW = clientWidth - padding * 2;
+    const availableH = clientHeight - padding * 2;
+
+    const scaleX = availableW / doc.boundary.widthMm;
+    const scaleY = availableH / doc.boundary.heightMm;
+    const initialScale = Math.min(scaleX, scaleY, 2.5);
+
+    setZoom(initialScale);
+    // Center in viewport
+    const offsetX = (clientWidth - doc.boundary.widthMm * initialScale) / 2;
+    const offsetY = (clientHeight - doc.boundary.heightMm * initialScale) / 2;
+    setPan({ x: offsetX, y: offsetY });
+  }, [doc.boundary.widthMm, doc.boundary.heightMm]);
+
+  useEffect(() => {
+    autoFit();
+  }, [autoFit]);
+
+  // Handle Zoom via Mouse Wheel with active non-passive listener
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      setContainerSize({ width, height });
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
 
-  // Initialize grid pattern
-  useEffect(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 50;
-    canvas.height = 50;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      // High contrast grid lines
-      ctx.strokeStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.4)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(50, 0);
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, 50);
-      ctx.stroke();
-    }
-    
-    const img = new Image();
-    img.src = canvas.toDataURL();
-    img.onload = () => {
-      setGridImage(img);
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      setZoom((prevZoom) => {
+        const newZoom = Math.max(0.15, Math.min(5.0, prevZoom * zoomFactor));
+        const rect = el.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        setPan((prevPan) => ({
+          x: mouseX - (mouseX - prevPan.x) * (newZoom / prevZoom),
+          y: mouseY - (mouseY - prevPan.y) * (newZoom / prevZoom),
+        }));
+
+        return newZoom;
+      });
     };
-  }, [theme]);
 
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
-  // Load images
-  useEffect(() => {
-    state.layers.forEach(layer => {
-      if (!loadedImages[layer.id] || loadedImages[layer.id].src !== layer.imageData) {
-        const img = new window.Image();
-        img.src = layer.imageData;
-        img.onload = () => {
-          setLoadedImages(prev => ({ ...prev, [layer.id]: img }));
-        };
+  // Start Panning or Layer Interaction
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Middle click or Space key held down pans the canvas
+    if (e.button === 1 || e.altKey || (e.target === containerRef.current || (e.target as HTMLElement).id === 'canvas-bg')) {
+      if (e.button === 0 && (e.target as HTMLElement).id === 'canvas-bg') {
+        selectLayer(null);
       }
-    });
-  }, [state.layers]);
+      setDragState({
+        mode: 'pan',
+        startX: e.clientX,
+        startY: e.clientY,
+      });
+    }
+  };
 
-  // Update transformer
-  useEffect(() => {
-    const tr = transformerRef.current;
-    const stage = stageRef.current;
-    if (!tr || !stage) return;
-    if (state.selectedLayerId) {
-      const node = stage.findOne(`#layer-${state.selectedLayerId}`);
-      if (node) {
-        tr.nodes([node]);
-        tr.getLayer()?.batchDraw();
-        return;
+  // Layer Move MouseDown
+  const handleLayerMouseDown = (e: React.MouseEvent, layer: AnyFeatureLayer) => {
+    e.stopPropagation();
+    selectLayer(layer.id);
+    if (layer.locked) return;
+
+    beginTransformGesture();
+    setDragState({
+      mode: 'move_layer',
+      startX: e.clientX,
+      startY: e.clientY,
+      layerInitialX: layer.transform.xMm,
+      layerInitialY: layer.transform.yMm,
+    });
+  };
+
+  // Rotation Handle MouseDown
+  const handleRotateMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedLayer || selectedLayer.locked) return;
+
+    beginTransformGesture();
+    const layerCenterMm = getLayerCenter(selectedLayer);
+    setDragState({
+      mode: 'rotate_layer',
+      startX: e.clientX,
+      startY: e.clientY,
+      layerInitialRot: selectedLayer.transform.rotationDeg || 0,
+      layerCenterMm,
+    });
+  };
+
+  // Global Pointer Movement
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragState) return;
+
+    if (dragState.mode === 'pan') {
+      const dx = e.clientX - dragState.startX;
+      const dy = e.clientY - dragState.startY;
+      setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+      setDragState(prev => prev ? { ...prev, startX: e.clientX, startY: e.clientY } : null);
+    } else if (dragState.mode === 'move_layer' && selectedLayer) {
+      const dxMm = (e.clientX - dragState.startX) / zoom;
+      const dyMm = (e.clientY - dragState.startY) / zoom;
+
+      // 0.5mm snapping
+      const rawX = (dragState.layerInitialX ?? 0) + dxMm;
+      const rawY = (dragState.layerInitialY ?? 0) + dyMm;
+      const snapX = Math.round(rawX * 2) / 2;
+      const snapY = Math.round(rawY * 2) / 2;
+
+      updateTransformLive(selectedLayer.id, { xMm: snapX, yMm: snapY });
+    } else if (dragState.mode === 'rotate_layer' && selectedLayer && dragState.layerCenterMm) {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const centerScreenX = pan.x + dragState.layerCenterMm.x * zoom;
+      const centerScreenY = pan.y + dragState.layerCenterMm.y * zoom;
+
+      const angleRad = Math.atan2(e.clientY - centerScreenY, e.clientX - centerScreenX);
+      let angleDeg = (angleRad * 180) / Math.PI + 90; // Top is 0 deg
+      if (angleDeg < 0) angleDeg += 360;
+
+      // Snap to 15 degree increments if Shift is pressed
+      if (e.shiftKey) {
+        angleDeg = Math.round(angleDeg / 15) * 15;
+      } else {
+        angleDeg = Math.round(angleDeg);
       }
+
+      updateTransformLive(selectedLayer.id, { rotationDeg: angleDeg });
     }
-    tr.nodes([]);
-    tr.getLayer()?.batchDraw();
-  }, [state.selectedLayerId, state.layers]);
+  };
 
-  const handleDragEnd = useCallback((layerId: string, e: Konva.KonvaEventObject<DragEvent>) => {
-    dispatch({
-      type: 'UPDATE_LAYER',
-      id: layerId,
-      updates: { x: e.target.x(), y: e.target.y() },
-    });
-    dispatch({ type: 'PUSH_HISTORY' });
-  }, [dispatch]);
-
-  const handleTransformEnd = useCallback((layerId: string, e: Konva.KonvaEventObject<Event>) => {
-    const node = e.target;
-    const scaleX = node.scaleX();
-    const scaleY = node.scaleY();
-    node.scaleX(1);
-    node.scaleY(1);
-    dispatch({
-      type: 'UPDATE_LAYER',
-      id: layerId,
-      updates: {
-        x: node.x(),
-        y: node.y(),
-        width: Math.max(5, node.width() * scaleX),
-        height: Math.max(5, node.height() * scaleY),
-        rotation: node.rotation(),
-      },
-    });
-    dispatch({ type: 'PUSH_HISTORY' });
-  }, [dispatch]);
-
-  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.target === e.target.getStage()) {
-      dispatch({ type: 'SELECT_LAYER', id: null });
+  const handleMouseUp = () => {
+    if (dragState?.mode === 'move_layer' || dragState?.mode === 'rotate_layer') {
+      commitTransform();
     }
-  }, [dispatch]);
+    setDragState(null);
+  };
 
-  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-    const delta = e.evt.deltaY > 0 ? -0.05 : 0.05;
-    dispatch({ type: 'SET_ZOOM', zoom: state.zoom + delta });
-  }, [dispatch, state.zoom]);
+  // Keyboard Delete
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (selectedLayerId && (e.key === 'Delete' || e.key === 'Backspace')) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+        removeLayer(selectedLayerId);
+        selectLayer(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedLayerId, removeLayer, selectLayer]);
 
-  // Middle-click panning
-  const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.evt.button === 1 || (e.evt.button === 0 && e.evt.altKey)) {
-      isPanning.current = true;
-      lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY };
-      e.evt.preventDefault();
-    }
-  }, []);
-
-  const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (!isPanning.current) return;
-    const dx = e.evt.clientX - lastPointer.current.x;
-    const dy = e.evt.clientY - lastPointer.current.y;
-    setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-    lastPointer.current = { x: e.evt.clientX, y: e.evt.clientY };
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isPanning.current = false;
-  }, []);
-
-  // Touch panning + pinch zoom for mobile
-  const lastTouchDist = useRef<number | null>(null);
-  const handleTouchStart = useCallback((e: Konva.KonvaEventObject<TouchEvent>) => {
-    const touches = e.evt.touches;
-    if (touches.length === 1 && e.target === e.target.getStage()) {
-      isPanning.current = true;
-      lastPointer.current = { x: touches[0].clientX, y: touches[0].clientY };
-    } else if (touches.length === 2) {
-      isPanning.current = false;
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      lastTouchDist.current = Math.hypot(dx, dy);
-    }
-  }, []);
-  const handleTouchMove = useCallback((e: Konva.KonvaEventObject<TouchEvent>) => {
-    const touches = e.evt.touches;
-    if (touches.length === 2 && lastTouchDist.current != null) {
-      e.evt.preventDefault();
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      const delta = (dist - lastTouchDist.current) / 200;
-      lastTouchDist.current = dist;
-      dispatch({ type: 'SET_ZOOM', zoom: state.zoom + delta });
-      return;
-    }
-    if (!isPanning.current || touches.length !== 1) return;
-    e.evt.preventDefault();
-    const dx = touches[0].clientX - lastPointer.current.x;
-    const dy = touches[0].clientY - lastPointer.current.y;
-    setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-    lastPointer.current = { x: touches[0].clientX, y: touches[0].clientY };
-  }, [dispatch, state.zoom]);
-  const handleTouchEnd = useCallback(() => {
-    isPanning.current = false;
-    lastTouchDist.current = null;
-  }, []);
-
-  const zoomBy = useCallback((delta: number) => {
-    dispatch({ type: 'SET_ZOOM', zoom: state.zoom + delta });
-  }, [dispatch, state.zoom]);
-  const resetView = useCallback(() => {
-    dispatch({ type: 'SET_ZOOM', zoom: 1 });
-    setPanOffset({ x: 0, y: 0 });
-  }, [dispatch]);
-
-  const shape = getShapeById(state.selectedShapeId);
-  if (!shape) return <div className="flex-1 flex items-center justify-center text-muted-foreground">No shape selected</div>;
-
-  const shapePath = shape.getPath(state.shapeWidth, state.shapeHeight);
-  const offsetX = (containerSize.width / state.zoom - state.shapeWidth) / 2 + panOffset.x / state.zoom;
-  const offsetY = (containerSize.height / state.zoom - state.shapeHeight) / 2 + panOffset.y / state.zoom;
-
-  // Global background grid - covers a massive area to ensure it's always visible
-  const backgroundGrid = state.showGrid && gridImage && (
-    <Rect
-      x={-20000}
-      y={-20000}
-      width={40000}
-      height={40000}
-      fillPatternImage={gridImage as any}
-      fillPatternScale={{ x: 1, y: 1 }}
-      listening={false}
-      opacity={theme === 'dark' ? 0.25 : 0.15}
-    />
-  );
-
-  // Grid pattern rect - sized to the shape and drawn inside the clipped group
-  const gridRect = state.showGrid && gridImage && (
-    <Rect
-      x={0}
-      y={0}
-      width={state.shapeWidth}
-      height={state.shapeHeight}
-      fillPatternImage={gridImage as any}
-      fillPatternScale={{ x: 1, y: 1 }}
-      listening={false}
-      opacity={theme === 'dark' ? 0.6 : 0.4}
-    />
-  );
-
-  // Center guides for shape
-  const centerGuides = (
-    <>
-      <Line
-        points={[offsetX + state.shapeWidth / 2, offsetY - 15, offsetX + state.shapeWidth / 2, offsetY + state.shapeHeight + 15]}
-        stroke="hsl(220, 70%, 50%)"
-        strokeWidth={0.5}
-        dash={[4, 4]}
-        opacity={0.3}
-      />
-      <Line
-        points={[offsetX - 15, offsetY + state.shapeHeight / 2, offsetX + state.shapeWidth + 15, offsetY + state.shapeHeight / 2]}
-        stroke="hsl(220, 70%, 50%)"
-        strokeWidth={0.5}
-        dash={[4, 4]}
-        opacity={0.3}
-      />
-    </>
-  );
-
-  const finish = METAL_FINISHES[state.metalFinish] ?? METAL_FINISHES.steel;
+  const activeShader = METAL_SHADERS[doc.material.substrate] || METAL_SHADERS.mild_steel;
 
   return (
-    <div ref={containerRef} className="flex-1 bg-muted/30 overflow-hidden relative cursor-crosshair">
-      {/* Zoom indicator */}
-      {!isMobile && (
-        <div className="absolute bottom-4 left-4 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground shadow-sm">
-          {Math.round(state.zoom * 100)}%
-        </div>
-      )}
-
-      {state.metalPreview && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-card border border-border rounded-md px-3 py-1.5 text-xs font-medium text-foreground shadow-sm capitalize">
-          {state.metalFinish} Preview
-        </div>
-      )}
-
-      {/* Keyboard shortcuts hint */}
-      {!isMobile && (
-        <div className="absolute bottom-4 right-4 z-10 bg-card/80 border border-border rounded-md px-3 py-1.5 text-[10px] text-muted-foreground shadow-sm space-x-3">
-          <span>Ctrl+Z Undo</span>
-          <span>Del Remove</span>
-          <span>Scroll Zoom</span>
-          <span>Alt+Drag Pan</span>
-        </div>
-      )}
-
-      {/* Mobile zoom / pan controls */}
-      {isMobile && (
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
-          <button
-            onClick={() => zoomBy(0.1)}
-            aria-label="Zoom in"
-            className="w-11 h-11 rounded-md bg-card border border-border shadow-sm text-lg font-medium active:scale-95 transition"
-          >+</button>
-          <button
-            onClick={() => zoomBy(-0.1)}
-            aria-label="Zoom out"
-            className="w-11 h-11 rounded-md bg-card border border-border shadow-sm text-lg font-medium active:scale-95 transition"
-          >−</button>
-          <button
-            onClick={resetView}
-            aria-label="Reset view"
-            className="w-11 h-11 rounded-md bg-card border border-border shadow-sm text-[10px] font-mono active:scale-95 transition"
-          >{Math.round(state.zoom * 100)}%</button>
-        </div>
-      )}
-
-      <Stage
-        ref={stageRef}
-        width={containerSize.width}
-        height={containerSize.height}
-        scaleX={state.zoom}
-        scaleY={state.zoom}
-        onClick={handleStageClick}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+    <div 
+      ref={containerRef}
+      className="relative flex-1 min-w-0 h-full w-full overflow-hidden select-none bg-slate-950 cursor-default"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      {/* Background SVG Canvas */}
+      <svg
+        ref={svgRef}
+        className="w-full h-full absolute inset-0 pointer-events-auto"
+        id="canvas-bg"
       >
-        <Layer>
-          {backgroundGrid}
-          
-          {/* Shape drop-shadow — drawn as the shape itself so grid stays visible around it */}
-          <Path
-            x={offsetX}
-            y={offsetY}
-            data={shapePath}
-            fill={state.metalPreview ? 'transparent' : (theme === 'dark' ? '#000000' : '#ffffff')}
-            shadowColor={state.metalPreview ? 'rgba(0,0,0,0.45)' : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.18)')}
-            shadowBlur={state.metalPreview ? 30 : 20}
-            shadowOffsetY={state.metalPreview ? 10 : 5}
-            shadowOpacity={1}
-            listening={false}
-          />
+        <defs>
+          {/* 10mm Minor & 50mm Major Metric Grid */}
+          <pattern
+            id="minorGrid"
+            width={10 * zoom}
+            height={10 * zoom}
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d={`M ${10 * zoom} 0 L 0 0 0 ${10 * zoom}`}
+              fill="none"
+              stroke={theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'}
+              strokeWidth="0.7"
+            />
+          </pattern>
+          <pattern
+            id="majorGrid"
+            width={50 * zoom}
+            height={50 * zoom}
+            patternUnits="userSpaceOnUse"
+          >
+            <rect width={50 * zoom} height={50 * zoom} fill="url(#minorGrid)" />
+            <path
+              d={`M ${50 * zoom} 0 L 0 0 0 ${50 * zoom}`}
+              fill="none"
+              stroke={theme === 'dark' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(14, 165, 233, 0.12)'}
+              strokeWidth="1.2"
+            />
+          </pattern>
 
-          {/* Metal base fill */}
-          {state.metalPreview && (
-            <Path
-              x={offsetX}
-              y={offsetY}
-              data={shapePath}
-              fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-              fillLinearGradientEndPoint={{ x: state.shapeWidth, y: state.shapeHeight }}
-              fillLinearGradientColorStops={[
-                0, finish.highlight,
-                0.35, finish.base,
-                0.7, finish.shadow,
-                1, finish.base,
-              ]}
-              listening={false}
+          {/* Realistic Metal Gradients */}
+          {Object.entries(METAL_SHADERS).map(([key, shader]) => (
+            <linearGradient
+              key={key}
+              id={shader.gradientId}
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="100%"
+            >
+              {shader.stops.map((s, idx) => (
+                <stop
+                  key={idx}
+                  offset={s.offset}
+                  stopColor={s.color}
+                  stopOpacity={s.opacity ?? 1}
+                />
+              ))}
+            </linearGradient>
+          ))}
+
+          {/* Soft Drop Shadow Filter for realistic sheet elevation */}
+          <filter id="metal-shadow" x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="3" dy="6" stdDeviation="6" floodColor="#000000" floodOpacity="0.6" />
+          </filter>
+
+          {/* Beveled Edge Lighting Filter */}
+          <filter id="metal-bevel">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
+            <feSpecularLighting in="blur" surfaceScale="2" specularConstant="1" specularExponent="20" lightingColor="#ffffff" result="spec">
+              <fePointLight x="-100" y="-100" z="200" />
+            </feSpecularLighting>
+            <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut" />
+            <feComposite in="SourceGraphic" in2="specOut" operator="over" />
+          </filter>
+        </defs>
+
+        {/* 1. Metric Background Grid */}
+        {showGrid && (
+          <rect 
+            x="0" 
+            y="0" 
+            width="100%" 
+            height="100%" 
+            fill="url(#majorGrid)" 
+            className="pointer-events-none" 
+          />
+        )}
+
+        {/* 2. Main CAD Viewport Group (Scaled & Panned) */}
+        <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+          
+          {/* Workpiece Boundary Silhouette */}
+          {viewMode === 'realistic' ? (
+            <path
+              d={doc.boundary.pathData}
+              fill={`url(#${activeShader.gradientId})`}
+              stroke={activeShader.border}
+              strokeWidth="0.6"
+              filter="url(#metal-shadow)"
+              className="transition-colors duration-300"
+            />
+          ) : (
+            // CAM Laser Mode: Clean Zinc Outer Boundary Toolpath
+            <path
+              d={doc.boundary.pathData}
+              fill="rgba(15, 23, 42, 0.85)"
+              stroke="#38BDF8"
+              strokeWidth="0.8"
+              strokeDasharray="none"
             />
           )}
 
-          {/* Center guides */}
-          {!state.metalPreview && centerGuides}
+          {/* Layers: Mounting Holes, Typography, and Vector Paths */}
+          {doc.layers.map(layer => {
+            if (!layer.visible) return null;
+            const isSelected = selectedLayerId === layer.id;
 
-          {/* Ghost image (unclipped) - only for selected layer to show cropping area */}
-          <Group x={offsetX} y={offsetY} listening={false}>
-            {state.layers.map(layer => {
-              if (state.selectedLayerId !== layer.id || !layer.visible || !loadedImages[layer.id]) return null;
-              return (
-                <KonvaImage
-                  key={`ghost-${layer.id}`}
-                  image={loadedImages[layer.id]}
-                  x={layer.x}
-                  y={layer.y}
-                  width={layer.width}
-                  height={layer.height}
-                  rotation={layer.rotation}
-                  opacity={0.15}
-                />
-              );
-            })}
-          </Group>
+            return (
+              <g
+                key={layer.id}
+                id={`layer-${layer.id}`}
+                transform={`translate(${layer.transform.xMm}, ${layer.transform.yMm}) rotate(${layer.transform.rotationDeg || 0})`}
+                onMouseDown={(e) => handleLayerMouseDown(e, layer)}
+                className={cn(
+                  "cursor-pointer transition-opacity",
+                  layer.locked ? "cursor-not-allowed opacity-80" : "hover:opacity-90"
+                )}
+              >
+                {/* 1. Mounting Hole Feature */}
+                {layer.type === 'mounting_hole' && (
+                  <g>
+                    {viewMode === 'realistic' ? (
+                      <>
+                        {/* Cutout hole showing background */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r={layer.diameterMm / 2}
+                          fill="#090d16"
+                          stroke="#18181b"
+                          strokeWidth="0.4"
+                        />
+                        {/* Standoff Barrel Spacer Rim / Highlight */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r={(layer.diameterMm / 2) + 2.5}
+                          fill="none"
+                          stroke="rgba(255, 255, 255, 0.25)"
+                          strokeWidth="0.4"
+                          strokeDasharray="1,1"
+                        />
+                      </>
+                    ) : (
+                      // CAM Laser Toolpath: Red pierce circle with center crosshair
+                      <>
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r={layer.diameterMm / 2}
+                          fill="rgba(239, 68, 68, 0.2)"
+                          stroke="#EF4444"
+                          strokeWidth="0.5"
+                        />
+                        <line x1="-2" y1="0" x2="2" y2="0" stroke="#EF4444" strokeWidth="0.3" />
+                        <line x1="0" y1="-2" x2="0" y2="2" stroke="#EF4444" strokeWidth="0.3" />
+                      </>
+                    )}
+                  </g>
+                )}
 
-          {/* Clipped image group */}
+                {/* 2. Typography Stencil Feature */}
+                {layer.type === 'typography' && layer.derivedPathData && (
+                  <path
+                    d={layer.derivedPathData}
+                    fill={viewMode === 'realistic' ? '#090d16' : 'rgba(239, 68, 68, 0.25)'}
+                    stroke={viewMode === 'realistic' ? '#18181b' : '#EF4444'}
+                    strokeWidth={viewMode === 'realistic' ? '0.3' : '0.5'}
+                  />
+                )}
 
-          <Group
-            x={offsetX}
-            y={offsetY}
-            clipFunc={(ctx: any) => {
-              // Konva's clipFunc receives a wrapped context; the underlying CanvasRenderingContext2D
-              // is at ctx._context. We trace the SVG path onto it so Konva's subsequent clip() uses it.
-              const target: CanvasRenderingContext2D = ctx._context ?? ctx;
-              target.beginPath();
-              drawSVGPathOnContext(target, shapePath);
-            }}
+                {/* 3. Custom / Traced Vector Path Feature */}
+                {layer.type === 'vector_path' && layer.pathData && (
+                  <path
+                    d={layer.pathData}
+                    fill={
+                      layer.camLayer === '2_VECTOR_SCORE' 
+                        ? 'none' 
+                        : (viewMode === 'realistic' ? '#090d16' : 'rgba(239, 68, 68, 0.2)')
+                    }
+                    stroke={
+                      layer.camLayer === '2_VECTOR_SCORE' 
+                        ? '#3B82F6' 
+                        : (viewMode === 'realistic' ? '#18181b' : '#EF4444')
+                    }
+                    strokeWidth="0.5"
+                    strokeDasharray={layer.camLayer === '2_VECTOR_SCORE' ? '2,1' : 'none'}
+                  />
+                )}
+              </g>
+            );
+          })}
 
+          {/* Interactive Bounding Box & Transform Handles for Selected Layer */}
+          {selectedLayer && (
+            <g
+              transform={`translate(${selectedLayer.transform.xMm}, ${selectedLayer.transform.yMm}) rotate(${selectedLayer.transform.rotationDeg || 0})`}
+              className="pointer-events-none"
+            >
+              {(() => {
+                const b = getLayerBounds(selectedLayer);
+                const handleSize = 6 / zoom; // Constant on-screen size
+                const stalkLength = 18 / zoom;
+
+                return (
+                  <g className="pointer-events-auto">
+                    {/* Dashed Selection Rectangle */}
+                    <rect
+                      x={b.minX}
+                      y={b.minY}
+                      width={b.width}
+                      height={b.height}
+                      fill="none"
+                      stroke="#38BDF8"
+                      strokeWidth={1.2 / zoom}
+                      strokeDasharray={`${3 / zoom},${3 / zoom}`}
+                    />
+
+                    {/* Rotation Handle & Connecting Stalk */}
+                    <line
+                      x1={b.minX + b.width / 2}
+                      y1={b.minY}
+                      x2={b.minX + b.width / 2}
+                      y2={b.minY - stalkLength}
+                      stroke="#38BDF8"
+                      strokeWidth={1.2 / zoom}
+                    />
+                    <circle
+                      cx={b.minX + b.width / 2}
+                      cy={b.minY - stalkLength}
+                      r={handleSize / 1.5}
+                      fill="#38BDF8"
+                      stroke="#FFFFFF"
+                      strokeWidth={1 / zoom}
+                      className="cursor-grab active:cursor-grabbing"
+                      onMouseDown={handleRotateMouseDown}
+                    />
+
+                    {/* 4 Corner Resize / Anchor Points */}
+                    <rect
+                      x={b.minX - handleSize / 2}
+                      y={b.minY - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="#FFFFFF"
+                      stroke="#38BDF8"
+                      strokeWidth={1 / zoom}
+                    />
+                    <rect
+                      x={b.minX + b.width - handleSize / 2}
+                      y={b.minY - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="#FFFFFF"
+                      stroke="#38BDF8"
+                      strokeWidth={1 / zoom}
+                    />
+                    <rect
+                      x={b.minX - handleSize / 2}
+                      y={b.minY + b.height - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="#FFFFFF"
+                      stroke="#38BDF8"
+                      strokeWidth={1 / zoom}
+                    />
+                    <rect
+                      x={b.minX + b.width - handleSize / 2}
+                      y={b.minY + b.height - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="#FFFFFF"
+                      stroke="#38BDF8"
+                      strokeWidth={1 / zoom}
+                    />
+
+                    {/* Position Tooltip Tag */}
+                    <g transform={`translate(${b.minX}, ${b.minY + b.height + 4 / zoom})`}>
+                      <rect
+                        width={65 / zoom}
+                        height={14 / zoom}
+                        fill="rgba(15, 23, 42, 0.85)"
+                        rx={2 / zoom}
+                      />
+                      <text
+                        x={4 / zoom}
+                        y={10 / zoom}
+                        fill="#38BDF8"
+                        fontSize={8 / zoom}
+                        fontFamily="monospace"
+                      >
+                        {Math.round(selectedLayer.transform.xMm)}, {Math.round(selectedLayer.transform.yMm)} mm
+                      </text>
+                    </g>
+                  </g>
+                );
+              })()}
+            </g>
+          )}
+
+          {/* 3. Outer Millimeter Dimension Guides */}
+          <g className="pointer-events-none opacity-40">
+            {/* Bottom width dimension */}
+            <line
+              x1="0"
+              y1={doc.boundary.heightMm + 6}
+              x2={doc.boundary.widthMm}
+              y2={doc.boundary.heightMm + 6}
+              stroke="#94A3B8"
+              strokeWidth="0.4"
+            />
+            <text
+              x={doc.boundary.widthMm / 2}
+              y={doc.boundary.heightMm + 12}
+              fill="#94A3B8"
+              fontSize="6"
+              textAnchor="middle"
+              fontFamily="monospace"
+            >
+              {doc.boundary.widthMm} mm
+            </text>
+
+            {/* Right height dimension */}
+            <line
+              x1={doc.boundary.widthMm + 6}
+              y1="0"
+              x2={doc.boundary.widthMm + 6}
+              y2={doc.boundary.heightMm}
+              stroke="#94A3B8"
+              strokeWidth="0.4"
+            />
+            <text
+              x={doc.boundary.widthMm + 12}
+              y={doc.boundary.heightMm / 2}
+              fill="#94A3B8"
+              fontSize="6"
+              dominantBaseline="middle"
+              fontFamily="monospace"
+            >
+              {doc.boundary.heightMm} mm
+            </text>
+          </g>
+        </g>
+      </svg>
+
+      {/* Floating Canvas HUD Controls */}
+      <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+        {/* View Mode Toggle Pill */}
+        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-0.5 shadow-xl">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setViewMode('realistic')}
+            className={cn(
+              "h-7 text-xs px-2.5 gap-1.5 rounded-md",
+              viewMode === 'realistic' ? "bg-primary text-primary-foreground font-semibold" : "text-slate-400 hover:text-white"
+            )}
           >
-            {/* Inner fill — white/black in design mode, transparent over metal in preview */}
-            {!state.metalPreview && (
-              <Rect x={0} y={0} width={state.shapeWidth} height={state.shapeHeight} fill={theme === 'dark' ? '#000000' : '#ffffff'} />
+            <Sparkles className="w-3 h-3" />
+            <span>Realistic</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setViewMode('cam_toolpath')}
+            className={cn(
+              "h-7 text-xs px-2.5 gap-1.5 rounded-md",
+              viewMode === 'cam_toolpath' ? "bg-primary text-primary-foreground font-semibold" : "text-slate-400 hover:text-white"
             )}
+          >
+            <Cpu className="w-3 h-3" />
+            <span>Laser CAM</span>
+          </Button>
+        </div>
 
-            {state.layers.map(layer => {
-              if (!layer.visible || !loadedImages[layer.id]) return null;
-              return (
-                <FilteredLayerImage
-                  key={layer.id}
-                  layer={layer}
-                  image={loadedImages[layer.id]}
-                  metalPreview={state.metalPreview}
-                  onDragEnd={(e) => handleDragEnd(layer.id, e)}
-                  onTransformEnd={(e) => handleTransformEnd(layer.id, e)}
-                  onSelect={() => dispatch({ type: 'SELECT_LAYER', id: layer.id })}
-                />
-              );
-            })}
+        {/* Manufacturing Status Pill */}
+        <div className={cn(
+          "flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-mono font-medium border backdrop-blur-md shadow-xl",
+          analytics.isValidated
+            ? "bg-emerald-950/80 border-emerald-500/40 text-emerald-400"
+            : "bg-amber-950/80 border-amber-500/40 text-amber-400"
+        )}>
+          {analytics.isValidated ? (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Laser Cut Ready</span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>{analytics.validationIssues?.length || 0} Warning(s)</span>
+            </>
+          )}
+        </div>
+      </div>
 
-            {/* Metallic sheen overlay inside shape */}
-            {state.metalPreview && (
-              <>
-                <Rect
-                  x={0}
-                  y={0}
-                  width={state.shapeWidth}
-                  height={state.shapeHeight}
-                  fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-                  fillLinearGradientEndPoint={{ x: state.shapeWidth, y: state.shapeHeight }}
-                  fillLinearGradientColorStops={[
-                    0, 'rgba(255,255,255,0.45)',
-                    0.4, 'rgba(255,255,255,0)',
-                    0.6, 'rgba(0,0,0,0)',
-                    1, 'rgba(0,0,0,0.35)',
-                  ]}
-                  listening={false}
-                />
-                <Rect
-                  x={0}
-                  y={0}
-                  width={state.shapeWidth}
-                  height={state.shapeHeight}
-                  fillLinearGradientStartPoint={{ x: state.shapeWidth, y: 0 }}
-                  fillLinearGradientEndPoint={{ x: 0, y: state.shapeHeight }}
-                  fillLinearGradientColorStops={[
-                    0, 'rgba(255,255,255,0.2)',
-                    0.5, 'rgba(255,255,255,0)',
-                    1, 'rgba(0,0,0,0.15)',
-                  ]}
-                  listening={false}
-                />
-              </>
-            )}
+      {/* Bottom Floating Viewport Controls */}
+      <div className="absolute bottom-4 right-4 flex items-center gap-1.5 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-1 shadow-xl">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setShowGrid(!showGrid)}
+          className={cn("h-7 w-7", showGrid ? "text-primary" : "text-slate-400")}
+          title="Toggle Metric Grid"
+        >
+          <Grid3X3 className="w-3.5 h-3.5" />
+        </Button>
 
-            {/* Grid rendered last in group to stay on top */}
-            {gridRect}
-          </Group>
+        <div className="w-px h-4 bg-slate-800 mx-0.5" />
 
-          {/* Shape border */}
-          <Path
-            x={offsetX}
-            y={offsetY}
-            data={shapePath}
-            stroke={state.metalPreview ? finish.border : (theme === 'dark' ? '#ffffff' : 'hsl(220, 20%, 30%)')}
-            strokeWidth={state.metalPreview ? Math.max(state.shapeBorderThickness, 1.5) : state.shapeBorderThickness}
-            fill="transparent"
-            listening={false}
-          />
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setZoom(prev => Math.max(0.15, prev * 0.85))}
+          className="h-7 w-7 text-slate-300 hover:text-white"
+          title="Zoom Out"
+        >
+          <ZoomOut className="w-3.5 h-3.5" />
+        </Button>
 
-          {/* Transformer */}
-          <Transformer
-            ref={transformerRef}
-            rotateEnabled
-            enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']}
-            boundBoxFunc={(oldBox, newBox) => {
-              if (newBox.width < 5 || newBox.height < 5) return oldBox;
-              return newBox;
-            }}
-            borderStroke="hsl(220, 70%, 50%)"
-            anchorStroke="hsl(220, 70%, 50%)"
-            anchorFill="white"
-            anchorSize={8}
-            anchorCornerRadius={2}
-          />
-        </Layer>
-      </Stage>
+        <span className="text-xs font-mono text-slate-300 w-12 text-center">
+          {Math.round(zoom * 100)}%
+        </span>
+
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setZoom(prev => Math.min(5.0, prev * 1.15))}
+          className="h-7 w-7 text-slate-300 hover:text-white"
+          title="Zoom In"
+        >
+          <ZoomIn className="w-3.5 h-3.5" />
+        </Button>
+
+        <div className="w-px h-4 bg-slate-800 mx-0.5" />
+
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={autoFit}
+          className="h-7 w-7 text-slate-300 hover:text-white"
+          title="Auto-Fit Workpiece"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      {/* Part Specifications Badge (Bottom Left) */}
+      <div className="absolute bottom-4 left-4 z-10 hidden sm:flex items-center gap-2 bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-lg px-3 py-1.5 text-[11px] font-mono text-slate-400 shadow-lg">
+        <span className="text-white font-medium">{doc.boundary.widthMm} × {doc.boundary.heightMm} mm</span>
+        <span className="text-slate-600">|</span>
+        <span>{doc.material.thicknessMm}mm {doc.material.substrate.replace(/_/g, ' ')}</span>
+        <span className="text-slate-600">|</span>
+        <span>{analytics.partWeightKg.toFixed(2)} kg</span>
+      </div>
     </div>
   );
 }
 
-/** Parse an SVG path data string and trace it onto a Canvas2D context. */
-function drawSVGPathOnContext(ctx: CanvasRenderingContext2D, pathData: string) {
-  const tokens = pathData.match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
-  let i = 0;
-  let cx = 0, cy = 0;     // current point
-  let sx = 0, sy = 0;     // subpath start
-  let lastCmd = '';
-  let lastCtrlX = 0, lastCtrlY = 0; // for smooth bezier (S/T)
-
-  const num = () => parseFloat(tokens[i++]);
-  const isCmd = (t: string) => /^[a-zA-Z]$/.test(t);
-
-  while (i < tokens.length) {
-    let cmd = tokens[i];
-    if (isCmd(cmd)) { i++; } else { cmd = lastCmd === 'M' ? 'L' : lastCmd === 'm' ? 'l' : lastCmd; }
-    const rel = cmd === cmd.toLowerCase();
-    const C = cmd.toUpperCase();
-
-    switch (C) {
-      case 'M': {
-        let x = num(), y = num();
-        if (rel) { x += cx; y += cy; }
-        ctx.moveTo(x, y); cx = sx = x; cy = sy = y;
-        // subsequent pairs are implicit L
-        while (i < tokens.length && !isCmd(tokens[i])) {
-          let nx = num(), ny = num();
-          if (rel) { nx += cx; ny += cy; }
-          ctx.lineTo(nx, ny); cx = nx; cy = ny;
-        }
-        break;
-      }
-      case 'L': {
-        do {
-          let x = num(), y = num();
-          if (rel) { x += cx; y += cy; }
-          ctx.lineTo(x, y); cx = x; cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'H': {
-        do {
-          let x = num();
-          if (rel) x += cx;
-          ctx.lineTo(x, cy); cx = x;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'V': {
-        do {
-          let y = num();
-          if (rel) y += cy;
-          ctx.lineTo(cx, y); cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'C': {
-        do {
-          let x1 = num(), y1 = num(), x2 = num(), y2 = num(), x = num(), y = num();
-          if (rel) { x1 += cx; y1 += cy; x2 += cx; y2 += cy; x += cx; y += cy; }
-          ctx.bezierCurveTo(x1, y1, x2, y2, x, y);
-          lastCtrlX = x2; lastCtrlY = y2;
-          cx = x; cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'S': {
-        do {
-          let x2 = num(), y2 = num(), x = num(), y = num();
-          if (rel) { x2 += cx; y2 += cy; x += cx; y += cy; }
-          const prev = lastCmd.toUpperCase();
-          const x1 = (prev === 'C' || prev === 'S') ? 2 * cx - lastCtrlX : cx;
-          const y1 = (prev === 'C' || prev === 'S') ? 2 * cy - lastCtrlY : cy;
-          ctx.bezierCurveTo(x1, y1, x2, y2, x, y);
-          lastCtrlX = x2; lastCtrlY = y2;
-          cx = x; cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'Q': {
-        do {
-          let x1 = num(), y1 = num(), x = num(), y = num();
-          if (rel) { x1 += cx; y1 += cy; x += cx; y += cy; }
-          ctx.quadraticCurveTo(x1, y1, x, y);
-          lastCtrlX = x1; lastCtrlY = y1;
-          cx = x; cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'T': {
-        do {
-          let x = num(), y = num();
-          if (rel) { x += cx; y += cy; }
-          const prev = lastCmd.toUpperCase();
-          const x1 = (prev === 'Q' || prev === 'T') ? 2 * cx - lastCtrlX : cx;
-          const y1 = (prev === 'Q' || prev === 'T') ? 2 * cy - lastCtrlY : cy;
-          ctx.quadraticCurveTo(x1, y1, x, y);
-          lastCtrlX = x1; lastCtrlY = y1;
-          cx = x; cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'A': {
-        do {
-          const rx = num(), ry = num(), rot = num(), large = num(), sweep = num();
-          let x = num(), y = num();
-          if (rel) { x += cx; y += cy; }
-          arcToCanvas(ctx, cx, cy, rx, ry, rot, large !== 0, sweep !== 0, x, y);
-          cx = x; cy = y;
-        } while (i < tokens.length && !isCmd(tokens[i]));
-        break;
-      }
-      case 'Z': {
-        ctx.closePath();
-        cx = sx; cy = sy;
-        break;
-      }
-    }
-    lastCmd = cmd;
+/**
+ * Helper to compute bounding box of any layer type in local layer coordinates
+ */
+function getLayerBounds(layer: AnyFeatureLayer): { minX: number; minY: number; width: number; height: number } {
+  if (layer.type === 'mounting_hole') {
+    const r = layer.diameterMm / 2;
+    return { minX: -r, minY: -r, width: layer.diameterMm, height: layer.diameterMm };
+  } else if (layer.type === 'typography') {
+    const w = (layer.fontSizeMm * (layer.rawText?.length || 1) * 0.7);
+    const h = layer.fontSizeMm;
+    return { minX: 0, minY: 0, width: w, height: h };
+  } else if (layer.type === 'vector_path') {
+    const bw = layer.boundsMm?.widthMm || 50;
+    const bh = layer.boundsMm?.heightMm || 50;
+    return { minX: 0, minY: 0, width: bw, height: bh };
   }
+  return { minX: 0, minY: 0, width: 40, height: 40 };
 }
 
-/** Convert SVG elliptical arc to a series of canvas bezier segments. */
-function arcToCanvas(
-  ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  rx: number, ry: number,
-  angleDeg: number, largeArc: boolean, sweep: boolean,
-  x2: number, y2: number,
-) {
-  if (rx === 0 || ry === 0) { ctx.lineTo(x2, y2); return; }
-  const rad = (angleDeg * Math.PI) / 180;
-  const cosA = Math.cos(rad), sinA = Math.sin(rad);
-  const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
-  const x1p =  cosA * dx + sinA * dy;
-  const y1p = -sinA * dx + cosA * dy;
-  let rxs = rx * rx, rys = ry * ry;
-  const x1ps = x1p * x1p, y1ps = y1p * y1p;
-  const radiiCheck = x1ps / rxs + y1ps / rys;
-  if (radiiCheck > 1) { const s = Math.sqrt(radiiCheck); rx *= s; ry *= s; rxs = rx * rx; rys = ry * ry; }
-  const sign = largeArc === sweep ? -1 : 1;
-  const sq = Math.max(0, (rxs * rys - rxs * y1ps - rys * x1ps) / (rxs * y1ps + rys * x1ps));
-  const coef = sign * Math.sqrt(sq);
-  const cxp =  coef * (rx * y1p) / ry;
-  const cyp = -coef * (ry * x1p) / rx;
-  const ccx = cosA * cxp - sinA * cyp + (x1 + x2) / 2;
-  const ccy = sinA * cxp + cosA * cyp + (y1 + y2) / 2;
-  const ang = (ux: number, uy: number, vx: number, vy: number) => {
-    const dot = ux * vx + uy * vy;
-    const len = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
-    let a = Math.acos(Math.max(-1, Math.min(1, dot / len)));
-    if (ux * vy - uy * vx < 0) a = -a;
-    return a;
+/**
+ * Helper to get center of layer in mm
+ */
+function getLayerCenter(layer: AnyFeatureLayer): { x: number; y: number } {
+  const b = getLayerBounds(layer);
+  return {
+    x: layer.transform.xMm + b.minX + b.width / 2,
+    y: layer.transform.yMm + b.minY + b.height / 2,
   };
-  const theta = ang(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
-  let delta = ang((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
-  if (!sweep && delta > 0) delta -= 2 * Math.PI;
-  else if (sweep && delta < 0) delta += 2 * Math.PI;
-
-  const segments = Math.max(2, Math.ceil(Math.abs(delta) / (Math.PI / 8)));
-  const step = delta / segments;
-  for (let s = 1; s <= segments; s++) {
-    const a = theta + step * s;
-    const px = cosA * rx * Math.cos(a) - sinA * ry * Math.sin(a) + ccx;
-    const py = sinA * rx * Math.cos(a) + cosA * ry * Math.sin(a) + ccy;
-    ctx.lineTo(px, py);
-  }
-}
-
-/* ---------- Filtered image subcomponent ---------- */
-interface FilteredLayerImageProps {
-  layer: EditorLayer;
-  image: HTMLImageElement;
-  metalPreview: boolean;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
-  onSelect: () => void;
-}
-
-function FilteredLayerImage({ layer, image, metalPreview, onDragEnd, onTransformEnd, onSelect }: FilteredLayerImageProps) {
-  const ref = useRef<Konva.Image>(null);
-
-  const filters: any[] = [];
-  if ((layer.brightness ?? 0) !== 0) filters.push(Konva.Filters.Brighten);
-  if ((layer.contrast ?? 0) !== 0) filters.push(Konva.Filters.Contrast);
-  if ((layer.saturation ?? 0) !== 0 || (layer.hue ?? 0) !== 0) filters.push(Konva.Filters.HSL);
-  if (layer.grayscale) filters.push(Konva.Filters.Grayscale);
-  if (layer.invert) filters.push(Konva.Filters.Invert);
-  if ((layer.blur ?? 0) > 0) filters.push(Konva.Filters.Blur);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    if (filters.length) {
-      node.cache();
-      node.getLayer()?.batchDraw();
-    } else {
-      try { node.clearCache(); } catch {}
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    layer.brightness, layer.contrast, layer.saturation, layer.hue,
-    layer.grayscale, layer.invert, layer.blur, layer.width, layer.height, image,
-  ]);
-
-  return (
-    <KonvaImage
-      ref={ref}
-      id={`layer-${layer.id}`}
-      image={image}
-      x={layer.x}
-      y={layer.y}
-      width={layer.width}
-      height={layer.height}
-      rotation={layer.rotation}
-      opacity={layer.opacity * (metalPreview ? 0.92 : 1)}
-      draggable={!layer.locked}
-      filters={filters.length ? filters : undefined}
-      brightness={layer.brightness ?? 0}
-      contrast={layer.contrast ?? 0}
-      saturation={layer.saturation ?? 0}
-      hue={layer.hue ?? 0}
-      blurRadius={layer.blur ?? 0}
-      onDragEnd={onDragEnd}
-      onTransformEnd={onTransformEnd}
-      onClick={(e) => { e.cancelBubble = true; onSelect(); }}
-      onTap={onSelect}
-    />
-  );
 }

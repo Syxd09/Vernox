@@ -1,3 +1,4 @@
+import { useState, useId } from 'react';
 import { shapeDefinitions } from '@/lib/shapes';
 
 interface Props {
@@ -6,36 +7,113 @@ interface Props {
   className?: string;
 }
 
-const finishGradient: Record<string, { a: string; b: string; c: string }> = {
-  steel:     { a: '#4a4a4a', b: '#1a1a1a', c: '#0a0a0a' },
-  stainless: { a: '#e8e8e8', b: '#a0a0a0', c: '#606060' },
-  aluminum:  { a: '#d0d0d0', b: '#909090', c: '#5a5a5a' },
-  brass:     { a: '#f0d078', b: '#a37c2a', c: '#5a3a10' },
-  copper:    { a: '#f0a070', b: '#a3562a', c: '#5a2010' },
-  gold:      { a: '#ffe390', b: '#c9a34c', c: '#7a5a1a' },
-  corten:    { a: '#d06a30', b: '#8a3a1a', c: '#3a1508' },
+const finishGradients: Record<string, string[]> = {
+  steel:     ['#5c5c5c', '#2c2c2c', '#151515', '#0c0c0c'],
+  stainless: ['#ffffff', '#dfdfdf', '#a8a8a8', '#686868', '#383838'],
+  aluminum:  ['#f5f5f5', '#cccccc', '#949494', '#5e5e5e'],
+  brass:     ['#ffe79a', '#dca842', '#b27b16', '#664103'],
+  copper:    ['#ffc4a6', '#e0764c', '#b54b20', '#631e05'],
+  gold:      ['#fff6d1', '#e8c95e', '#bc9a24', '#755b0a'],
+  corten:    ['#f29f63', '#d9653b', '#963c11', '#4d1902'],
 };
 
 export function ShapeThumb({ shapeId, finish = 'brass', className }: Props) {
   const shape = shapeDefinitions.find(s => s.id === shapeId) ?? shapeDefinitions[0];
   const w = 200, h = 200;
   const path = shape.getPath(w, h);
-  const g = finishGradient[finish] ?? finishGradient.brass;
-  const gid = `grad-${shapeId}-${finish}`;
+  const stops = finishGradients[finish] ?? finishGradients.brass;
+  const uid = useId().replace(/:/g, '');
+  const gid = `grad-${shapeId}-${finish}-${uid}`;
+
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={className} aria-hidden>
+    <svg 
+      viewBox={`0 0 ${w} ${h}`} 
+      className={`${className} transition-transform duration-300 ease-out will-change-transform ${isHovered ? 'scale-105 -translate-y-1' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      aria-hidden
+    >
       <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={g.a} />
-          <stop offset="55%" stopColor={g.b} />
-          <stop offset="100%" stopColor={g.c} />
+        {/* Metallic base gradient */}
+        <linearGradient 
+          id={gid} 
+          x1="0.2" 
+          y1="0" 
+          x2="0.8" 
+          y2="1"
+        >
+          {stops.map((color, index) => (
+            <stop 
+              key={index} 
+              offset={`${(index / (stops.length - 1)) * 100}%`} 
+              stopColor={color} 
+            />
+          ))}
         </linearGradient>
-        <filter id={`${gid}-shadow`} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#000" floodOpacity="0.55" />
+
+        {/* Diagonal sheen glare reflection overlay */}
+        <linearGradient id={`${gid}-sheen`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity={0.0} />
+          <stop offset="35%" stopColor="#ffffff" stopOpacity={0.0} />
+          <stop offset="50%" stopColor="#ffffff" stopOpacity={isHovered ? 0.35 : 0.1} />
+          <stop offset="65%" stopColor="#ffffff" stopOpacity={0.0} />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity={0.0} />
+        </linearGradient>
+
+        {/* Premium 3D Bevel and specular metallic lighting filter (static geometry for GPU raster caching) */}
+        <filter id={`${gid}-luxe-filter`} x="-20%" y="-20%" width="140%" height="140%">
+          {/* Drop shadow */}
+          <feDropShadow 
+            dx="0" 
+            dy={isHovered ? 14 : 8} 
+            stdDeviation={isHovered ? 14 : 8} 
+            floodColor="#000000" 
+            floodOpacity={isHovered ? 0.4 : 0.28} 
+          />
+
+          {/* Ambient occlusion and edge beveling mapping */}
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="blur" />
+          <feSpecularLighting 
+            in="blur" 
+            specularExponent="35" 
+            specularConstant="1.5" 
+            surfaceScale="2" 
+            lightingColor="#ffffff" 
+            result="specOut"
+          >
+            <feDistantLight azimuth={225} elevation={42} />
+          </feSpecularLighting>
+          <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOutAlpha" />
+          <feComposite in="SourceGraphic" in2="specOutAlpha" operator="arithmetic" k1="0" k2="1" k3="0.8" k4="0" />
         </filter>
       </defs>
-      <path d={path} fill={`url(#${gid})`} filter={`url(#${gid}-shadow)`} />
-      <path d={path} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+
+      {/* Solid metal plate with lux-lighting bevel filter */}
+      <path 
+        d={path} 
+        fill={`url(#${gid})`} 
+        filter={`url(#${gid}-luxe-filter)`} 
+      />
+
+      {/* Sweeping dynamic sheen layer */}
+      <path 
+        d={path} 
+        fill={`url(#${gid}-sheen)`}
+        className="transition-opacity duration-300"
+        style={{
+          opacity: isHovered ? 1 : 0.6,
+        }}
+      />
+
+      {/* Subtle edge highlight */}
+      <path 
+        d={path} 
+        fill="none" 
+        stroke="rgba(255,255,255,0.2)" 
+        strokeWidth="1.2" 
+      />
     </svg>
   );
 }
