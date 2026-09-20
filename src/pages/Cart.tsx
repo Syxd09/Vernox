@@ -11,7 +11,8 @@ export default function Cart() {
   const { items, updateQty, remove, subtotal } = useCart();
   const navigate = useNavigate();
   const shipping = subtotal > storeConfig.freeShippingThreshold || subtotal === 0 ? 0 : storeConfig.shippingFee;
-  const total = subtotal + shipping;
+  const tax = subtotal * (storeConfig.taxRate / 100);
+  const total = subtotal + shipping + tax;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -63,6 +64,7 @@ export default function Cart() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{storeConfig.currency}{subtotal.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Shipping</span><span>{shipping === 0 ? 'Free' : `${storeConfig.currency}${shipping.toFixed(2)}`}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Estimated Tax ({storeConfig.taxRate}%)</span><span>{storeConfig.currency}{tax.toFixed(2)}</span></div>
                 {shipping > 0 && <div className="text-xs text-muted-foreground">Add {storeConfig.currency}{(storeConfig.freeShippingThreshold - subtotal).toFixed(2)} for free shipping.</div>}
                 <div className="border-t border-border/60 pt-3 flex justify-between text-base font-semibold">
                   <span>Total</span><span>{storeConfig.currency}{total.toFixed(2)}</span>

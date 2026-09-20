@@ -39,27 +39,32 @@ export function AdminOrders() {
   const filteredOrders = useMemo(() => {
     return orders
       .filter(o => {
+        const customerName = o.shippingName || (typeof (o as any).shippingAddress === 'object' ? (o as any).shippingAddress?.name : '');
         const matchesSearch = 
           o.id.toLowerCase().includes(orderSearch.toLowerCase()) || 
           o.email.toLowerCase().includes(orderSearch.toLowerCase()) ||
-          (o.shippingAddress?.name && o.shippingAddress.name.toLowerCase().includes(orderSearch.toLowerCase()));
+          (customerName && customerName.toLowerCase().includes(orderSearch.toLowerCase()));
         const matchesStatus = orderStatusFilter === 'all' || o.status === orderStatusFilter;
         return matchesSearch && matchesStatus;
       })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => {
+        const timeA = a.placedAt || new Date((a as any).createdAt || 0).getTime();
+        const timeB = b.placedAt || new Date((b as any).createdAt || 0).getTime();
+        return timeB - timeA;
+      });
   }, [orders, orderSearch, orderStatusFilter]);
 
   const handleOpenOrder = (order: Order) => {
     setSelectedOrder(order);
     setOrderTrackingForm({
-      shippingName: order.shippingAddress?.name || '',
-      shippingAddress: order.shippingAddress?.line1 || '',
-      shippingCity: order.shippingAddress?.city || '',
-      shippingZip: order.shippingAddress?.postalCode || '',
-      shippingCountry: order.shippingAddress?.country || 'United States',
-      trackingCarrier: order.tracking?.carrier || '',
-      trackingNumber: order.tracking?.trackingNumber || '',
-      estimatedDelivery: order.tracking?.estimatedDelivery || '',
+      shippingName: order.shippingName || (typeof (order as any).shippingAddress === 'object' ? (order as any).shippingAddress?.name : '') || '',
+      shippingAddress: (typeof order.shippingAddress === 'string' ? order.shippingAddress : (order as any).shippingAddress?.line1) || '',
+      shippingCity: order.shippingCity || (typeof (order as any).shippingAddress === 'object' ? (order as any).shippingAddress?.city : '') || '',
+      shippingZip: order.shippingZip || (typeof (order as any).shippingAddress === 'object' ? (order as any).shippingAddress?.postalCode : '') || '',
+      shippingCountry: order.shippingCountry || (typeof (order as any).shippingAddress === 'object' ? (order as any).shippingAddress?.country : '') || 'India',
+      trackingCarrier: order.trackingCarrier || (order as any).tracking?.carrier || '',
+      trackingNumber: order.trackingNumber || (order as any).tracking?.trackingNumber || '',
+      estimatedDelivery: order.estimatedDelivery || (order as any).tracking?.estimatedDelivery || '',
       adminNotes: order.adminNotes || ''
     });
   };
@@ -69,36 +74,28 @@ export function AdminOrders() {
     if (!selectedOrder) return;
 
     updateOrder(selectedOrder.id, {
-      shippingAddress: {
-        name: orderTrackingForm.shippingName,
-        line1: orderTrackingForm.shippingAddress,
-        city: orderTrackingForm.shippingCity,
-        postalCode: orderTrackingForm.shippingZip,
-        country: orderTrackingForm.shippingCountry
-      },
-      tracking: {
-        carrier: orderTrackingForm.trackingCarrier,
-        trackingNumber: orderTrackingForm.trackingNumber,
-        estimatedDelivery: orderTrackingForm.estimatedDelivery
-      },
+      shippingName: orderTrackingForm.shippingName,
+      shippingAddress: orderTrackingForm.shippingAddress,
+      shippingCity: orderTrackingForm.shippingCity,
+      shippingZip: orderTrackingForm.shippingZip,
+      shippingCountry: orderTrackingForm.shippingCountry,
+      trackingCarrier: orderTrackingForm.trackingCarrier,
+      trackingNumber: orderTrackingForm.trackingNumber,
+      estimatedDelivery: orderTrackingForm.estimatedDelivery,
       adminNotes: orderTrackingForm.adminNotes
     });
 
     toast.success('Order shipping details updated');
     setSelectedOrder(prev => prev ? {
       ...prev,
-      shippingAddress: {
-        name: orderTrackingForm.shippingName,
-        line1: orderTrackingForm.shippingAddress,
-        city: orderTrackingForm.shippingCity,
-        postalCode: orderTrackingForm.shippingZip,
-        country: orderTrackingForm.shippingCountry
-      },
-      tracking: {
-        carrier: orderTrackingForm.trackingCarrier,
-        trackingNumber: orderTrackingForm.trackingNumber,
-        estimatedDelivery: orderTrackingForm.estimatedDelivery
-      },
+      shippingName: orderTrackingForm.shippingName,
+      shippingAddress: orderTrackingForm.shippingAddress,
+      shippingCity: orderTrackingForm.shippingCity,
+      shippingZip: orderTrackingForm.shippingZip,
+      shippingCountry: orderTrackingForm.shippingCountry,
+      trackingCarrier: orderTrackingForm.trackingCarrier,
+      trackingNumber: orderTrackingForm.trackingNumber,
+      estimatedDelivery: orderTrackingForm.estimatedDelivery,
       adminNotes: orderTrackingForm.adminNotes
     } : null);
   };
@@ -305,7 +302,7 @@ export function AdminOrders() {
                   <span className="mx-2">·</span>
                   <span>Items: {order.items.reduce((s, i) => s + i.quantity, 0)}</span>
                   <span className="mx-2">·</span>
-                  <span>{new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span>{new Date(order.placedAt || (order as any).createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
               </div>
 

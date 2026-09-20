@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { SiteHeader } from '@/components/shop/SiteHeader';
 import { SiteFooter } from '@/components/shop/SiteFooter';
@@ -56,6 +56,17 @@ export default function Account() {
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   // Profile Settings form states
   const [profileForm, setProfileForm] = useState({
@@ -167,20 +178,34 @@ export default function Account() {
 
     setSendingOtp(true);
     try {
+      // Clear previous verifier instance if exists
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (_) {}
+        recaptchaVerifierRef.current = null;
+      }
 
-      // Initialize invisible recaptcha verifier
+      // Initialize invisible recaptcha verifier bound to submit button
       const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-button', {
         size: 'invisible',
         callback: () => {
           // recaptcha completed
         }
       });
+      recaptchaVerifierRef.current = recaptchaVerifier;
 
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber.trim(), recaptchaVerifier);
       setConfirmationResult(confirmation);
       setShowOtpInput(true);
       toast.success("SMS confirmation code sent successfully!");
     } catch (err: any) {
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (_) {}
+        recaptchaVerifierRef.current = null;
+      }
       toast.error(err.message || "SMS send failed. Confirm number formatting.");
       console.error(err);
     } finally {
@@ -258,8 +283,6 @@ export default function Account() {
         <SiteHeader />
         
         <section className="max-w-md mx-auto px-6 py-16 flex-1 w-full flex flex-col justify-center">
-          {/* Invisible anchor for invisible recaptcha */}
-          <div id="recaptcha-button"></div>
 
           <div className="bg-card border border-border shadow-luxe rounded p-6 sm:p-8 space-y-6 noise-overlay relative">
             <button
@@ -383,6 +406,7 @@ export default function Account() {
                     </div>
 
                     <button
+                      id="recaptcha-button"
                       type="submit"
                       disabled={sendingOtp}
                       className="w-full bg-gradient-oxblood text-primary-foreground py-3 rounded-full hover:shadow-soft transition text-xs uppercase tracking-widest font-semibold flex items-center justify-center gap-1 disabled:opacity-60"

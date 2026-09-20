@@ -96,11 +96,11 @@ export function SiteFooter() {
           <h4 className="font-display text-sm uppercase tracking-[0.25em] font-bold mb-4 text-oxblood-deep">Services & Trade</h4>
           <ul className="space-y-2.5 text-xs text-muted-foreground font-medium">
             <li><Link to="/about" className="hover:text-oxblood transition">The Antwerp Craft & Metallurgy</Link></li>
-            <li><Link to="/about" className="hover:text-oxblood transition">Architectural Trade Program</Link></li>
-            <li><Link to="/customize" className="hover:text-oxblood transition">Bespoke Commissions & Proofing</Link></li>
+            <li><Link to="/about#b2b" className="hover:text-oxblood transition font-semibold text-foreground flex items-center gap-1.5"><span>B2B Bulk Corporate Supply</span><span className="text-[9px] font-mono text-brass font-bold">BULK</span></Link></li>
+            <li><Link to="/about#b2b" className="hover:text-oxblood transition">Architectural Trade Program</Link></li>
+            <li><Link to="/customize" className="hover:text-oxblood transition">Bespoke Commissions & CAM Proofing</Link></li>
             <li><Link to="/notebook" className="hover:text-oxblood transition">Atelier Journal & Exhibition Notes</Link></li>
             <li><Link to="/account" className="hover:text-oxblood transition">Client Order Verification</Link></li>
-            <li><Link to="/about" className="hover:text-oxblood transition">Care & Patina Maintenance Guide</Link></li>
           </ul>
         </div>
 

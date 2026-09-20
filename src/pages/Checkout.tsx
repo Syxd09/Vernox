@@ -43,57 +43,39 @@ export default function Checkout() {
   // Multiple Payment Methods state
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'razorpay'>('card');
   
-  // Card Inputs
-  const [card, setCard] = useState({ number: '', expiry: '', cvv: '', cardholder: '' });
-  
   // UPI Inputs
   const [upiId, setUpiId] = useState('');
-  const [showUpiModal, setShowUpiModal] = useState(false);
-  const [upiCountdown, setUpiCountdown] = useState(5);
 
-  // Dynamic Razorpay script loading
+  // Razorpay script verification / dynamic loading
   useEffect(() => {
+    if (typeof (window as any).Razorpay !== 'undefined') return;
+    if (document.querySelector('script[src*="checkout.razorpay.com"]')) return;
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
     document.body.appendChild(script);
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
   }, []);
-
-  // UPI auto-redirect timer simulation
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (showUpiModal && upiCountdown > 0) {
-      timer = setTimeout(() => {
-        setUpiCountdown(prev => prev - 1);
-      }, 1000);
-    } else if (showUpiModal && upiCountdown === 0) {
-      handleCompleteUpiOrder();
-    }
-    return () => clearTimeout(timer);
-  }, [showUpiModal, upiCountdown]);
 
   const getCurrencyCode = (symbol: string) => {
     switch (symbol) {
-      case '$': return 'USD';
+      case '₹': return 'INR';
       case '€': return 'EUR';
       case '£': return 'GBP';
       case '¥': return 'JPY';
-      case '₹': return 'INR';
-      default: return 'USD';
+      case '$': return 'INR';
+      default: return 'INR';
     }
   };
 
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() => crypto.randomUUID());
+
   const triggerRazorpayCheckout = async (preferredMethod?: 'card' | 'upi' | 'netbanking') => {
+    if (placing) return;
     const currencyCode = getCurrencyCode(storeConfig.currency);
     setPlacing(true);
     try {
-      // 1. Authoritative Server Order Creation (pricing recalculated on server)
-      const res = await fetch('/api/create-order', {
+      // 1. Authoritative Server Order Intent Creation with Inventory Reservation & Idempotency Key
+      const res = await fetch('/api/checkout-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,13 +90,21 @@ export default function Checkout() {
             customDesignRef: item.customDesignRef
           })),
           currency: currencyCode,
-          receipt: `receipt_order_${Date.now()}`
+          idempotencyKey,
+          customer: {
+            email: form.email.trim().toLowerCase(),
+            name: form.name.trim(),
+            address: form.address,
+            city: form.city,
+            zip: form.zip,
+            country: form.country,
+          }
         })
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: 'Failed to create order' }));
-        throw new Error(errData.error || 'Server rejected order creation');
+        const errData = await res.json().catch(() => ({ error: 'Failed to create checkout intent' }));
+        throw new Error(errData.error || 'Server rejected checkout intent');
       }
 
       const orderData = await res.json();
@@ -139,7 +129,7 @@ export default function Checkout() {
         handler: async function (response: any) {
           const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = response;
           try {
-            // 2. Authoritative Cryptographic HMAC Signature Verification
+            // 2. Authoritative Cryptographic HMAC Signature Verification against server order intent
             const verifyRes = await fetch('/api/verify-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -148,10 +138,6 @@ export default function Checkout() {
                 razorpay_order_id,
                 razorpay_signature,
                 orderData: {
-                  id: razorpay_order_id,
-                  items,
-                  total: orderData.pricing?.total || total,
-                  currency: currencyCode,
                   email: form.email,
                   shippingName: form.name,
                   shippingAddress: form.address,
@@ -201,6 +187,8 @@ export default function Checkout() {
           ondismiss: function () {
             toast.error('Payment window closed.');
             setPlacing(false);
+            // Cycle idempotency key so that next intent attempt is fresh
+            setIdempotencyKey(crypto.randomUUID());
           }
         }
       };
@@ -209,6 +197,7 @@ export default function Checkout() {
       rzp.on('payment.failed', function (response: any) {
         toast.error(response.error?.description || 'Payment failed.');
         setPlacing(false);
+        setIdempotencyKey(crypto.randomUUID());
       });
       rzp.open();
     } catch (err: any) {
@@ -298,44 +287,16 @@ export default function Checkout() {
               {paymentMethod === 'card' && (
                 <div className="space-y-3 animate-fade-in">
                   <div className="text-xs font-semibold text-oxblood uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                    <CreditCard className="w-4 h-4" /> Card Billing Credentials
+                    <CreditCard className="w-4 h-4" /> Credit / Debit Card Gateway
                   </div>
-                  <input 
-                    required 
-                    type="text" 
-                    placeholder="Cardholder Name" 
-                    value={card.cardholder}
-                    onChange={e => setCard({ ...card, cardholder: e.target.value })}
-                    className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood" 
-                  />
-                  <input 
-                    required 
-                    type="text" 
-                    placeholder="Card Number (16-digits)" 
-                    maxLength={19}
-                    value={card.number}
-                    onChange={e => setCard({ ...card, number: e.target.value.replace(/\s?/g, '').replace(/(\d{4})/g, '$1 ').trim() })}
-                    className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono" 
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input 
-                      required 
-                      type="text" 
-                      placeholder="MM / YY" 
-                      maxLength={5}
-                      value={card.expiry}
-                      onChange={e => setCard({ ...card, expiry: e.target.value })}
-                      className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono" 
-                    />
-                    <input 
-                      required 
-                      type="password" 
-                      placeholder="CVV" 
-                      maxLength={3}
-                      value={card.cvv}
-                      onChange={e => setCard({ ...card, cvv: e.target.value })}
-                      className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono" 
-                    />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Pay securely with Visa, MasterCard, RuPay, Maestro & Amex. Upon clicking below, the encrypted Razorpay payment modal will handle 3D-Secure 2-factor OTP authorization.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="px-2.5 py-1 bg-muted/60 border border-border/80 rounded text-[10px] font-mono font-semibold">Visa</span>
+                    <span className="px-2.5 py-1 bg-muted/60 border border-border/80 rounded text-[10px] font-mono font-semibold">MasterCard</span>
+                    <span className="px-2.5 py-1 bg-muted/60 border border-border/80 rounded text-[10px] font-mono font-semibold">RuPay</span>
+                    <span className="px-2.5 py-1 bg-muted/60 border border-border/80 rounded text-[10px] font-mono font-semibold">Amex</span>
                   </div>
                 </div>
               )}
@@ -409,72 +370,7 @@ export default function Checkout() {
         </aside>
       </section>
 
-      {/* DYNAMIC UPI QR SCANNER SIMULATION MODAL */}
-      {showUpiModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border shadow-luxe max-w-sm w-full rounded p-6 text-center space-y-6 relative noise-overlay">
-            <button 
-              onClick={() => {
-                setShowUpiModal(false);
-                setPlacing(false);
-              }}
-              className="absolute top-3 right-3 p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
-            <div className="space-y-2">
-              <span className="text-xs uppercase tracking-widest text-brass font-bold flex items-center justify-center gap-1">
-                <Smartphone className="w-4 h-4" /> UPI Gateway Simulator
-              </span>
-              <h3 className="font-display text-2xl text-oxblood-deep font-semibold">Scan QR Code</h3>
-              <p className="text-xs text-muted-foreground">
-                Scan the dynamic QR code below using your BHIM, GPay, PhonePe, or Paytm mobile app to complete the transaction.
-              </p>
-            </div>
-
-            {/* Visual QR Code Box */}
-            <div className="w-48 h-48 mx-auto border-2 border-oxblood p-3 bg-white rounded-md shadow-soft flex items-center justify-center relative group">
-              <div className="grid grid-cols-5 grid-rows-5 gap-1.5 w-full h-full opacity-90">
-                {[...Array(25)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`rounded-sm ${(i * 7 + 13) % 3 === 0 || i === 0 || i === 4 || i === 20 || i === 24 ? 'bg-oxblood-deep' : 'bg-transparent'}`} 
-                  />
-                ))}
-              </div>
-              <div className="absolute inset-0 bg-oxblood/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
-                <span className="text-[10px] bg-oxblood text-ivory px-2 py-1 rounded shadow uppercase tracking-wider font-semibold">Simulating Code</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-muted/40 p-4 rounded text-xs">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Paying to</span><span className="font-semibold text-foreground">{storeConfig.storeName}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>VPA ID</span><span className="font-mono text-foreground font-semibold">{upiId}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Amount</span><span className="font-mono text-oxblood-deep font-bold text-sm">{storeConfig.currency}{total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <div className="text-xs text-muted-foreground flex items-center justify-center gap-1.5 animate-pulse text-brass font-bold">
-                <Smartphone className="w-3.5 h-3.5" /> Waiting for mobile approval ({upiCountdown}s)...
-              </div>
-              
-              <button
-                onClick={handleCompleteUpiOrder}
-                className="w-full bg-gradient-oxblood text-primary-foreground py-2.5 rounded-full hover:shadow-soft text-xs uppercase tracking-widest font-semibold"
-              >
-                Bypass Delay & Approve Now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <SiteFooter />
     </div>

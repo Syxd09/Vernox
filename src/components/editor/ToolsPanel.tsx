@@ -121,9 +121,10 @@ export function ToolsPanel() {
       description: "Running Otsu binarization and Bezier curve fitting...",
     });
 
+    let objectUrl = '';
     try {
       const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
+      objectUrl = URL.createObjectURL(file);
       img.src = objectUrl;
 
       await new Promise((resolve, reject) => {
@@ -178,7 +179,6 @@ export function ToolsPanel() {
         title: "Vector Toolpath Generated",
         description: `Extracted ${result.contours.length} contours. Ready for laser cut.`,
       });
-      URL.revokeObjectURL(objectUrl);
     } catch (err: any) {
       console.error("Vector trace error:", err);
       toast({
@@ -187,6 +187,11 @@ export function ToolsPanel() {
         variant: "destructive",
       });
     } finally {
+      if (objectUrl) {
+        try {
+          URL.revokeObjectURL(objectUrl);
+        } catch (_) {}
+      }
       setIsTracing(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }

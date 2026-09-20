@@ -12,11 +12,16 @@ export default function Shop() {
   const { products, categories, storeConfig } = useCatalog();
   const { category } = useParams<{ category?: string }>();
   
+  const maxCatalogPrice = useMemo(() => {
+    const highest = Math.max(...products.map(p => p.price), 300);
+    return Math.ceil(highest / 50) * 50;
+  }, [products]);
+
   // Filtering & Sorting States
   const [sort, setSort] = useState<'featured' | 'price-asc' | 'price-desc' | 'bestsellers' | 'new'>('featured');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [maxPrice, setMaxPrice] = useState(300);
+  const [maxPrice, setMaxPrice] = useState(maxCatalogPrice);
   const [selectedFinishes, setSelectedFinishes] = useState<string[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -41,7 +46,7 @@ export default function Shop() {
 
   const clearFilters = () => {
     setSearch('');
-    setMaxPrice(300);
+    setMaxPrice(maxCatalogPrice);
     setSelectedFinishes([]);
   };
 
@@ -146,7 +151,7 @@ export default function Shop() {
             <input
               type="range"
               min={50}
-              max={300}
+              max={maxCatalogPrice}
               step={10}
               value={maxPrice}
               onChange={e => setMaxPrice(Number(e.target.value))}
@@ -154,7 +159,7 @@ export default function Shop() {
             />
             <div className="flex justify-between text-[8px] text-muted-foreground font-mono">
               <span>{storeConfig.currency}50</span>
-              <span>{storeConfig.currency}300</span>
+              <span>{storeConfig.currency}{maxCatalogPrice}</span>
             </div>
           </div>
 
@@ -186,14 +191,14 @@ export default function Shop() {
           {/* Top Control Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/40 pb-4">
             
-            {/* Category Links */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Link to="/shop" className={cn('px-4 py-2 rounded-sm border text-[10px] uppercase tracking-widest transition-colors font-semibold',
+            {/* Category Links with Mobile Horizontal Scroll */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-6 px-6 sm:mx-0 sm:px-0 sm:flex-wrap w-full sm:w-auto">
+              <Link to="/shop" className={cn('px-4 py-2 rounded-sm border text-[10px] uppercase tracking-widest transition-colors font-semibold shrink-0 whitespace-nowrap',
                 !category ? 'bg-oxblood text-ivory border-oxblood shadow-soft' : 'border-border/80 bg-card text-muted-foreground hover:border-oxblood/50 hover:text-foreground')}>
                 All Artworks
               </Link>
               {categories.map(c => (
-                <Link key={c.id} to={`/shop/${c.id}`} className={cn('px-4 py-2 rounded-sm border text-[10px] uppercase tracking-widest transition-colors font-semibold',
+                <Link key={c.id} to={`/shop/${c.id}`} className={cn('px-4 py-2 rounded-sm border text-[10px] uppercase tracking-widest transition-colors font-semibold shrink-0 whitespace-nowrap',
                   category === c.id ? 'bg-oxblood text-ivory border-oxblood shadow-soft' : 'border-border/80 bg-card text-muted-foreground hover:border-oxblood/50 hover:text-foreground')}>
                   {c.name}
                 </Link>
@@ -293,7 +298,7 @@ export default function Shop() {
                 <input
                   type="range"
                   min={50}
-                  max={300}
+                  max={maxCatalogPrice}
                   step={10}
                   value={maxPrice}
                   onChange={e => setMaxPrice(Number(e.target.value))}

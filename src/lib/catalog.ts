@@ -13,6 +13,8 @@ export interface Product {
   shapeId: string; // references shapeDefinitions
   finishes: Array<'steel' | 'brass' | 'copper' | 'gold' | 'corten' | 'stainless'>;
   sizes: Array<{ label: string; widthMm: number; heightMm: number; priceDelta: number }>;
+  stock: number;
+  trackInventory?: boolean;
   featured?: boolean;
   bestseller?: boolean;
   isNew?: boolean;
@@ -40,6 +42,7 @@ export const products: Product[] = [
     shapeId: pickShape('circle'), finishes: ['brass', 'gold', 'copper'],
     imageUrl: '/images/installation-round.jpg',
     alloySpec: 'Solid 3.0mm Belgian CZ108 Brass · Hand-Grained',
+    stock: 14, trackInventory: true,
     sizes: [
       { label: 'Small · 30cm', widthMm: 300, heightMm: 300, priceDelta: 0 },
       { label: 'Medium · 50cm', widthMm: 500, heightMm: 500, priceDelta: 80 },
@@ -54,6 +57,7 @@ export const products: Product[] = [
     shapeId: pickShape('square'), finishes: ['steel', 'stainless', 'corten'],
     imageUrl: '/images/installation-corten.jpg',
     alloySpec: '3.0mm Structural Steel & Weathered Corten Patina',
+    stock: 8, trackInventory: true,
     sizes: [
       { label: 'Small · 30cm', widthMm: 300, heightMm: 300, priceDelta: 0 },
       { label: 'Medium · 50cm', widthMm: 500, heightMm: 500, priceDelta: 60 },
@@ -67,6 +71,7 @@ export const products: Product[] = [
     shapeId: pickShape('star'), finishes: ['gold', 'brass', 'copper'],
     imageUrl: '/images/hero-penthouse-brass.jpg',
     alloySpec: 'Solid 3.0mm Belgian Brass · 24K Gilded Relief',
+    stock: 19, trackInventory: true,
     sizes: [
       { label: 'Small · 25cm', widthMm: 250, heightMm: 250, priceDelta: 0 },
       { label: 'Medium · 40cm', widthMm: 400, heightMm: 400, priceDelta: 50 },
@@ -78,6 +83,7 @@ export const products: Product[] = [
     id: 'p-04', slug: 'monarch-heart', name: 'Monarch Heart',
     tagline: 'Anniversary keepsake', category: 'monograms', price: 99,
     shapeId: pickShape('heart'), finishes: ['copper', 'brass', 'gold'],
+    stock: 25, trackInventory: true,
     sizes: [
       { label: 'Small · 20cm', widthMm: 200, heightMm: 200, priceDelta: 0 },
       { label: 'Medium · 35cm', widthMm: 350, heightMm: 350, priceDelta: 40 },
@@ -89,6 +95,7 @@ export const products: Product[] = [
     id: 'p-05', slug: 'apollo-hex', name: 'Apollo Hexagon',
     tagline: 'Hex tile modular art', category: 'geometric', price: 79,
     shapeId: pickShape('hexagon'), finishes: ['brass', 'copper', 'steel'],
+    stock: 32, trackInventory: true,
     sizes: [
       { label: 'Single · 20cm', widthMm: 200, heightMm: 200, priceDelta: 0 },
       { label: 'Trio · 20cm × 3', widthMm: 600, heightMm: 200, priceDelta: 140 },
@@ -102,6 +109,7 @@ export const products: Product[] = [
     shapeId: pickShape('starburst'), finishes: ['stainless', 'gold', 'steel'],
     imageUrl: '/images/hero-penthouse-brass.jpg',
     alloySpec: 'Marine-Grade 304 Stainless & Warm Gold Accent',
+    stock: 12, trackInventory: true,
     sizes: [
       { label: 'Medium · 45cm', widthMm: 450, heightMm: 450, priceDelta: 0 },
       { label: 'Large · 70cm', widthMm: 700, heightMm: 700, priceDelta: 160 },
@@ -114,6 +122,7 @@ export const products: Product[] = [
     tagline: 'Botanical cutout', category: 'nature', price: 119,
     shapeId: pickShape('leaf'), finishes: ['corten', 'brass', 'copper'],
     alloySpec: 'Weathering Corten Steel · Architectural Rust Patina',
+    stock: 15, trackInventory: true,
     sizes: [
       { label: 'Medium · 40cm', widthMm: 400, heightMm: 500, priceDelta: 0 },
       { label: 'Large · 60cm', widthMm: 600, heightMm: 750, priceDelta: 90 },
@@ -127,6 +136,7 @@ export const products: Product[] = [
     shapeId: pickShape('wave'), finishes: ['stainless', 'brass', 'steel'],
     imageUrl: '/images/installation-round.jpg',
     alloySpec: 'Triple Layer 3.0mm Stainless & Polished Brass',
+    stock: 9, trackInventory: true,
     sizes: [
       { label: 'Medium · 60cm', widthMm: 600, heightMm: 400, priceDelta: 0 },
       { label: 'Large · 90cm', widthMm: 900, heightMm: 600, priceDelta: 210 },
@@ -139,6 +149,7 @@ export const products: Product[] = [
     tagline: 'Eight-sided display', category: 'frames', price: 199,
     shapeId: pickShape('octagon'), finishes: ['gold', 'brass', 'stainless'],
     alloySpec: 'Solid 3.0mm Belgian Brass · Mitred Bevel',
+    stock: 11, trackInventory: true,
     sizes: [
       { label: 'Medium · 45cm', widthMm: 450, heightMm: 450, priceDelta: 0 },
       { label: 'Large · 70cm', widthMm: 700, heightMm: 700, priceDelta: 180 },
@@ -152,6 +163,7 @@ export const products: Product[] = [
     shapeId: pickShape('shield'), finishes: ['brass', 'steel', 'gold'],
     imageUrl: '/images/artisan-workshop.jpg',
     alloySpec: 'Solid 3.0mm Hand-Forged Steel · Atelier Hallmark Stamped',
+    stock: 7, trackInventory: true,
     sizes: [
       { label: 'Medium · 40cm', widthMm: 400, heightMm: 500, priceDelta: 0 },
       { label: 'Large · 60cm', widthMm: 600, heightMm: 750, priceDelta: 140 },
@@ -163,6 +175,7 @@ export const products: Product[] = [
     id: 'p-11', slug: 'triad-triangle', name: 'Triad',
     tagline: 'Three points, one statement', category: 'geometric', price: 89,
     shapeId: pickShape('triangle'), finishes: ['copper', 'gold', 'steel'],
+    stock: 18, trackInventory: true,
     sizes: [
       { label: 'Small · 30cm', widthMm: 300, heightMm: 300, priceDelta: 0 },
       { label: 'Medium · 50cm', widthMm: 500, heightMm: 500, priceDelta: 60 },
@@ -174,6 +187,7 @@ export const products: Product[] = [
     id: 'p-12', slug: 'pentacle-frame', name: 'Pentacle Frame',
     tagline: 'Pentagon display', category: 'frames', price: 139,
     shapeId: pickShape('pentagon'), finishes: ['brass', 'stainless', 'gold'],
+    stock: 14, trackInventory: true,
     sizes: [
       { label: 'Medium · 40cm', widthMm: 400, heightMm: 400, priceDelta: 0 },
     ],

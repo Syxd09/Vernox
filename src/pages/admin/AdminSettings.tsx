@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { useCatalog } from '@/lib/catalogContext';
+import { useCatalog, hashPassphrase } from '@/lib/catalogContext';
 import { Download, Upload, Clipboard, ShieldAlert, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,14 +29,18 @@ export function AdminSettings() {
 
   const handleConfigSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateStoreConfig({
+    const updates: any = {
       storeName: configForm.storeName,
       currency: configForm.currency,
       taxRate: Number(configForm.taxRate),
       freeShippingThreshold: Number(configForm.freeShippingThreshold),
       shippingFee: Number(configForm.shippingFee),
-      adminPassphrase: configForm.newPassphrase || undefined
-    });
+    };
+    if (configForm.newPassphrase && configForm.newPassphrase.trim()) {
+      updates.adminPassphraseHash = hashPassphrase(configForm.newPassphrase.trim());
+    }
+    updateStoreConfig(updates);
+    setConfigForm(prev => ({ ...prev, newPassphrase: '' }));
     toast.success('Store configurations saved');
   };
 
@@ -123,11 +127,11 @@ export function AdminSettings() {
               onChange={e => setConfigForm({ ...configForm, currency: e.target.value })}
               className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood"
             >
+              <option value="₹">₹ (INR - Rupee)</option>
               <option value="$">$ (USD)</option>
               <option value="€">€ (EUR)</option>
               <option value="£">£ (GBP)</option>
               <option value="¥">¥ (JPY)</option>
-              <option value="₹">₹ (INR)</option>
             </select>
           </div>
 

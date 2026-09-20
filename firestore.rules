@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Admin Verification Helper
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email in ['admin@vernox.com', 'concierge@vernoxatelier.com'] ||
+        request.auth.token.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    // Authenticated user helper
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // 1. Products Catalog: Publicly readable; Admin editable
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. Categories: Publicly readable; Admin editable
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 3. Educational Topics / Journal: Public read; Admin write
+    match /topics/{topicId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 4. Store Configuration & Homepage Settings: Public read; Admin write
+    match /config/{configDoc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/{settingDoc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 5. Customer Profiles: Users can read/write their own; Admins can read all
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // 6. Customer Wishlists: Strictly isolated to owner
+    match /wishlists/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // 7. Reviews: Public read; verified authenticated creation; Admin delete
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    // 8. Orders: Customer can read only their own orders by email matching; Admin full access
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (
+        request.auth != null && 
+        (resource.data.email == request.auth.token.email || resource.data.userId == request.auth.uid)
+      );
+      // Order creation & updates are governed by serverless endpoints (checkout-intent & verify-payment)
+      // or authenticated matching customer for client fallback
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // 9. B2B Inquiries: Public submission allowed; Admin read/manage
+    match /b2b_inquiries/{inquiryId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

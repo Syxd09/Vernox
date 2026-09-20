@@ -61,10 +61,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const add: CartCtx['add'] = (item) => {
-    setItems(prev => [
-      ...prev,
-      { ...item, id: crypto.randomUUID(), quantity: item.quantity ?? 1 },
-    ]);
+    setItems(prev => {
+      // If it is a standard non-custom item, coalesce matching attributes
+      if (!item.customDesignThumb && !item.customDesignRef) {
+        const existingIndex = prev.findIndex(
+          i => i.productId === item.productId &&
+               i.shapeId === item.shapeId &&
+               i.sizeLabel === item.sizeLabel &&
+               i.finish === item.finish &&
+               !i.customDesignRef &&
+               !i.customDesignThumb
+        );
+        if (existingIndex > -1) {
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            quantity: updated[existingIndex].quantity + (item.quantity ?? 1)
+          };
+          return updated;
+        }
+      }
+      return [
+        ...prev,
+        { ...item, id: crypto.randomUUID(), quantity: item.quantity ?? 1 },
+      ];
+    });
     setDrawerOpen(true); // Auto open cart drawer when item is added!
   };
   

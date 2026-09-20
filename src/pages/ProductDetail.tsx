@@ -105,7 +105,7 @@ export default function ProductDetail() {
       <section className="max-w-7xl mx-auto px-6 pb-20 grid lg:grid-cols-[1.15fr_1fr] gap-12 flex-1 w-full">
         {/* LEFT: preview canvas with tabs */}
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-1.5 p-1 bg-card border border-border/80 rounded-sm w-fit">
+          <div className="flex items-center gap-1.5 p-1 bg-card border border-border/80 rounded-sm w-full sm:w-fit overflow-x-auto no-scrollbar py-1">
             {([
               ...(product.imageUrl ? [{ id: 'photo', label: 'Architectural Photo' }] : []),
               { id: 'preview', label: 'Interactive Vector' },
@@ -113,7 +113,7 @@ export default function ProductDetail() {
               { id: 'story', label: 'Atelier Making' },
             ] as { id: Tab; label: string }[]).map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={cn('px-4 py-2 text-[10px] uppercase tracking-wider font-semibold rounded-sm transition',
+                className={cn('px-3.5 sm:px-4 py-2 text-[10px] uppercase tracking-wider font-semibold rounded-sm transition shrink-0 whitespace-nowrap',
                   tab === t.id ? 'bg-oxblood text-ivory shadow-soft' : 'text-muted-foreground hover:text-foreground')}>
                 {t.label}
               </button>
@@ -181,9 +181,9 @@ export default function ProductDetail() {
           )}
           <div className="flex items-baseline gap-3 mb-4">
             <span className="font-display text-4xl text-oxblood-deep">
-              <span className="font-sans font-medium text-3xl mr-0.5">{storeConfig.currency}</span>{unitPrice}
+              <span className="font-sans font-medium text-3xl mr-0.5">{(storeConfig.currency && storeConfig.currency !== '$') ? storeConfig.currency : '₹'}</span>{unitPrice.toLocaleString()}
             </span>
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{storeConfig.currency === '₹' ? 'INR' : 'USD'} · Bespoke Edition</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{storeConfig.currency === '$' || storeConfig.currency === '₹' ? 'INR' : storeConfig.currency} · Bespoke Edition</span>
           </div>
 
           {product.alloySpec && (
@@ -240,7 +240,7 @@ export default function ProductDetail() {
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={handleAdd}
               className="flex-1 inline-flex items-center justify-center gap-2.5 bg-oxblood text-ivory font-semibold text-xs uppercase tracking-widest px-7 py-4 rounded-sm hover:bg-oxblood-deep hover:shadow-luxe transition shadow-sm">
-              <ShoppingBag className="w-4 h-4" /> Add to Order · {storeConfig.currency}{unitPrice * qty}
+              <ShoppingBag className="w-4 h-4" /> Add to Order · {(storeConfig.currency && storeConfig.currency !== '$') ? storeConfig.currency : '₹'}{(unitPrice * qty).toLocaleString()}
             </button>
             {product.customizable && (
               <button onClick={() => setStudioOpen(true)}
@@ -281,6 +281,30 @@ export default function ProductDetail() {
           </div>
         </motion.div>
       </section>
+
+      {/* STICKY MOBILE BUY BAR */}
+      <div className="fixed bottom-[50px] left-0 right-0 z-30 md:hidden bg-background/95 backdrop-blur-xl border-t border-border/80 px-4 py-2.5 shadow-[0_-6px_20px_rgba(0,0,0,0.12)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-oxblood truncate">
+              {product.name}
+            </div>
+            <div className="text-xs font-mono font-bold text-foreground">
+              {(storeConfig.currency && storeConfig.currency !== '$') ? storeConfig.currency : '₹'}{(unitPrice * qty).toLocaleString()}
+              <span className="text-[9px] font-sans text-muted-foreground font-normal ml-1">· {size.label}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleAdd}
+              className="inline-flex items-center gap-1.5 bg-oxblood hover:bg-oxblood-deep text-ivory text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-sm shadow-sm active:scale-95 transition"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>Add to Order</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <InlineStudio
         open={studioOpen}

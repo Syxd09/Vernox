@@ -12,7 +12,8 @@ export function CartDrawer() {
   const navigate = useNavigate();
 
   const shipping = subtotal > storeConfig.freeShippingThreshold || subtotal === 0 ? 0 : storeConfig.shippingFee;
-  const total = subtotal + shipping;
+  const tax = subtotal * (storeConfig.taxRate / 100);
+  const total = subtotal + shipping + tax;
 
   const handleCheckoutClick = () => {
     setDrawerOpen(false);
@@ -107,17 +108,19 @@ export function CartDrawer() {
                           <button 
                             type="button" 
                             onClick={() => updateQty(item.id, item.quantity - 1)}
-                            className="px-2 py-1 hover:bg-muted text-muted-foreground hover:text-foreground"
+                            className="w-8 h-8 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground active:bg-muted/80 transition"
+                            aria-label="Decrease quantity"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="px-2.5 font-mono text-foreground font-semibold">{item.quantity}</span>
+                          <span className="px-3 font-mono text-foreground font-semibold text-xs">{item.quantity}</span>
                           <button 
                             type="button" 
                             onClick={() => updateQty(item.id, item.quantity + 1)}
-                            className="px-2 py-1 hover:bg-muted text-muted-foreground hover:text-foreground"
+                            className="w-8 h-8 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground active:bg-muted/80 transition"
+                            aria-label="Increase quantity"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
@@ -126,10 +129,11 @@ export function CartDrawer() {
                             remove(item.id);
                             toast.info(`Removed ${item.productName}`);
                           }}
-                          className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-muted transition"
+                          className="text-muted-foreground hover:text-destructive p-2 rounded hover:bg-muted transition"
                           title="Remove item"
+                          aria-label="Remove item"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -145,7 +149,7 @@ export function CartDrawer() {
 
             {/* DRAWER FOOTER (CHECKOUT & TOTALS) */}
             {items.length > 0 && (
-              <div className="p-6 border-t border-border bg-background-warm/30 space-y-4">
+              <div className="p-5 sm:p-6 border-t border-border bg-background-warm/30 space-y-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)]">
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
@@ -154,6 +158,10 @@ export function CartDrawer() {
                   <div className="flex justify-between text-muted-foreground">
                     <span>Shipping</span>
                     <span className="font-mono">{shipping === 0 ? 'Free' : `${storeConfig.currency}${shipping.toFixed(2)}`}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Estimated Tax ({storeConfig.taxRate}%)</span>
+                    <span className="font-mono">{storeConfig.currency}{tax.toFixed(2)}</span>
                   </div>
                   
                   {shipping > 0 && (

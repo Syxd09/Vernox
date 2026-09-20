@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { items, currency = 'USD', receipt, amount } = req.body || {};
+  const { items, currency = 'INR', receipt, amount } = req.body || {};
 
   let orderAmount: number = 0;
   let pricing: any = null;

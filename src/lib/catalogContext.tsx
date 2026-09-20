@@ -302,13 +302,14 @@ const DEFAULT_HOMEPAGE_SETTINGS: HomepageSettings = {
     featured: true,
     installations: true,
     story: true,
+    'b2b-trade': true,
     authenticity: true,
     metallurgy: true,
     bestsellers: true,
     topics: true,
     'studio-cta': true
   },
-  sectionsOrder: ['hero', 'manifesto', 'collections', 'featured', 'installations', 'story', 'authenticity', 'metallurgy', 'bestsellers', 'topics', 'studio-cta'],
+  sectionsOrder: ['hero', 'manifesto', 'collections', 'featured', 'installations', 'story', 'b2b-trade', 'authenticity', 'metallurgy', 'bestsellers', 'topics', 'studio-cta'],
   heroShapeId: 'starburst',
   heroFinish: 'brass'
 };
@@ -431,7 +432,17 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {
     try {
       const saved = localStorage.getItem('vernox-store-config');
-      return saved ? JSON.parse(saved) : DEFAULT_STORE_CONFIG;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.currency || parsed.currency === '$' || parsed.currency === 'USD') {
+          parsed.currency = '₹';
+          try {
+            localStorage.setItem('vernox-store-config', JSON.stringify(parsed));
+          } catch {}
+        }
+        return parsed;
+      }
+      return DEFAULT_STORE_CONFIG;
     } catch {
       return DEFAULT_STORE_CONFIG;
     }
@@ -467,8 +478,13 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           if (docSnap.exists()) {
             const data = docSnap.data() as CustomerAccount;
             const email = (user.email || data.email || '').toLowerCase();
-            const isAdminUser = email === (storeConfig?.adminEmail || 'admin@vernox.com').toLowerCase() ||
-                                email.startsWith('admin@') ||
+            const VERIFIED_ADMINS = [
+              'admin@vernox.com',
+              'concierge@vernoxatelier.com',
+              (storeConfig?.adminEmail || '').toLowerCase()
+            ].filter(Boolean);
+
+            const isAdminUser = VERIFIED_ADMINS.includes(email) ||
                                 Boolean(data.role === 'admin') ||
                                 Boolean(data.isAdmin);
 
@@ -482,8 +498,12 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
             });
           } else {
             const email = (user.email || '').toLowerCase();
-            const isAdminUser = email === (storeConfig?.adminEmail || 'admin@vernox.com').toLowerCase() ||
-                                email.startsWith('admin@');
+            const VERIFIED_ADMINS = [
+              'admin@vernox.com',
+              'concierge@vernoxatelier.com',
+              (storeConfig?.adminEmail || '').toLowerCase()
+            ].filter(Boolean);
+            const isAdminUser = VERIFIED_ADMINS.includes(email);
 
             // Write fallback document
             const fallbackProfile: CustomerAccount = {
@@ -500,7 +520,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         } catch (e) {
           console.error("Error loading user profile from Firestore, using offline fallback:", e);
           const email = (user.email || '').toLowerCase();
-          const isAdminUser = email === 'admin@vernox.com' || email.startsWith('admin@');
+          const isAdminUser = email === 'admin@vernox.com' || email === 'concierge@vernoxatelier.com';
           const fallbackProfile: CustomerAccount = {
             email: user.email || '',
             phone: user.phoneNumber || '',
@@ -853,7 +873,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       currentCustomer.role === 'admin' ||
       currentCustomer.isAdmin === true ||
       currentCustomer.email.toLowerCase() === (storeConfig.adminEmail || 'admin@vernox.com').toLowerCase() ||
-      currentCustomer.email.toLowerCase().startsWith('admin@')
+      currentCustomer.email.toLowerCase() === 'concierge@vernoxatelier.com'
     )
   );
 
@@ -1043,7 +1063,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       homepageSettings,
       orders,
       topics,
-      storeConfig,
+      storeConfig: {
+        ...storeConfig,
+        currency: (!storeConfig.currency || storeConfig.currency === '$') ? '₹' : storeConfig.currency
+      },
       reviews,
       wishlist,
       addProduct,

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import createOrderHandler from "./api/create-order";
+import checkoutIntentHandler from "./api/checkout-intent";
 import verifyPaymentHandler from "./api/verify-payment";
 
 function apiMiddlewarePlugin(env: Record<string, string>): Plugin {
@@ -50,7 +51,9 @@ function apiMiddlewarePlugin(env: Record<string, string>): Plugin {
           });
 
           try {
-            if (url === "/api/create-order") {
+            if (url === "/api/checkout-intent") {
+              await checkoutIntentHandler(vercelReq as any, vercelRes as any);
+            } else if (url === "/api/create-order") {
               await createOrderHandler(vercelReq as any, vercelRes as any);
             } else if (url === "/api/verify-payment") {
               await verifyPaymentHandler(vercelReq as any, vercelRes as any);

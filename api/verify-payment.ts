@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { db } from '../src/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -14,9 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     razorpay_payment_id, 
     razorpay_signature,
     orderData 
-  } = req.body;
+  } = req.body || {};
 
-  // 1. Validate required signature fields
+  // 1. Validate required signature verification fields
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
     return res.status(400).json({ 
       error: 'Missing required validation fields (razorpay_order_id, razorpay_payment_id, razorpay_signature)' 
@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 2. Cryptographic HMAC-SHA256 verification
+    // 2. Cryptographic HMAC-SHA256 signature verification
     const expectedSignature = crypto
       .createHmac('sha256', keySecret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -42,42 +42,88 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 3. Atomically persist verified order into Cloud Firestore
-    const orderId = orderData?.id || `VX-${Date.now().toString(36).toUpperCase()}`;
-    const orderRecord = {
-      id: orderId,
-      orderNumber: `VX-${new Date().getFullYear()}-${orderId.slice(-6).toUpperCase()}`,
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id,
-      status: 'Paid',
-      paymentGateway: 'razorpay',
-      total: orderData?.total || 0,
-      currency: orderData?.currency || 'USD',
-      items: orderData?.items || [],
-      email: orderData?.email || '',
-      shippingName: orderData?.shippingName || '',
-      shippingAddress: orderData?.shippingAddress || '',
-      shippingCity: orderData?.shippingCity || '',
-      shippingZip: orderData?.shippingZip || '',
-      shippingCountry: orderData?.shippingCountry || '',
-      placedAt: Date.now(),
-      createdAt: new Date().toISOString(),
-    };
+    // 3. Retrieve Server-Authoritative Order Record from Firestore
+    const orderRef = doc(db, 'orders', razorpay_order_id);
+    const orderSnap = await getDoc(orderRef);
 
-    try {
-      await setDoc(doc(db, 'orders', orderId), orderRecord);
-    } catch (fsErr) {
-      console.warn('Firestore write warning in verify-payment:', fsErr);
+    if (orderSnap.exists()) {
+      const existingOrder = orderSnap.data();
+
+      // Idempotency: If this payment or webhook was already processed, return success without duplicate side-effects
+      if (existingOrder.status === 'Paid') {
+        return res.status(200).json({
+          success: true,
+          message: 'Payment already verified and order confirmed (idempotent response)',
+          order_id: razorpay_order_id,
+          payment_id: razorpay_payment_id,
+          orderId: razorpay_order_id,
+          orderNumber: existingOrder.orderNumber,
+          isDuplicate: true
+        });
+      }
+
+      // Transition order status to 'Paid' using authoritative server pricing
+      const updates: Record<string, any> = {
+        status: 'Paid',
+        razorpayPaymentId: razorpay_payment_id,
+        paymentSignature: razorpay_signature,
+        verifiedAt: Date.now(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Optional customer shipping updates if not already captured
+      if (orderData?.shippingAddress && !existingOrder.shippingAddress) {
+        updates.shippingAddress = orderData.shippingAddress;
+        updates.shippingCity = orderData.shippingCity || '';
+        updates.shippingZip = orderData.shippingZip || '';
+        updates.shippingCountry = orderData.shippingCountry || '';
+      }
+
+      await updateDoc(orderRef, updates);
+
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Payment verified and order confirmed successfully',
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        orderId: razorpay_order_id,
+        orderNumber: existingOrder.orderNumber || `VX-${new Date().getFullYear()}-${razorpay_order_id.slice(-6).toUpperCase()}`,
+      });
+    } else {
+      // Fallback: order document was not pre-created; create it now with sanitized order data
+      const orderId = razorpay_order_id;
+      const orderNumber = `VX-${new Date().getFullYear()}-${orderId.slice(-6).toUpperCase()}`;
+      const fallbackRecord = {
+        id: orderId,
+        orderNumber,
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        status: 'Paid',
+        paymentGateway: 'razorpay',
+        total: orderData?.total || 0,
+        currency: orderData?.currency || 'INR',
+        items: orderData?.items || [],
+        email: (orderData?.email || '').toLowerCase(),
+        shippingName: orderData?.shippingName || '',
+        shippingAddress: orderData?.shippingAddress || '',
+        shippingCity: orderData?.shippingCity || '',
+        shippingZip: orderData?.shippingZip || '',
+        shippingCountry: orderData?.shippingCountry || '',
+        placedAt: Date.now(),
+        createdAt: new Date().toISOString(),
+      };
+
+      await setDoc(orderRef, fallbackRecord);
+
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Payment verified and order recorded successfully',
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        orderId,
+        orderNumber,
+      });
     }
-
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Payment verified and order recorded successfully',
-      order_id: razorpay_order_id,
-      payment_id: razorpay_payment_id,
-      orderId,
-      orderNumber: orderRecord.orderNumber,
-    });
   } catch (error: any) {
     console.error('Payment Verification Error:', error);
     return res.status(500).json({ error: error.message || 'Payment Verification Failed' });

@@ -34,6 +34,8 @@ export function AdminProducts() {
     shapeId: 'circle',
     finishes: ['steel', 'brass'],
     sizes: [{ label: 'Medium · 40cm', widthMm: 400, heightMm: 400, priceDelta: 0 }],
+    stock: 50,
+    trackInventory: true,
     featured: false,
     bestseller: false,
     isNew: true,
@@ -51,6 +53,8 @@ export function AdminProducts() {
       shapeId: 'circle',
       finishes: ['steel', 'brass', 'copper'],
       sizes: [{ label: 'Medium · 400mm', widthMm: 400, heightMm: 400, priceDelta: 0 }],
+      stock: 50,
+      trackInventory: true,
       featured: false,
       bestseller: false,
       isNew: true,
@@ -72,6 +76,8 @@ export function AdminProducts() {
       shapeId: p.shapeId,
       finishes: p.finishes,
       sizes: p.sizes,
+      stock: p.stock ?? 50,
+      trackInventory: p.trackInventory ?? true,
       featured: p.featured,
       bestseller: p.bestseller,
       isNew: p.isNew,
@@ -180,8 +186,10 @@ export function AdminProducts() {
                           <div className="font-semibold text-oxblood-deep">{p.name}</div>
                           <div className="text-xs text-muted-foreground">{p.tagline} · <span className="font-mono text-[10px]">{p.slug}</span></div>
                         </td>
-                        <td className="px-6 py-4 capitalize">{p.category}</td>
-                        <td className="px-6 py-4 font-semibold">{storeConfig.currency}{p.price}</td>
+                        <td className="px-6 py-4">
+                          <div className="font-semibold">{storeConfig.currency}{p.price}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{p.stock ?? 0} in stock</div>
+                        </td>
                         <td className="px-6 py-4">
                           {p.customizable ? (
                             <span className="text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded text-xs border border-emerald-500/20 font-medium">Yes</span>
@@ -325,6 +333,32 @@ export function AdminProducts() {
                     <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inventory Units in Stock</label>
+                <input 
+                  type="number" 
+                  required
+                  min={0}
+                  value={productForm.stock}
+                  onChange={e => setProductForm({ ...productForm, stock: Math.max(0, parseInt(e.target.value) || 0) })}
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-oxblood font-mono"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input 
+                  type="checkbox"
+                  id="trackInventory"
+                  checked={productForm.trackInventory ?? true}
+                  onChange={e => setProductForm({ ...productForm, trackInventory: e.target.checked })}
+                  className="rounded border-border text-oxblood focus:ring-oxblood h-4 w-4"
+                />
+                <label htmlFor="trackInventory" className="text-xs font-medium text-foreground cursor-pointer select-none">
+                  Enable Transactional Stock Reservation at Checkout
+                </label>
               </div>
             </div>
 
