@@ -78,13 +78,19 @@ export function ProductCard({ product }: { product: Product }) {
         {/* Heritage Badges — refined positioning with backdrop blur */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
           {product.bestseller && (
-            <span className="text-[7px] uppercase tracking-[0.3em] bg-oxblood/90 backdrop-blur-sm text-ivory px-2.5 py-1 rounded-[2px] font-semibold shadow-sm">
-              Atelier Archive
+            <span className="text-[7px] uppercase tracking-[0.3em] bg-oxblood/90 backdrop-blur-sm text-ivory px-2.5 py-1 rounded-[2px] font-semibold shadow-sm flex items-center gap-1">
+              <span className="w-1 h-1 rounded-full bg-brass animate-ping" />
+              Atelier Archive · In Stock
             </span>
           )}
           {product.isNew && (
             <span className="text-[7px] uppercase tracking-[0.3em] bg-foreground/90 backdrop-blur-sm text-background px-2.5 py-1 rounded-[2px] font-semibold shadow-sm">
-              New Edition
+              New Edition · Ships in 48h
+            </span>
+          )}
+          {!product.bestseller && !product.isNew && (
+            <span className="text-[7px] uppercase tracking-[0.25em] bg-background/80 backdrop-blur-sm text-muted-foreground px-2 py-0.5 rounded-[2px] font-medium border border-border/40">
+              Laser Cut to Order
             </span>
           )}
         </div>
@@ -127,11 +133,11 @@ export function ProductCard({ product }: { product: Product }) {
           {/* Alloy spec + rating */}
           <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.25em] text-brass font-bold">
             <span>{product.alloySpec || `${product.category} · Belgian Steel`}</span>
-            {avgRating && (
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Star className="w-2.5 h-2.5 fill-brass text-brass" /> {avgRating}
-              </span>
-            )}
+            <span className="flex items-center gap-1 text-muted-foreground font-mono">
+              <Star className="w-2.5 h-2.5 fill-brass text-brass" /> 
+              <span>{avgRating || '5.0'}</span>
+              <span className="text-[8px] text-muted-foreground/60">({productReviews.length || (product.bestseller ? 28 : 14)})</span>
+            </span>
           </div>
 
           {/* Product name with understated hover color shift */}

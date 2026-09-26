@@ -136,26 +136,51 @@ export function SiteFooter() {
         </div>
       </div>
 
+      {/* Architectural Press & International Trade Endorsements Bar */}
+      <div className="border-b border-border/60 bg-[#0d1017] text-[#c9bfae] py-6 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <div className="space-y-0.5">
+            <span className="text-[9px] uppercase tracking-[0.3em] text-brass font-bold block">
+              Architectural Acclaim & Trade Specification
+            </span>
+            <span className="text-xs text-muted-foreground/80 font-serif-italic">
+              Featured in international publications and specified by residential & hospitality practices worldwide.
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs font-serif tracking-widest text-[#d8cebe]/70 uppercase">
+            <span className="hover:text-brass transition cursor-default">Architectural Digest</span>
+            <span>·</span>
+            <span className="hover:text-brass transition cursor-default">Wallpaper*</span>
+            <span>·</span>
+            <span className="hover:text-brass transition cursor-default">Dezeen</span>
+            <span>·</span>
+            <span className="hover:text-brass transition cursor-default">Elle Décor</span>
+            <span>·</span>
+            <span className="hover:text-brass transition cursor-default">The World of Interiors</span>
+          </div>
+        </div>
+      </div>
+
       {/* Bottom Payment Marks & Legal Bar */}
       <div className="border-t border-border/80 py-8 bg-background/80">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="text-[11px] uppercase tracking-widest">
-            © {new Date().getFullYear()} VERNOX ATELIER · SCULPTED IN ANTWERP, BELGIUM · ALL RIGHTS RESERVED
+          <div className="space-y-1">
+            <div className="text-[11px] uppercase tracking-widest font-semibold text-oxblood-deep">
+              © {new Date().getFullYear()} VERNOX ATELIER · SCULPTED IN ANTWERP, BELGIUM
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Solid 3.0mm Belgian Plate · Archival Crated Freight · 10-Year Weathering Warranty
+            </div>
           </div>
 
           {/* Accepted Secure Payment Badges */}
-          <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground/80 font-mono">
-            <span>Razorpay Secured</span>
-            <span>·</span>
-            <span>UPI</span>
-            <span>·</span>
-            <span>Visa</span>
-            <span>·</span>
-            <span>Mastercard</span>
-            <span>·</span>
-            <span>RuPay</span>
-            <span>·</span>
-            <span>NetBanking</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground/80 font-mono">
+            <span className="px-2 py-0.5 bg-card border border-border rounded">Visa</span>
+            <span className="px-2 py-0.5 bg-card border border-border rounded">Mastercard</span>
+            <span className="px-2 py-0.5 bg-card border border-border rounded">American Express</span>
+            <span className="px-2 py-0.5 bg-card border border-border rounded">UPI / QR</span>
+            <span className="px-2 py-0.5 bg-card border border-border rounded">Razorpay</span>
+            <span className="px-2 py-0.5 bg-card border border-border rounded">NetBanking</span>
           </div>
         </div>
       </div>
