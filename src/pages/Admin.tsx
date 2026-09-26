@@ -16,7 +16,7 @@ import { AdminProducts } from './admin/AdminProducts';
 import { AdminSettings } from './admin/AdminSettings';
 import { 
   LayoutDashboard, ShoppingCart, Package, Settings, 
-  ArrowLeft, Lock, Scissors, RefreshCw 
+  ArrowLeft, Lock, Scissors, RefreshCw, Sparkles 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
