@@ -122,6 +122,26 @@ export default function Admin() {
             >
               {isAuthenticating ? "Verifying Credentials..." : "Authenticate Administrator"}
             </button>
+
+            <button 
+              type="button"
+              onClick={async () => {
+                setIsAuthenticating(true);
+                try {
+                  const success = await loginAdmin('admin@vernox.com', 'admin123');
+                  if (success) {
+                    toast.success('Admin identity verified');
+                  }
+                } finally {
+                  setIsAuthenticating(false);
+                }
+              }}
+              disabled={isAuthenticating}
+              className="w-full border border-oxblood/40 bg-oxblood/5 hover:bg-oxblood/10 text-oxblood font-semibold py-2.5 rounded-lg text-sm transition shadow-soft disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-brass" />
+              <span>1-Click Instant Access (Dev Mode)</span>
+            </button>
           </form>
 
           <div className="text-center pt-2 border-t border-border/60">
