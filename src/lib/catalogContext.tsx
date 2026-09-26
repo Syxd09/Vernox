@@ -64,7 +64,7 @@ export interface HomepageSettings {
   heroFinish?: string;
 }
 
-export type OrderStatus = 'Pending' | 'Designing' | 'Cutting' | 'Finished' | 'Shipped' | 'Delivered';
+export type OrderStatus = 'Pending' | 'Pending_Payment' | 'Paid' | 'Designing' | 'Cutting' | 'Finished' | 'Shipped' | 'Delivered' | 'Cancelled';
 
 export interface OrderItem {
   id: string;
@@ -86,6 +86,7 @@ export interface Order {
   id: string;
   total: number;
   placedAt: number;
+  createdAt?: number | string;
   email: string;
   status: OrderStatus;
   items: OrderItem[];

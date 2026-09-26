@@ -20,7 +20,14 @@ export type MetalFinish =
   | 'black_patina' 
   | 'antique_brass' 
   | 'verdigris' 
-  | 'corten_rust';
+  | 'corten_rust'
+  | 'steel'
+  | 'stainless'
+  | 'brass'
+  | 'copper'
+  | 'gold'
+  | 'corten'
+  | (string & {});
 
 export type CuttingProcessType = 'fiber_laser' | 'co2_laser' | 'waterjet' | 'cnc_router';
 
@@ -61,19 +68,20 @@ export type PathCommand =
   | { op: 'Z' };
 
 export interface BaseFeatureLayer {
-  id: string;
-  name: string;
-  visible: boolean;
-  locked: boolean;
-  transform: AffineTransform2D;
-  camLayer: CAMToolpathLayer;
-  cutSequencePriority: number; // 0 = earliest
+  id?: string;
+  name?: string;
+  visible?: boolean;
+  locked?: boolean;
+  transform?: AffineTransform2D;
+  camLayer?: CAMToolpathLayer;
+  cutSequencePriority?: number; // 0 = earliest
 }
 
 export interface TypographyFeatureLayer extends BaseFeatureLayer {
   type: 'typography';
   rawText: string;
-  fontFamily: string;
+  fontFamily?: string;
+  fontId?: string;
   fontSizeMm: number;
   letterSpacingMm: number;
   isStencilBridged: boolean;
@@ -85,25 +93,28 @@ export interface VectorPathFeatureLayer extends BaseFeatureLayer {
   type: 'vector_path';
   pathData: string;
   isClosed: boolean;
-  boundsMm: BoundingBox2D;
+  boundsMm?: BoundingBox2D;
   tracedFromRaster?: boolean;
 }
 
 export interface MountingHoleFeatureLayer extends BaseFeatureLayer {
   type: 'mounting_hole';
   diameterMm: number;
-  standoffType: 'flush_screw' | 'barrel_spacer' | 'keyhole_hanger';
+  standoffType?: 'flush_screw' | 'barrel_spacer' | 'keyhole_hanger' | string;
+  holeType?: string;
   edgeOffsetMm: number;
 }
 
 export interface BoundaryFeatureLayer extends BaseFeatureLayer {
-  type: 'boundary';
-  shapeTemplateId: string;
+  type?: 'boundary';
+  shapeTemplateId?: string;
+  shapeId?: string;
   widthMm: number;
   heightMm: number;
   cornerRadiusMm: number;
-  borderThicknessMm: number;
+  borderThicknessMm?: number;
   pathData: string;
+  aspectRatioLocked?: boolean;
 }
 
 export type AnyFeatureLayer = 
@@ -113,17 +124,20 @@ export type AnyFeatureLayer =
   | BoundaryFeatureLayer;
 
 export interface GaugeCuttingParameters {
+  gaugeName?: string;
   thicknessMm: number;
   kerfWidthMm: number;
-  leadInLengthMm: number;
-  pierceDwellSec: number;
-  feedRateMmPerMin: number;
-  assistGas: 'nitrogen' | 'oxygen' | 'compressed_air' | 'none';
-  assistGasPressureBar: number;
+  leadInLengthMm?: number;
+  pierceDwellSec?: number;
+  dwellTimeMs?: number;
+  feedRateMmPerMin?: number;
+  feedRateMmMin?: number;
+  assistGas?: 'nitrogen' | 'oxygen' | 'compressed_air' | 'none';
+  assistGasPressureBar?: number;
   minWebWidthMm: number;
   minHoleDiameterMm: number;
   minEdgeClearanceMm: number;
-  densityGPerCm3: number;
+  densityGPerCm3?: number;
 }
 
 export interface MachineManufacturingProfile {
@@ -142,7 +156,7 @@ export interface MaterialSpecification {
   substrate: MetalSubstrate;
   thicknessMm: number;
   finish: MetalFinish;
-  machineProfileId: string;
+  machineProfileId?: string;
   activeGaugeParams: GaugeCuttingParameters;
 }
 
@@ -156,9 +170,10 @@ export interface ValidationIssue {
 
 export interface VectorDocument {
   version: VDMVersion;
-  documentId: string;
-  createdAt: number;
-  updatedAt: number;
+  documentId?: string;
+  id?: string;
+  createdAt?: number;
+  updatedAt?: number;
   unit: UnitOfMeasure;
   material: MaterialSpecification;
   boundary: BoundaryFeatureLayer;
@@ -166,12 +181,17 @@ export interface VectorDocument {
   manufacturingAnalytics: {
     totalCutLengthMm: number;
     totalPierceCount: number;
-    sheetAreaSqMm: number;
+    sheetAreaSqMm?: number;
     estimatedCutTimeSec: number;
     partWeightKg: number;
-    isValidated: boolean;
-    validationIssues: ValidationIssue[];
+    isValidated?: boolean;
+    validationIssues?: ValidationIssue[];
+    scrapPercentage?: number;
+    boundingWidthMm?: number;
+    boundingHeightMm?: number;
+    isManufacturable?: boolean;
   };
+  validationIssues?: ValidationIssue[];
 }
 
 export const FIBER_LASER_3KW_PROFILE: MachineManufacturingProfile = {

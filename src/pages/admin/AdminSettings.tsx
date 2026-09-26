@@ -82,7 +82,7 @@ export function AdminSettings() {
 
     const result = importDatabase(dbImportText);
     if (!result.success) {
-      setDbImportError(result.errors ? result.errors.join('\n') : (result.error || 'Failed to import'));
+      setDbImportError(result.error || 'Failed to import');
       toast.error('Import validation failed');
     } else {
       toast.success('Database successfully restored');

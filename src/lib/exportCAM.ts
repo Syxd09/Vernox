@@ -196,7 +196,8 @@ export function exportDocumentAsPDF(
   pdf.setTextColor(203, 213, 225); // slate-300
   pdf.text('CNC LASER CUTTING WORKSHOP SPECIFICATION SHEET & CAM TRAVELER', margin, 18);
 
-  const orderNum = options.orderNumber || `SPEC-${doc.id.substring(0, 8).toUpperCase()}`;
+  const docIdStr = doc.documentId || doc.id || 'DESIGN';
+  const orderNum = options.orderNumber || `SPEC-${docIdStr.substring(0, 8).toUpperCase()}`;
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(255, 255, 255);
@@ -276,7 +277,7 @@ export function exportDocumentAsPDF(
     ['Pierce Count', `${doc.manufacturingAnalytics.totalPierceCount} pierces`],
     ['Laser Run Time', `${doc.manufacturingAnalytics.estimatedCutTimeSec.toFixed(1)} s`],
     ['Finished Part Mass', `${doc.manufacturingAnalytics.partWeightKg.toFixed(2)} kg`],
-    ['Scrap Percentage', `${doc.manufacturingAnalytics.scrapPercentage.toFixed(1)}%`],
+    ['Scrap Percentage', `${(doc.manufacturingAnalytics.scrapPercentage ?? 15).toFixed(1)}%`],
   ];
 
   propY = cardY + 12;

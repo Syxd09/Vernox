@@ -5,6 +5,7 @@ import type { VectorDocument } from '../cadEngineTypes';
 function createSampleVectorDoc(): VectorDocument {
   return {
     id: 'doc-fixture-cam-001',
+    documentId: 'doc-fixture-cam-001',
     version: '3.0.0',
     unit: 'mm',
     boundary: {

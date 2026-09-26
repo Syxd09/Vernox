@@ -580,10 +580,18 @@ export function ToolsPanel() {
                               onClick={() => {
                                 const w = targetLayer.type === 'typography'
                                   ? (targetLayer.rawText?.length || 1) * targetLayer.fontSizeMm * 0.7
-                                  : (targetLayer.type === 'vector_path' ? targetLayer.boundsMm?.widthMm || 50 : targetLayer.diameterMm);
+                                  : targetLayer.type === 'vector_path'
+                                  ? targetLayer.boundsMm?.widthMm || 50
+                                  : targetLayer.type === 'mounting_hole'
+                                  ? targetLayer.diameterMm
+                                  : targetLayer.widthMm;
                                 const h = targetLayer.type === 'typography'
                                   ? targetLayer.fontSizeMm
-                                  : (targetLayer.type === 'vector_path' ? targetLayer.boundsMm?.heightMm || 50 : targetLayer.diameterMm);
+                                  : targetLayer.type === 'vector_path'
+                                  ? targetLayer.boundsMm?.heightMm || 50
+                                  : targetLayer.type === 'mounting_hole'
+                                  ? targetLayer.diameterMm
+                                  : targetLayer.heightMm;
                                 const newX = Math.max(15, Math.round((doc.boundary.widthMm - w) / 2));
                                 const newY = Math.max(15, Math.round((doc.boundary.heightMm - h) / 2));
                                 updateTransform(targetLayer.id, { xMm: newX, yMm: newY });

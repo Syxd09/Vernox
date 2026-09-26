@@ -107,7 +107,7 @@ export function TopBar({ onClose }: TopBarProps = {}) {
     const svgContent = exportDocumentAsSVG(doc, { applyKerfOffset: true });
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     const link = document.createElement('a');
-    link.download = `vernox-cnc-toolpath-${doc.id || 'design'}.svg`;
+    link.download = `vernox-cnc-toolpath-${doc.id || doc.documentId || 'design'}.svg`;
     link.href = URL.createObjectURL(blob);
     link.click();
     toast({
@@ -121,7 +121,7 @@ export function TopBar({ onClose }: TopBarProps = {}) {
     const dxfContent = exportDocumentAsDXF(doc);
     const blob = new Blob([dxfContent], { type: 'application/dxf' });
     const link = document.createElement('a');
-    link.download = `vernox-laser-cam-${doc.id || 'design'}.dxf`;
+    link.download = `vernox-laser-cam-${doc.id || doc.documentId || 'design'}.dxf`;
     link.href = URL.createObjectURL(blob);
     link.click();
     toast({
@@ -135,7 +135,7 @@ export function TopBar({ onClose }: TopBarProps = {}) {
     const pdf = exportDocumentAsPDF(doc, {
       orderNumber: `SPEC-${Date.now().toString(36).toUpperCase()}`,
     });
-    pdf.save(`vernox-workshop-spec-${doc.id || 'design'}.pdf`);
+    pdf.save(`vernox-workshop-spec-${doc.id || doc.documentId || 'design'}.pdf`);
     toast({
       title: 'Workshop Spec Sheet PDF Generated',
       description: 'Includes material specs, laser telemetry, scaled schematic, and QC traveler.',

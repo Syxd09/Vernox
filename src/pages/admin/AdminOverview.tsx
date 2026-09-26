@@ -44,7 +44,7 @@ export function AdminOverview({ onSelectTab, onSelectOrder }: AdminOverviewProps
       d.setDate(d.getDate() - i);
       const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const dayOrders = orders.filter(o => {
-        const od = new Date(o.createdAt);
+        const od = new Date(o.placedAt || o.createdAt || Date.now());
         return od.getDate() === d.getDate() && od.getMonth() === d.getMonth();
       });
       const dayTotal = dayOrders.reduce((s, o) => s + o.total, 0);
