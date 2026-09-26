@@ -66,24 +66,6 @@ export default function Admin() {
             <p className="text-xs text-muted-foreground">Sign in with authorized administrator credentials to manage CAM production routing.</p>
           </div>
 
-          <div 
-            onClick={() => {
-              setAdminEmail('admin@vernox.com');
-              setAdminPassword('admin123');
-            }}
-            className="bg-oxblood/5 border border-oxblood/20 rounded-lg p-3 text-xs space-y-1.5 cursor-pointer hover:bg-oxblood/10 transition"
-            title="Click to auto-fill default admin credentials"
-          >
-            <div className="flex items-center justify-between text-[11px] font-semibold text-oxblood uppercase tracking-wider">
-              <span>Atelier Admin Credentials</span>
-              <span className="text-[10px] lowercase font-normal underline">Click to prefill</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground font-mono text-[11px]">
-              <span>Email: <strong className="text-foreground">admin@vernox.com</strong></span>
-              <span>Pass: <strong className="text-foreground">admin123</strong></span>
-            </div>
-          </div>
-
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Administrator Email</label>
@@ -107,6 +89,30 @@ export default function Admin() {
                 placeholder="••••••••••••"
                 className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
               />
+            </div>
+
+            <div className="bg-muted/40 border border-border/60 rounded-lg p-3 text-xs space-y-1.5">
+              <div className="flex justify-between items-center text-muted-foreground font-medium">
+                <span>Atelier Credentials:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminEmail('admin@vernox.com');
+                    setAdminPassword('admin123');
+                  }}
+                  className="text-oxblood hover:underline font-semibold text-[11px]"
+                >
+                  Quick Fill
+                </button>
+              </div>
+              <div className="font-mono text-[11px] text-foreground/80 flex justify-between">
+                <span>Email:</span>
+                <span className="font-semibold text-oxblood">admin@vernox.com</span>
+              </div>
+              <div className="font-mono text-[11px] text-foreground/80 flex justify-between">
+                <span>Passphrase:</span>
+                <span className="font-semibold text-oxblood">admin123 <span className="font-normal text-muted-foreground">or</span> vernox2026</span>
+              </div>
             </div>
 
             <button 

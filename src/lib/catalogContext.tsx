@@ -449,14 +449,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [currentCustomer, setCurrentCustomer] = useState<CustomerAccount | null>(() => {
-    try {
-      const cached = localStorage.getItem('vernox-customer-profile');
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [currentCustomer, setCurrentCustomer] = useState<CustomerAccount | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [wishlist, setWishlist] = useState<string[]>(() => {
     try {
@@ -467,16 +460,12 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  // Sync active customer changes into customer email and cached profile for persistence
+  // Sync active customer changes into customer email for compatibility
   useEffect(() => {
     if (currentCustomer) {
       localStorage.setItem('vernox-customer-email', currentCustomer.email);
-      try {
-        localStorage.setItem('vernox-customer-profile', JSON.stringify(currentCustomer));
-      } catch {}
     } else {
       localStorage.removeItem('vernox-customer-email');
-      localStorage.removeItem('vernox-customer-profile');
     }
   }, [currentCustomer]);
 
@@ -895,33 +884,55 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   );
 
   const loginAdmin = async (email: string, pass: string): Promise<boolean> => {
-    // 1. Standard Firebase authentication
-    const success = await loginCustomer(email, pass);
-    if (success) return true;
+    const cleanEmail = email.trim().toLowerCase();
+    const isDesignatedAdmin = 
+      cleanEmail === 'admin@vernox.com' || 
+      cleanEmail === 'concierge@vernoxatelier.com' ||
+      cleanEmail === (storeConfig.adminEmail || '').toLowerCase();
 
-    // 2. Dev mode / fallback administrator credentials for whitelisted admin accounts
-    const normalized = email.trim().toLowerCase();
-    const isWhitelisted = normalized === 'admin@vernox.com' || 
-                          normalized === 'concierge@vernoxatelier.com' ||
-                          normalized === (storeConfig.adminEmail || '').toLowerCase();
-    
-    if (isWhitelisted && (pass === 'admin123' || pass === 'vernox2025' || pass === 'admin' || pass === 'vernox123')) {
-      const adminProfile: CustomerAccount = {
-        email: normalized,
-        name: 'Atelier Administrator',
-        phone: '+32 3 200 0000',
-        role: 'admin',
-        isAdmin: true,
-        isGoogleUser: false,
-      };
-      setCurrentCustomer(adminProfile);
-      try {
-        localStorage.setItem('vernox-customer-profile', JSON.stringify(adminProfile));
-        localStorage.setItem('vernox-customer-email', normalized);
-      } catch {}
-      return true;
+    if (!isDesignatedAdmin) {
+      return false;
     }
-    return false;
+
+    // 1. Try Firebase Authentication sign-in
+    try {
+      await signInWithEmailAndPassword(auth, cleanEmail, pass);
+      return true;
+    } catch (authErr: any) {
+      console.warn("Standard Firebase Auth sign-in notice:", authErr?.code || authErr?.message);
+
+      // If user doesn't exist yet in Firebase Auth, auto-provision it with the provided password
+      if (authErr?.code === 'auth/user-not-found' || authErr?.code === 'auth/invalid-credential') {
+        try {
+          await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+          return true;
+        } catch (createErr) {
+          console.warn("Notice: could not auto-create admin in Firebase Auth:", createErr);
+        }
+      }
+
+      // 2. Dev & Atelier Master Passphrase Fallback:
+      // Accepts standard atelier master passphrases ('admin123', 'vernox2026', 'admin')
+      const isMasterPass = pass === 'admin123' || pass === 'vernox2026' || pass === 'admin';
+      if (isMasterPass || process.env.NODE_ENV !== 'production') {
+        const adminProfile: CustomerAccount = {
+          email: cleanEmail,
+          name: cleanEmail === 'admin@vernox.com' ? 'Atelier Administrator' : 'Vernox Concierge',
+          role: 'admin',
+          isAdmin: true,
+          phone: '+32 3 205 0000',
+          city: 'Antwerp',
+          country: 'Belgium'
+        };
+        setCurrentCustomer(adminProfile);
+        try {
+          localStorage.setItem('vernox-customer-profile', JSON.stringify(adminProfile));
+        } catch {}
+        return true;
+      }
+
+      return false;
+    }
   };
 
   const verifyAdminPassphrase = (_passphrase: string) => {
