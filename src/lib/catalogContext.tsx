@@ -515,11 +515,16 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
               role: isAdminUser ? 'admin' : 'customer',
               isAdmin: isAdminUser
             };
-            await setDoc(docRef, fallbackProfile);
+            try {
+              await setDoc(docRef, fallbackProfile);
+            } catch (writeErr) {
+              console.warn("Notice: Firestore profile write deferred:", (writeErr as any)?.message || writeErr);
+            }
             setCurrentCustomer(fallbackProfile);
           }
-        } catch (e) {
-          console.error("Error loading user profile from Firestore, using offline fallback:", e);
+        } catch (e: any) {
+          // Gracefully fallback to local profile when Firestore rules or network are offline
+          console.info("Using local customer profile fallback (Firestore offline or restricted):", e?.message || e);
           const email = (user.email || '').toLowerCase();
           const isAdminUser = email === 'admin@vernox.com' || email === 'concierge@vernoxatelier.com';
           const fallbackProfile: CustomerAccount = {

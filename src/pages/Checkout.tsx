@@ -109,6 +109,52 @@ export default function Checkout() {
 
       const orderData = await res.json();
       
+      // Development mode mock checkout simulation when gateway credentials reject in dev
+      if (orderData.isDevFallback) {
+        toast.info('Development Gateway: Simulating instant order confirmation…');
+        const mockPaymentId = `pay_dev_${Date.now()}`;
+        const mockSignature = `sig_dev_${Date.now()}`;
+        const verifyRes = await fetch('/api/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_payment_id: mockPaymentId,
+            razorpay_order_id: orderData.order_id,
+            razorpay_signature: mockSignature,
+            orderData: {
+              email: form.email,
+              shippingName: form.name,
+              shippingAddress: form.address,
+              shippingCity: form.city,
+              shippingZip: form.zip,
+              shippingCountry: form.country,
+            }
+          })
+        });
+
+        const verifyData = await verifyRes.json().catch(() => ({}));
+        if (verifyRes.ok && verifyData.success) {
+          const verifiedId = verifyData.orderId || orderData.order_id;
+          addOrder({
+            id: verifiedId,
+            items,
+            total: orderData.pricing?.total || total,
+            placedAt: Date.now(),
+            email: form.email,
+            shippingName: form.name,
+            shippingAddress: form.address,
+            shippingCity: form.city,
+            shippingZip: form.zip,
+            shippingCountry: form.country,
+            adminNotes: `Dev Mode Mock Order: ${mockPaymentId}`
+          });
+          clear();
+          toast.success("Order confirmed successfully (Development Mode)");
+          navigate(`/order-confirmation/${verifiedId}`);
+          return;
+        }
+      }
+
       // Ensure Razorpay SDK is loaded
       if (typeof (window as any).Razorpay === 'undefined') {
         throw new Error('Payment gateway SDK is loading. Please try again in a moment.');

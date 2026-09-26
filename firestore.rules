@@ -7,7 +7,8 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.token.email in ['admin@vernox.com', 'concierge@vernoxatelier.com'] ||
         request.auth.token.role == 'admin' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'customer') == 'admin')
       );
     }
 
@@ -47,7 +48,9 @@ service cloud.firestore {
     // 5. Customer Profiles: Users can read/write their own; Admins can read all
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // 6. Customer Wishlists: Strictly isolated to owner

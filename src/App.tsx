@@ -31,7 +31,7 @@ const App = () => (
         <Sonner />
         <CatalogProvider>
           <CartProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <CartDrawer />
               <Routes>
                 <Route path="/" element={<Home />} />
