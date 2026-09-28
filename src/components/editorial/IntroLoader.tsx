@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function IntroLoader({ onComplete }: { onComplete: () => void }) {
+export function IntroLoader({ onComplete }: { onComplete?: () => void } = {}) {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -10,7 +10,7 @@ export function IntroLoader({ onComplete }: { onComplete: () => void }) {
     const seen = sessionStorage.getItem('vernox_intro_seen');
     if (seen) {
       setIsVisible(false);
-      onComplete();
+      onComplete?.();
       return;
     }
 
@@ -21,7 +21,7 @@ export function IntroLoader({ onComplete }: { onComplete: () => void }) {
           setTimeout(() => {
             setIsVisible(false);
             sessionStorage.setItem('vernox_intro_seen', 'true');
-            onComplete();
+            onComplete?.();
           }, 350);
           return 100;
         }
