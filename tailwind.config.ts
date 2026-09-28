@@ -13,6 +13,15 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        editorial: ['"Italiana"', '"Bodoni Moda"', '"Cormorant Garamond"', 'Georgia', 'serif'],
+        display: ['"Cormorant Garamond"', '"Bodoni Moda"', '"Italiana"', 'Georgia', 'serif'],
+        brand: ['"Cinzel"', '"Italiana"', 'Georgia', 'serif'],
+        serif: ['"Cormorant Garamond"', '"Bodoni Moda"', 'Georgia', 'serif'],
+        "serif-italic": ['"Instrument Serif"', '"Bodoni Moda"', '"Cormorant Garamond"', 'serif'],
+        sans: ['"Tenor Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
