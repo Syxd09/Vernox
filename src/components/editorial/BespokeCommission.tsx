@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, Upload, Ruler, CheckCircle2, ShieldCheck, Mail, Building2 } from 'lucide-react';
+import { Compass, ArrowRight, Upload, Ruler, CheckCircle2, ShieldCheck, Mail, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -29,20 +29,15 @@ export function BespokeCommission({ onOpenStudio, onOpenTradeModal }: Props) {
   return (
     <section 
       id="commission" 
-      className="relative py-24 md:py-36 bg-[#0B0B0B] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
+      className="relative py-24 md:py-32 bg-[#0B0B0B] text-[#F4F2EE] border-b border-white/10"
     >
-      {/* Ambient background radiance */}
-      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[#D4AF37]/[0.03] rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 left-10 w-[500px] h-[500px] bg-[#800020]/[0.03] rounded-full blur-[120px] pointer-events-none" />
-
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-start">
           {/* Left Editorial Narrative */}
           <div className="space-y-8">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
-                <Sparkles className="w-3 h-3 text-[#D4AF37]" />
-                <span>Private Atelier Commission</span>
+              <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-mono font-semibold mb-2">
+                Private Atelier Commission
               </div>
               <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
                 Have a wall in mind? <br />
@@ -92,8 +87,8 @@ export function BespokeCommission({ onOpenStudio, onOpenTradeModal }: Props) {
                   onClick={onOpenStudio}
                   className="px-6 py-3.5 rounded-[2px] bg-white text-black text-xs uppercase tracking-widest font-semibold hover:bg-[#E8E5DF] transition flex items-center gap-2"
                 >
-                  <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-                  Launch Live CAD Studio
+                  <Compass className="w-4 h-4 text-[#D4AF37]" />
+                  Launch Bespoke Studio
                 </button>
               )}
 

@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { ShoppingBag, Menu, X, User, Sparkles, Heart, Search } from 'lucide-react';
+import { ShoppingBag, Menu, X, User, Compass, Heart, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/lib/cartContext';
@@ -86,10 +86,9 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <button
               type="button"
               onClick={openStudio}
-              className="relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 text-white/70 hover:text-white transition-colors group/link flex items-center gap-1.5 cursor-pointer"
+              className="relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 text-white/70 hover:text-white transition-colors group/link cursor-pointer"
             >
               <span>Studio</span>
-              <span className="text-[8px] text-[#D4AF37] group-hover/link:text-white transition-colors">✦</span>
               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-[#D4AF37] group-hover/link:w-full transition-all duration-300" />
             </button>
 
@@ -113,11 +112,20 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
 
             <NavLink
               to="/about#b2b"
-              className="relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 text-white/70 hover:text-white transition-colors group/link flex items-center gap-1.5"
+              className={({ isActive }) => cn(
+                'relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 transition-colors group/link',
+                isActive ? 'text-white font-semibold' : 'text-white/70 hover:text-white'
+              )}
             >
-              <span>Trade / B2B</span>
-              <span className="text-[8px] font-mono text-[#D4AF37] border border-[#D4AF37]/40 px-1 rounded-xs">BULK</span>
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-[#D4AF37] group-hover/link:w-full transition-all duration-300" />
+              {({ isActive }) => (
+                <>
+                  <span>Trade</span>
+                  <span className={cn(
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
+                    isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
+                  )} />
+                </>
+              )}
             </NavLink>
 
             <NavLink
@@ -223,7 +231,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                     className="text-left text-sm uppercase tracking-[0.2em] font-medium py-2 text-foreground/80 hover:text-oxblood border-b border-border/40 flex items-center justify-between"
                   >
                     <span>Studio</span>
-                    <Sparkles className="w-4 h-4 text-brass" />
+                    <Compass className="w-4 h-4 text-brass" />
                   </button>
                   <NavLink
                     to="/about"
@@ -238,7 +246,6 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                     className="text-sm uppercase tracking-[0.2em] font-medium py-2 text-foreground/80 hover:text-oxblood border-b border-border/40 flex items-center justify-between"
                   >
                     <span>Trade & B2B Supply</span>
-                    <span className="text-[9px] font-mono text-brass border border-brass/40 px-1 rounded-xs">BULK</span>
                   </NavLink>
                   <NavLink
                     to="/notebook"
@@ -262,7 +269,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                     onClick={() => { setOpen(false); openStudio(); }}
                     className="w-full inline-flex items-center justify-center gap-2.5 bg-oxblood text-ivory px-5 py-3.5 rounded-sm text-xs uppercase tracking-[0.2em] font-semibold hover:bg-oxblood-deep transition"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-brass" /> Launch CAD Studio
+                    <Compass className="w-3.5 h-3.5 text-brass" /> Launch CAD Studio
                   </button>
                 </div>
 

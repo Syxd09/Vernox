@@ -51,7 +51,6 @@ export function EditorialCollections() {
           </div>
           <Link
             to="/shop"
-            data-cursor="VIEW"
             className="text-xs uppercase tracking-[0.2em] font-medium text-white/80 hover:text-[#C5A880] transition inline-flex items-center gap-2 group"
           >
             <span>View All Atelier Works</span>
@@ -70,7 +69,7 @@ export function EditorialCollections() {
               transition={{ duration: 0.8, delay: idx * 0.15 }}
               className={`relative group rounded-[2px] overflow-hidden border border-white/10 bg-[#111111] ${col.aspect}`}
             >
-              <Link to={`/shop/${col.id}`} data-cursor="EXPLORE" className="block w-full h-full relative">
+              <Link to={`/shop/${col.id}`} className="block w-full h-full relative">
                 {/* Background Image with slow zoom */}
                 <div className="absolute inset-0 w-full h-full overflow-hidden">
                   <img
@@ -83,7 +82,7 @@ export function EditorialCollections() {
 
                 {/* Top Badge */}
                 <div className="absolute top-5 left-5 z-10">
-                  <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[9px] uppercase tracking-[0.25em] text-[#C5A880] font-mono">
+                  <span className="px-2.5 py-1 rounded-[1px] bg-black/80 backdrop-blur-md border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-mono font-semibold">
                     {col.badge}
                   </span>
                 </div>

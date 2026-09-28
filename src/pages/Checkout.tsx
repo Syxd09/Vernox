@@ -6,7 +6,7 @@ import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
 import { toast } from 'sonner';
-import { ShieldCheck, CreditCard, Landmark, QrCode, CheckCircle, Sparkles, Smartphone, X, Lock, Truck, Award, Phone, Shield, Clock } from 'lucide-react';
+import { ShieldCheck, CreditCard, Landmark, QrCode, CheckCircle, Smartphone, X, Lock, Truck, Award, Phone, Shield, Clock } from 'lucide-react';
 
 export default function Checkout() {
   const { items, subtotal, clear } = useCart();

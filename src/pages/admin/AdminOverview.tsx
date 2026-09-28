@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { useCatalog, Order, OrderStatus } from '@/lib/catalogContext';
 import { 
-  Sparkles, ShoppingCart, Tag, Scissors, Clock, Eye 
+  TrendingUp, ShoppingCart, Tag, Scissors, Clock, Eye 
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, 
@@ -106,7 +106,7 @@ export function AdminOverview({ onSelectTab, onSelectOrder }: AdminOverviewProps
       {/* STATS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Revenue', value: `${storeConfig.currency}${totalRevenue.toFixed(2)}`, desc: 'From verified orders', icon: Sparkles, color: 'text-yellow-600 bg-yellow-500/10' },
+          { label: 'Total Revenue', value: `${storeConfig.currency}${totalRevenue.toFixed(2)}`, desc: 'From verified orders', icon: TrendingUp, color: 'text-brass bg-brass/10' },
           { label: 'Total Orders', value: orders.length, desc: 'Processed in platform', icon: ShoppingCart, color: 'text-oxblood bg-oxblood/10' },
           { label: 'Avg. Order Value', value: `${storeConfig.currency}${avgOrderValue.toFixed(2)}`, desc: 'Average cart size', icon: Tag, color: 'text-purple-600 bg-purple-500/10' },
           { label: 'Pending Production', value: pendingOrdersCount, desc: 'Waiting in studio / shop', icon: Scissors, color: 'text-blue-600 bg-blue-500/10' },

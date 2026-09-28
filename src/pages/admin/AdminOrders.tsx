@@ -12,7 +12,7 @@ import { getShapeById } from '@/lib/shapes';
 import type { VectorDocument } from '@/lib/cadEngineTypes';
 import { 
   ShoppingCart, Package, Scissors, Truck, Clock, Eye, Trash2, 
-  Search, X, Sparkles, Download, FileCode, FileText
+  Search, X, Layers, Download, FileCode, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -429,7 +429,7 @@ export function AdminOrders() {
                             }}
                             className="inline-flex items-center gap-1 bg-oxblood text-ivory px-2 py-1 rounded text-[10px] uppercase tracking-wider hover:bg-oxblood-deep transition font-semibold ml-auto"
                           >
-                            <Sparkles className="w-3 h-3 text-brass" /> Studio
+                            <Layers className="w-3 h-3 text-brass" /> Studio
                           </button>
                         )}
                       </div>

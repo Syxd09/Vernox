@@ -16,7 +16,6 @@ import {
   Phone,
   FileCheck,
   Truck,
-  Sparkles,
   ArrowRight,
   ShieldAlert,
   Percent,

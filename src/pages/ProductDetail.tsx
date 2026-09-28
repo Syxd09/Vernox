@@ -10,7 +10,7 @@ import { WallPreview } from '@/components/experience/WallPreview';
 import { InlineStudio } from '@/components/experience/InlineStudio';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
-import { Check, Sparkles, ShoppingBag, ArrowLeft, Ruler, Flame, Hammer, Wind, Star, Heart, Award, ShieldCheck, MapPin, Clock, Truck } from 'lucide-react';
+import { Check, Compass, ChevronDown, ShoppingBag, ArrowLeft, Ruler, Flame, Hammer, Wind, Star, Heart, Award, ShieldCheck, MapPin, Clock, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -248,7 +248,7 @@ export default function ProductDetail() {
               <span>Complimentary Insured White-Glove Crated Shipping worldwide</span>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>In Stock in Antwerp Atelier · Ready for Laser Final Inspection</span>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function ProductDetail() {
             {product.customizable && (
               <button onClick={() => setStudioOpen(true)}
                 className="inline-flex items-center justify-center gap-2 border border-oxblood/40 hover:border-oxblood bg-background text-oxblood font-semibold text-xs uppercase tracking-widest px-6 py-4 rounded-sm hover:bg-oxblood/5 transition">
-                <Sparkles className="w-3.5 h-3.5 text-brass" /> Customise in CAD Studio
+                <Compass className="w-3.5 h-3.5 text-brass" /> Customise in CAD Studio
               </button>
             )}
             <button onClick={() => {
@@ -302,7 +302,7 @@ export default function ProductDetail() {
             <details className="group border border-border/70 rounded p-3.5 bg-card/60 transition open:bg-card">
               <summary className="text-xs font-semibold uppercase tracking-wider text-oxblood-deep cursor-pointer flex items-center justify-between list-none">
                 <span>Metallurgy & Precision Tolerance</span>
-                <span className="text-brass group-open:rotate-180 transition-transform">▼</span>
+                <ChevronDown className="w-4 h-4 text-brass group-open:rotate-180 transition-transform" />
               </summary>
               <div className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-1.5 font-sans">
                 <p>Solid cold-rolled Belgian metallurgical plate with an uncompromising 3.0mm thickness (gauge weight approx. 24kg/m²). Cut with fiber-optic nitrogen assist laser to ±0.05mm precision.</p>
@@ -313,7 +313,7 @@ export default function ProductDetail() {
             <details className="group border border-border/70 rounded p-3.5 bg-card/60 transition open:bg-card">
               <summary className="text-xs font-semibold uppercase tracking-wider text-oxblood-deep cursor-pointer flex items-center justify-between list-none">
                 <span>Concealed Float Mounting & Installation</span>
-                <span className="text-brass group-open:rotate-180 transition-transform">▼</span>
+                <ChevronDown className="w-4 h-4 text-brass group-open:rotate-180 transition-transform" />
               </summary>
               <div className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-1.5 font-sans">
                 <p>Each piece includes our signature rear standoff system: 4× machined 20mm brass cylinders that mount invisibly to drywall, masonry, or timber cladding.</p>
@@ -324,7 +324,7 @@ export default function ProductDetail() {
             <details className="group border border-border/70 rounded p-3.5 bg-card/60 transition open:bg-card">
               <summary className="text-xs font-semibold uppercase tracking-wider text-oxblood-deep cursor-pointer flex items-center justify-between list-none">
                 <span>Insured Freight, Zero-Deflection Crating & Returns</span>
-                <span className="text-brass group-open:rotate-180 transition-transform">▼</span>
+                <ChevronDown className="w-4 h-4 text-brass group-open:rotate-180 transition-transform" />
               </summary>
               <div className="pt-3 text-xs text-muted-foreground leading-relaxed space-y-1.5 font-sans">
                 <p>Shipped in archival plywood crates reinforced with shock-absorbing foam. Fully insured door-to-door with DHL Express / FedEx Priority.</p>
@@ -421,7 +421,7 @@ export default function ProductDetail() {
                   { star: 1, pct: 0, count: 0 },
                 ].map(b => (
                   <div key={b.star} className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
-                    <span className="w-3">{b.star}★</span>
+                    <span className="w-4 inline-flex items-center gap-0.5">{b.star}<Star className="w-2 h-2 fill-brass text-brass inline" /></span>
                     <div className="flex-1 bg-border/60 h-1.5 rounded-full overflow-hidden">
                       <div className="h-full bg-brass rounded-full" style={{ width: `${b.pct}%` }} />
                     </div>

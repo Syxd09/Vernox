@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
-import { X, Trash2, ShoppingBag, Plus, Minus, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, Trash2, ShoppingBag, Plus, Minus, ArrowRight, ShieldCheck, Truck, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -73,7 +73,7 @@ export function CartDrawer() {
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   {remainingForFreeShipping === 0 ? (
                     <span className="font-medium text-oxblood-deep flex items-center gap-1.5 text-[11px]">
-                      <span className="text-brass">✦</span> Complimentary Worldwide Insured Delivery Unlocked
+                      Complimentary Worldwide Insured Delivery Unlocked
                     </span>
                   ) : (
                     <span className="text-muted-foreground text-[11px]">
@@ -95,11 +95,11 @@ export function CartDrawer() {
 
             {/* TRUST REASSURANCE PILLS BAR */}
             <div className="px-6 py-2 bg-muted/30 border-b border-border/40 flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-              <span className="flex items-center gap-1">🛡️ 10-Yr Guarantee</span>
+              <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-brass" /> 10-Yr Guarantee</span>
               <span>·</span>
-              <span className="flex items-center gap-1">📦 Crated Transit</span>
+              <span className="flex items-center gap-1.5"><Truck className="w-3 h-3 text-brass" /> Crated Transit</span>
               <span>·</span>
-              <span className="flex items-center gap-1">📜 Signed Hallmark</span>
+              <span className="flex items-center gap-1.5"><Award className="w-3 h-3 text-brass" /> Signed Hallmark</span>
             </div>
 
             {/* DRAWER BODY (SCROLLABLE ITEMS LIST) */}

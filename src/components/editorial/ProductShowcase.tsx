@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, Star, ShoppingBag, Eye } from 'lucide-react';
+import { ArrowRight, Star, ShoppingBag, Eye } from 'lucide-react';
 import { useCatalog } from '@/lib/catalogContext';
 import { useCart } from '@/lib/cartContext';
 import { finishLabels } from '@/lib/catalog';
@@ -40,14 +40,12 @@ export function ProductShowcase() {
     <section 
       id="showcase" 
       className="relative py-24 md:py-36 bg-[#0B0B0B] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
-      data-cursor="VIEW"
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
-              <Sparkles className="w-3 h-3 text-[#D4AF37]" />
               <span>Curated Atelier Highlights</span>
             </div>
             <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
@@ -101,10 +99,9 @@ export function ProductShowcase() {
                 {current.sizes?.[0]?.label || '1,200 mm'} · Solid 3.0mm Plate
               </div>
 
-              {/* Floating Quick View Pill */}
-              <div className="absolute top-5 left-5 bg-black/80 backdrop-blur-md px-3.5 py-1 rounded-[2px] border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-ping" />
-                <span>Featured Exhibition Piece</span>
+              {/* Exhibition Tag */}
+              <div className="absolute top-5 left-5 bg-black/80 backdrop-blur-md px-3.5 py-1 rounded-[2px] border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-mono font-semibold">
+                Featured Artwork
               </div>
             </Link>
           </div>

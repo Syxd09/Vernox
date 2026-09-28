@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Sparkles, Heart, ShoppingBag, User } from 'lucide-react';
+import { Compass, Layers, Heart, ShoppingBag, User } from 'lucide-react';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,7 @@ export function MobileBottomNav() {
             className="flex flex-col items-center justify-center py-1 gap-1 text-[9px] uppercase tracking-wider font-semibold text-muted-foreground hover:text-foreground active:scale-95 cursor-pointer"
           >
             <div className="relative">
-              <Sparkles className="w-4 h-4 text-brass animate-pulse" />
+              <Layers className="w-4 h-4 text-brass" />
             </div>
             <span className="text-brass font-bold">Studio</span>
           </button>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, Shield, Sparkles, Compass, Check } from 'lucide-react';
+import { Layers, Shield, Compass, Check } from 'lucide-react';
 
 interface MaterialSpec {
   id: string;

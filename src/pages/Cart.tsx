@@ -17,7 +17,7 @@ import {
   Minus, 
   Tag, 
   CheckCircle2, 
-  Sparkles, 
+  Compass, 
   PhoneCall,
   Lock
 } from 'lucide-react';
@@ -137,7 +137,7 @@ export default function Cart() {
                 to="/customize" 
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-oxblood/40 hover:border-oxblood text-oxblood px-8 py-4 rounded-full text-xs uppercase tracking-widest font-semibold hover:bg-oxblood/5 transition"
               >
-                <Sparkles className="w-4 h-4 text-brass" /> Launch CAD Studio
+                <Compass className="w-4 h-4 text-brass" /> Launch CAD Studio
               </Link>
             </div>
 
@@ -182,7 +182,7 @@ export default function Cart() {
                     <Truck className="w-4 h-4 text-oxblood" />
                     {remainingForFreeShipping === 0 ? (
                       <span className="font-semibold text-oxblood-deep">
-                        🎉 Complimentary Worldwide Insured Delivery Unlocked!
+                        Complimentary Worldwide Insured Delivery Unlocked
                       </span>
                     ) : (
                       <span className="text-muted-foreground">

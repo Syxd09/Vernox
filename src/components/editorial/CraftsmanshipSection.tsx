@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, Flame, Hammer, Sparkles, CheckCircle2, Truck, ArrowRight } from 'lucide-react';
+import { Cpu, Flame, Hammer, CheckCircle2, Truck, ArrowRight } from 'lucide-react';
 
 interface Stage {
   step: string;
@@ -17,6 +17,7 @@ const STAGES: Stage[] = [
   {
     step: '01',
     phase: 'DESIGN',
+    tabLabel: 'CAD Engine',
     title: 'Parametric CAD & Kerf Computation',
     tagline: 'Vector mathematics balanced for structural rigidity.',
     description: 'Every relief begins in our CAD engine where vector silhouettes are proofed against finite element metal stress, thermal deflection, and laser lead-in paths before a single sheet is drawn.',
@@ -27,6 +28,7 @@ const STAGES: Stage[] = [
   {
     step: '02',
     phase: 'CUT',
+    tabLabel: 'Fibre Laser',
     title: '3000W Nitrogen-Shielded Fibre Laser',
     tagline: 'Zero edge oxidation through high-pressure inert gas.',
     description: 'Operating under 18-bar ultra-pure nitrogen assist, our 3kW fibre lasers slice through solid 3.0mm Belgian plate without burning, micro-cracking, or leaving slag along intricate geometric contours.',
@@ -37,6 +39,7 @@ const STAGES: Stage[] = [
   {
     step: '03',
     phase: 'FORM',
+    tabLabel: 'Plate Forming',
     title: 'Solid 3.0mm Structural Plate Forming',
     tagline: 'Substantial mass with architectural permanence.',
     description: 'We never stamp thin foil. Relief components are formed from certified structural alloys—CZ108 brass, marine 316L stainless, and Cor-Ten steel—giving each piece weight and absolute planar stability.',
@@ -47,16 +50,18 @@ const STAGES: Stage[] = [
   {
     step: '04',
     phase: 'FINISH',
+    tabLabel: 'Hand Patina',
     title: 'Hand Graining & Archival Patination',
     tagline: 'The timeless warmth of master artisan hands.',
     description: 'Our finishers hand-grain raw metal with directional abrasives before immersing pieces in archival chemical baths—liver-of-sulphur, French bronzing acids, and hot microcrystalline wax sealant.',
     specPill: 'Hand-Grained & Chemical Bath',
     tolerance: 'Museum-Grade Microcrystalline Wax',
-    icon: Sparkles,
+    icon: CheckCircle2,
   },
   {
     step: '05',
     phase: 'INSPECT',
+    tabLabel: 'Hallmark',
     title: 'Optical Tolerance & Atelier Hallmark',
     tagline: 'Permanently cataloged with unique registry credentials.',
     description: 'Each completed artwork undergoes optical micrometer checks for planar precision, is stamped with the Vernox hallmark and edition code on the reverse, and paired with a signed Certificate of Authenticity.',
@@ -67,6 +72,7 @@ const STAGES: Stage[] = [
   {
     step: '06',
     phase: 'DELIVER',
+    tabLabel: 'Crated Transit',
     title: 'Reinforced Timber Crated Transit',
     tagline: 'Arrives in pristine gallery condition, anywhere in the world.',
     description: 'Artwork is enclosed in custom wood-reinforced crates with custom-cut polyethylene foam damping, complete with 316 stainless steel standoff wall mounts and template drill guides.',
@@ -84,53 +90,47 @@ export function CraftsmanshipSection() {
   return (
     <section 
       id="craftsmanship" 
-      className="relative py-24 md:py-36 bg-[#0E0E0E] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
+      className="relative py-24 md:py-32 bg-[#0E0E0E] text-[#F4F2EE] border-b border-white/10"
     >
-      {/* Ambient background glow */}
-      <div className="absolute top-1/3 left-0 w-96 h-96 bg-[#B98B48]/[0.03] rounded-full blur-[140px] pointer-events-none" />
-
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
-        <div className="max-w-3xl mb-16 md:mb-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
-            <span>Atelier Métallurgie · Antwerp</span>
+        <div className="max-w-3xl mb-14">
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-mono font-semibold mb-2">
+            Atelier Fabrication Protocol
           </div>
           <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
             Precision begins long before <br />
             <span className="italic font-light text-[#E8E5DF]/70">the artwork reaches your wall.</span>
           </h2>
-          <p className="text-xs sm:text-sm text-[#F4F2EE]/60 font-sans leading-relaxed mt-4 max-w-xl">
+          <p className="text-xs sm:text-sm text-[#F4F2EE]/65 font-sans leading-relaxed mt-4 max-w-xl">
             From algorithmic vector CAD proofing to 18-bar nitrogen laser slicing and hand-rubbed archival patinas, explore our uncompromising 6-stage fabrication cycle.
           </p>
         </div>
 
         {/* 6-Stage Interactive Stepper */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-12 border-b border-white/10 pb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-10 border-b border-white/10 pb-6">
           {STAGES.map((s, idx) => (
             <button
               key={s.step}
               type="button"
               onClick={() => setActiveStage(idx)}
-              className={`p-4 rounded-[2px] text-left transition-all duration-300 relative ${
+              className={`p-3.5 rounded-[2px] text-left transition-all duration-300 relative ${
                 activeStage === idx
                   ? 'bg-white/10 text-white'
                   : 'hover:bg-white/5 text-white/50 hover:text-white/80'
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-[#D4AF37] mb-2 font-semibold">
+              <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-[#D4AF37] mb-1 font-semibold">
                 <span>{s.step}</span>
                 <span className="text-[9px] text-white/40 uppercase">{s.phase}</span>
               </div>
-              <div className="font-editorial text-sm truncate">
-                {s.title.split(' ')[0]} {s.title.split(' ')[1]}
+              <div className="font-editorial text-sm text-white truncate">
+                {s.tabLabel}
               </div>
 
               {/* Active Indicator Underline */}
               {activeStage === idx && (
-                <motion.div
-                  layoutId="activeStageLine"
-                  className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4AF37]"
-                />
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4AF37]" />
               )}
             </button>
           ))}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, X, ArrowRight, Compass } from 'lucide-react';
 import { useCatalog } from '@/lib/catalogContext';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 
@@ -202,7 +202,7 @@ export function SearchModal({ open, onClose }: Props) {
                       onClick={onClose}
                       className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#C5A880] hover:underline font-semibold"
                     >
-                      <Sparkles className="w-3.5 h-3.5" /> Launch CAD Customizer
+                      <Compass className="w-3.5 h-3.5" /> Launch CAD Customizer
                     </Link>
                   </div>
                 </div>

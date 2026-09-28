@@ -13,7 +13,7 @@ import {
   Clock, 
   FileText, 
   Hammer, 
-  Sparkles,
+  Flame,
   PackageCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -85,7 +85,7 @@ export default function OrderConfirmation() {
                 title: 'Laser Slicing',
                 desc: 'Nitrogen-assist fiber laser cut to ±0.05mm',
                 status: 'In Progress',
-                icon: Sparkles,
+                icon: Flame,
                 current: true
               },
               {

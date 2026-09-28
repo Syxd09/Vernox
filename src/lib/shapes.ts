@@ -52,7 +52,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'square',
     name: 'Square',
     category: 'basic',
-    icon: '⬛',
+    icon: 'square',
     getPath: (w, h) => `M0,0 L${w},0 L${w},${h} L0,${h} Z`,
   },
   {
@@ -94,7 +94,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'star',
     name: 'Star',
     category: 'basic',
-    icon: '★',
+    icon: 'star',
     getPath: (w, h) => starPath(w / 2, h / 2, Math.min(w, h) / 2, Math.min(w, h) / 4, 5),
   },
   {
@@ -139,7 +139,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'heart',
     name: 'Heart',
     category: 'decorative',
-    icon: '♥',
+    icon: 'heart',
     getPath: (w, h) => {
       const cx = w / 2;
       return `M${cx},${h * 0.85} C${w * 0.05},${h * 0.5} ${w * 0.0},${h * 0.15} ${cx},${h * 0.3} C${w},${h * 0.15} ${w * 0.95},${h * 0.5} ${cx},${h * 0.85} Z`;
@@ -149,21 +149,21 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'shield',
     name: 'Shield',
     category: 'decorative',
-    icon: '🛡',
+    icon: 'shield',
     getPath: (w, h) => `M${w / 2},0 L${w},${h * 0.15} L${w},${h * 0.55} Q${w},${h * 0.8} ${w / 2},${h} Q0,${h * 0.8} 0,${h * 0.55} L0,${h * 0.15} Z`,
   },
   {
     id: 'badge',
     name: 'Badge',
     category: 'decorative',
-    icon: '🏷',
+    icon: 'badge',
     getPath: (w, h) => starPath(w / 2, h / 2, Math.min(w, h) / 2, Math.min(w, h) * 0.38, 8),
   },
   {
     id: 'cloud',
     name: 'Cloud',
     category: 'decorative',
-    icon: '☁',
+    icon: 'cloud',
     getPath: (w, h) => {
       return `M${w * 0.25},${h * 0.6} A${w * 0.18},${h * 0.2} 0 0,1 ${w * 0.15},${h * 0.35} A${w * 0.2},${h * 0.2} 0 0,1 ${w * 0.4},${h * 0.2} A${w * 0.18},${h * 0.18} 0 0,1 ${w * 0.65},${h * 0.25} A${w * 0.18},${h * 0.18} 0 0,1 ${w * 0.85},${h * 0.4} A${w * 0.15},${h * 0.18} 0 0,1 ${w * 0.8},${h * 0.6} Z`;
     },
@@ -172,7 +172,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'leaf',
     name: 'Leaf',
     category: 'decorative',
-    icon: '🍃',
+    icon: 'leaf',
     getPath: (w, h) => `M${w / 2},0 Q${w},0 ${w},${h / 2} Q${w},${h} ${w / 2},${h} Q0,${h} 0,${h / 2} Q0,0 ${w / 2},0 Z`,
   },
   {
@@ -205,7 +205,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'frame',
     name: 'Frame',
     category: 'decorative',
-    icon: '⬜',
+    icon: 'frame',
     getPath: (w, h) => {
       const b = Math.min(w, h) * 0.12;
       return `M0,0 L${w},0 L${w},${h} L0,${h} Z M${b},${b} L${b},${h - b} L${w - b},${h - b} L${w - b},${b} Z`;
@@ -215,21 +215,21 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'ribbon',
     name: 'Ribbon',
     category: 'decorative',
-    icon: '🎀',
+    icon: 'ribbon',
     getPath: (w, h) => `M0,${h * 0.25} L${w * 0.1},0 L${w * 0.1},${h * 0.2} L${w * 0.9},${h * 0.2} L${w * 0.9},0 L${w},${h * 0.25} L${w * 0.9},${h * 0.5} L${w * 0.9},${h * 0.8} L${w * 0.1},${h * 0.8} L${w * 0.1},${h * 0.5} Z`,
   },
   {
     id: 'arrow',
     name: 'Arrow',
     category: 'decorative',
-    icon: '➤',
+    icon: 'arrow',
     getPath: (w, h) => `M0,${h * 0.3} L${w * 0.6},${h * 0.3} L${w * 0.6},0 L${w},${h / 2} L${w * 0.6},${h} L${w * 0.6},${h * 0.7} L0,${h * 0.7} Z`,
   },
   {
     id: 'gear',
     name: 'Gear',
     category: 'decorative',
-    icon: '⚙',
+    icon: 'gear',
     getPath: (w, h) => {
       const cx = w / 2, cy = h / 2;
       const outerR = Math.min(w, h) / 2;
@@ -255,7 +255,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'cross',
     name: 'Cross',
     category: 'decorative',
-    icon: '✚',
+    icon: 'cross',
     getPath: (w, h) => {
       const t = 0.3;
       return `M${w * t},0 L${w * (1 - t)},0 L${w * (1 - t)},${h * t} L${w},${h * t} L${w},${h * (1 - t)} L${w * (1 - t)},${h * (1 - t)} L${w * (1 - t)},${h} L${w * t},${h} L${w * t},${h * (1 - t)} L0,${h * (1 - t)} L0,${h * t} L${w * t},${h * t} Z`;
@@ -265,7 +265,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'crescent',
     name: 'Crescent',
     category: 'decorative',
-    icon: '🌙',
+    icon: 'crescent',
     getPath: (w, h) => {
       const rx = w / 2, ry = h / 2;
       return `M${rx},0 A${rx},${ry} 0 1,1 ${rx},${h} A${rx * 0.6},${ry * 0.8} 0 1,0 ${rx},0 Z`;
@@ -275,7 +275,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'lightning',
     name: 'Lightning',
     category: 'decorative',
-    icon: '⚡',
+    icon: 'lightning',
     getPath: (w, h) =>
       `M${w * 0.55},0 L${w * 0.15},${h * 0.55} L${w * 0.45},${h * 0.55} L${w * 0.3},${h} L${w * 0.85},${h * 0.4} L${w * 0.55},${h * 0.4} L${w * 0.75},0 Z`,
   },
@@ -283,7 +283,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'house',
     name: 'House',
     category: 'decorative',
-    icon: '⌂',
+    icon: 'house',
     getPath: (w, h) =>
       `M0,${h * 0.4} L${w / 2},0 L${w},${h * 0.4} L${w},${h} L0,${h} Z`,
   },
@@ -291,7 +291,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'tag',
     name: 'Tag',
     category: 'decorative',
-    icon: '🏷',
+    icon: 'tag',
     getPath: (w, h) =>
       `M0,${h * 0.2} L${w * 0.75},${h * 0.2} L${w},${h / 2} L${w * 0.75},${h * 0.8} L0,${h * 0.8} Z`,
   },
@@ -299,7 +299,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'speech',
     name: 'Speech',
     category: 'decorative',
-    icon: '💬',
+    icon: 'speech',
     getPath: (w, h) =>
       `M0,0 L${w},0 L${w},${h * 0.7} L${w * 0.55},${h * 0.7} L${w * 0.4},${h} L${w * 0.4},${h * 0.7} L0,${h * 0.7} Z`,
   },
@@ -307,14 +307,14 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'starburst',
     name: 'Starburst',
     category: 'decorative',
-    icon: '✷',
+    icon: 'starburst',
     getPath: (w, h) => starPath(w / 2, h / 2, Math.min(w, h) / 2, Math.min(w, h) * 0.3, 12),
   },
   {
     id: 'plaque',
     name: 'Plaque',
     category: 'decorative',
-    icon: '▭',
+    icon: 'plaque',
     getPath: (w, h) => {
       const r = Math.min(w, h) * 0.18;
       return `M${r},0 L${w - r},0 Q${w},0 ${w},${r} L${w},${h - r} Q${w},${h} ${w - r},${h} L${r},${h} Q0,${h} 0,${h - r} L0,${r} Q0,0 ${r},0 Z`;
@@ -324,7 +324,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'bone',
     name: 'Bone',
     category: 'decorative',
-    icon: '🦴',
+    icon: 'bone',
     getPath: (w, h) => {
       const r = h * 0.25;
       return `M${r},${h / 2 - r} A${r},${r} 0 1,0 ${r},${h / 2 + r} L${w - r},${h / 2 + r} A${r},${r} 0 1,0 ${w - r},${h / 2 - r} Z`;
@@ -334,7 +334,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'paw',
     name: 'Paw',
     category: 'decorative',
-    icon: '🐾',
+    icon: 'paw',
     getPath: (w, h) => {
       const cx = w / 2, cy = h * 0.65;
       const padR = Math.min(w, h) * 0.28;

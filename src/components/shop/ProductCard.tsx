@@ -75,22 +75,16 @@ export function ProductCard({ product }: { product: Product }) {
           </div>
         )}
 
-        {/* Heritage Badges — refined positioning with backdrop blur */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+        {/* Heritage Badges */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
           {product.bestseller && (
-            <span className="text-[7px] uppercase tracking-[0.3em] bg-oxblood/90 backdrop-blur-sm text-ivory px-2.5 py-1 rounded-[2px] font-semibold shadow-sm flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-brass animate-ping" />
-              Atelier Archive · In Stock
+            <span className="text-[8px] uppercase tracking-[0.25em] bg-black/75 backdrop-blur-md text-[#D4AF37] px-2 py-0.5 rounded-[1px] font-mono border border-white/10">
+              Curated
             </span>
           )}
           {product.isNew && (
-            <span className="text-[7px] uppercase tracking-[0.3em] bg-foreground/90 backdrop-blur-sm text-background px-2.5 py-1 rounded-[2px] font-semibold shadow-sm">
-              New Edition · Ships in 48h
-            </span>
-          )}
-          {!product.bestseller && !product.isNew && (
-            <span className="text-[7px] uppercase tracking-[0.25em] bg-background/80 backdrop-blur-sm text-muted-foreground px-2 py-0.5 rounded-[2px] font-medium border border-border/40">
-              Laser Cut to Order
+            <span className="text-[8px] uppercase tracking-[0.25em] bg-black/75 backdrop-blur-md text-white px-2 py-0.5 rounded-[1px] font-mono border border-white/10">
+              New Edition
             </span>
           )}
         </div>

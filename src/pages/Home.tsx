@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Building2 } from 'lucide-react';
+import { ArrowRight, Building2 } from 'lucide-react';
 
 import { SiteHeader } from '@/components/shop/SiteHeader';
 import { SiteFooter } from '@/components/shop/SiteFooter';
@@ -11,7 +11,6 @@ import { B2BTradeModal } from '@/components/shop/B2BTradeModal';
 import { useCatalog } from '@/lib/catalogContext';
 
 // Luxury Editorial Components
-import { IntroLoader } from '@/components/editorial/IntroLoader';
 import { EditorialHero } from '@/components/editorial/EditorialHero';
 import { EditorialStatement } from '@/components/editorial/EditorialStatement';
 import { EditorialCollections } from '@/components/editorial/EditorialCollections';
@@ -149,7 +148,6 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3">
-                    <Sparkles className="w-3 h-3 text-[#D4AF37]" />
                     <span>Permanent Collection</span>
                   </div>
                   <h2 className="font-editorial text-4xl sm:text-5xl text-white font-normal leading-tight">
@@ -264,9 +262,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0B0B] text-[#F4F2EE] selection:bg-[#D4AF37] selection:text-black">
-      {/* 1.5s Minimal Editorial Loading Counter */}
-      <IntroLoader />
-
       {/* Sophisticated Fixed Navigation */}
       <SiteHeader onOpenStudio={() => setStudioOpen(true)} />
 

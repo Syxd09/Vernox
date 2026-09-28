@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/shop/SiteFooter';
 import { useCatalog } from '@/lib/catalogContext';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronUp, MapPin, Truck, Calendar, Package, AlertCircle, Sparkles, Sun, Moon, User, Lock, Settings, History, ShieldCheck, Mail, Phone, ArrowRight, Eye, EyeOff, X, PhoneCall, Heart } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin, Truck, Calendar, Package, AlertCircle, Layers, Sun, Moon, User, Lock, Settings, History, ShieldCheck, Mail, Phone, ArrowRight, Eye, EyeOff, X, PhoneCall, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import { auth, googleProvider } from '@/lib/firebase';
@@ -638,7 +638,7 @@ export default function Account() {
 
               {customerOrders.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-border rounded bg-card/40 noise-overlay">
-                  <Package className="w-10 h-10 mx-auto mb-4 text-muted-foreground/50 animate-pulse" />
+                  <Package className="w-10 h-10 mx-auto mb-4 text-muted-foreground/40" />
                   <p className="text-muted-foreground mb-6 font-serif-italic text-sm">No orders recorded under this account yet.</p>
                   <Link to="/shop" className="inline-flex bg-gradient-oxblood text-primary-foreground font-semibold px-6 py-3 rounded-full hover:shadow-soft transition text-xs uppercase tracking-widest">
                     Explore the Shop
@@ -787,7 +787,7 @@ export default function Account() {
                                       </div>
                                       {item.customDesignRef && item.customDesignRef.startsWith('{') && (
                                         <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-brass font-bold mt-1">
-                                          <Sparkles className="w-2.5 h-2.5" /> Custom Design
+                                          <Layers className="w-2.5 h-2.5" /> Custom Design
                                         </span>
                                       )}
                                     </div>

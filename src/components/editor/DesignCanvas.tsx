@@ -9,7 +9,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useVectorDocument } from '@/hooks/useVectorDocument';
 import { useTheme } from 'next-themes';
 import { 
-  ZoomIn, ZoomOut, Maximize2, Grid3X3, Sparkles, Cpu, 
+  ZoomIn, ZoomOut, Maximize2, Grid3X3, Eye, Cpu, 
   Move, RotateCw, CheckCircle2, AlertTriangle, Crosshair
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -669,7 +669,7 @@ export function DesignCanvas() {
               viewMode === 'realistic' ? "bg-primary text-primary-foreground font-semibold" : "text-slate-400 hover:text-white"
             )}
           >
-            <Sparkles className="w-3 h-3" />
+            <Eye className="w-3 h-3" />
             <span>Realistic</span>
           </Button>
           <Button

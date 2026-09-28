@@ -16,7 +16,7 @@ import { AdminProducts } from './admin/AdminProducts';
 import { AdminSettings } from './admin/AdminSettings';
 import { 
   LayoutDashboard, ShoppingCart, Package, Settings, 
-  ArrowLeft, Lock, Scissors, RefreshCw, Sparkles 
+  ArrowLeft, Lock, Scissors, RefreshCw, KeyRound 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -139,7 +139,7 @@ export default function Admin() {
               disabled={isAuthenticating}
               className="w-full border border-oxblood/40 bg-oxblood/5 hover:bg-oxblood/10 text-oxblood font-semibold py-2.5 rounded-lg text-sm transition shadow-soft disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <Sparkles className="w-4 h-4 text-brass" />
+              <KeyRound className="w-4 h-4 text-brass" />
               <span>1-Click Instant Access (Dev Mode)</span>
             </button>
           </form>

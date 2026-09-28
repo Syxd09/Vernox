@@ -4,7 +4,6 @@ import { SiteFooter } from '@/components/shop/SiteFooter';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles,
   Flame,
   Hammer,
   ShieldCheck,
@@ -33,8 +32,8 @@ const PROCESS_STEPS = [
     title: 'The Digital Canvas & Dynamic Kerf',
     subtitle: 'Where vector line meets engineering CAD',
     desc: 'Every commission begins with parametric vector calculation. Design geometries are fed directly into high-precision nesting software, translating architectural sketches into micro-meter laser paths with automated kerf offset compensation.',
-    icon: Sparkles,
-    color: 'from-yellow-500/10 to-amber-500/10 text-amber-600 border-amber-500/20',
+    icon: Compass,
+    color: 'bg-brass/10 text-brass border-brass/30',
     detail: 'Kerf compensation is calculated dynamically down to ±0.08mm, ensuring perfect clearance for interlocking elements and standoff fixings.'
   },
   {
@@ -43,7 +42,7 @@ const PROCESS_STEPS = [
     subtitle: 'Slicing 3.0mm structural steel with pure light',
     desc: 'Certified raw plate is loaded onto our dual-pallet bed. A 3000W nitrogen-assist fibre laser beam slices through raw alloy at speeds exceeding 25 m/min, achieving flawless edge perpendicularity without thermal warping.',
     icon: Flame,
-    color: 'from-red-500/10 to-orange-500/10 text-orange-600 border-orange-500/20',
+    color: 'bg-oxblood/10 text-oxblood border-oxblood/30',
     detail: 'High-pressure 20-bar nitrogen shielding eliminates cut edge oxidation, leaving virgin metallurgical surfaces ready for chemical bonding.'
   },
   {
@@ -52,7 +51,7 @@ const PROCESS_STEPS = [
     subtitle: 'Artisanal texture crafted by human hands',
     desc: 'Every piece is hand-deburred using diamond-honed abrasive blocks. Artisans guide the plate across custom Scotch-Brite linishing belts to build a rich, uniform satin brush that catches and breaks ambient light.',
     icon: Hammer,
-    color: 'from-blue-500/10 to-cyan-500/10 text-cyan-600 border-cyan-500/20',
+    color: 'bg-brass/10 text-brass border-brass/30',
     detail: 'Graining is applied unidirectionally parallel to the structural silhouette, accentuating clean lines and natural architectural reflectivity.'
   },
   {
@@ -61,7 +60,7 @@ const PROCESS_STEPS = [
     subtitle: 'Historic multi-stage oxidation recipes',
     desc: 'We immerse the prepared metal into proprietary chemical oxidation baths. From smoked charcoal bronze to velvety Corten rust and radiant brushed brass, our patinas are naturally matured and sealed with museum-grade microcrystalline wax.',
     icon: Layers,
-    color: 'from-purple-500/10 to-pink-500/10 text-purple-600 border-purple-500/20',
+    color: 'bg-oxblood/10 text-oxblood border-oxblood/30',
     detail: 'Patinas are halted with organic neutralizing agents and sealed with archival French wax, safeguarding against indoor discoloration for generations.'
   },
   {
@@ -70,7 +69,7 @@ const PROCESS_STEPS = [
     subtitle: 'Physical hallmark & signed Certificate of Authenticity',
     desc: 'On the reverse, each piece is stamped with the Vernox seal, edition sequence, and alloy purity hallmark. Pieces are protected in Belgian tissue paper and sealed inside shock-damped timber crates.',
     icon: ShieldCheck,
-    color: 'from-emerald-500/10 to-green-500/10 text-emerald-600 border-emerald-500/20',
+    color: 'bg-brass/10 text-brass border-brass/30',
     detail: 'Accompanied by a letterpress-printed Certificate of Authenticity signed by the master laser technician and patinator.'
   }
 ];

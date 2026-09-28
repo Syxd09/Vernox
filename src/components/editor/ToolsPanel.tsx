@@ -23,7 +23,7 @@ import {
   Type, CircleDot, Spline, Layers, Settings2, Activity,
   Upload, Eye, EyeOff, Lock, Unlock, Trash2, Copy,
   ArrowUp, ArrowDown, CheckCircle2, AlertTriangle, Wand2, ShieldAlert,
-  Sparkles, Maximize2
+  Maximize2
 } from 'lucide-react';
 
 export function ToolsPanel() {
@@ -566,7 +566,7 @@ export function ToolsPanel() {
                                 });
                               }}
                             >
-                              <Sparkles className="w-3 h-3 text-primary" />
+                              <Wand2 className="w-3 h-3 text-primary" />
                               Convert to Vector Score (Surface Etch)
                             </Button>
                           )}
