@@ -25,20 +25,20 @@ export function AtelierTrustBar() {
   ];
 
   return (
-    <section className="bg-white border-b border-[#E6E2D8] py-8 px-6 text-[#18181B] relative z-20 shadow-xs">
+    <section className="bg-[#0E0F12] border-b border-white/10 py-7 px-6 text-[#F4F2EE] relative z-20 shadow-xl">
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
         {trustPoints.map((item, idx) => {
           const Icon = item.icon;
           return (
             <div key={item.title} className="flex items-start gap-3.5 group">
-              <div className="w-10 h-10 rounded-[2px] bg-[#FAF8F5] border border-[#E6E2D8] flex items-center justify-center shrink-0 text-[#C5A880] group-hover:border-[#C5A880] group-hover:bg-[#121316] group-hover:text-white transition-all duration-300">
+              <div className="w-10 h-10 rounded-[2px] bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-[#C5A880] group-hover:border-[#C5A880] group-hover:bg-[#C5A880] group-hover:text-black transition-all duration-300">
                 <Icon className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-xs uppercase tracking-wider font-semibold text-[#18181B]">
+                <h4 className="text-xs uppercase tracking-wider font-semibold text-white">
                   {item.title}
                 </h4>
-                <p className="text-[11px] text-[#18181B]/60 font-sans leading-snug">
+                <p className="text-[11px] text-white/55 font-sans leading-snug">
                   {item.subtitle}
                 </p>
               </div>

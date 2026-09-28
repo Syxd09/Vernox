@@ -12,11 +12,14 @@ import { useCatalog } from '@/lib/catalogContext';
 // High-End Luxury Editorial & E-Commerce Components
 import { EditorialHero } from '@/components/editorial/EditorialHero';
 import { AtelierTrustBar } from '@/components/editorial/AtelierTrustBar';
+import { EditorialStatement } from '@/components/editorial/EditorialStatement';
 import { EditorialCollections } from '@/components/editorial/EditorialCollections';
+import { ProductShowcase } from '@/components/editorial/ProductShowcase';
 import { AtelierMasterworks } from '@/components/editorial/AtelierMasterworks';
 import { RoomVisualizer } from '@/components/editorial/RoomVisualizer';
 import { QualityBenchmark } from '@/components/editorial/QualityBenchmark';
 import { CraftsmanshipSection } from '@/components/editorial/CraftsmanshipSection';
+import { MaterialStory } from '@/components/editorial/MaterialStory';
 import { BespokeCommission } from '@/components/editorial/BespokeCommission';
 import { ArchitecturalProof } from '@/components/editorial/ArchitecturalProof';
 
@@ -28,7 +31,7 @@ export default function Home() {
   const isVisible = (key: string) => homepageSettings.sectionsVisibility[key] !== false;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#18181B] selection:bg-[#C5A880] selection:text-black">
+    <div className="min-h-screen flex flex-col bg-[#0B0B0C] text-[#F4F2EE] selection:bg-[#C5A880] selection:text-black">
       {/* Sophisticated Fixed Navigation with Announcement Bar */}
       <SiteHeader onOpenStudio={() => setStudioOpen(true)} />
 
@@ -42,28 +45,37 @@ export default function Home() {
         {/* 02. The Atelier Trust & Provenance Bar */}
         <AtelierTrustBar />
 
-        {/* 03. Curated Series Collections */}
+        {/* 03. The Atelier Manifesto Statement */}
+        <EditorialStatement />
+
+        {/* 04. Curated Series Collections */}
         {isVisible('collections') && (
           <EditorialCollections />
         )}
 
-        {/* 04. Core E-Commerce Catalog Masterworks Grid */}
+        {/* 05. Masterwork Curated Single-Piece Showcase */}
+        <ProductShowcase />
+
+        {/* 06. Core E-Commerce Catalog Masterworks Grid */}
         <AtelierMasterworks onOpenStudio={() => setStudioOpen(true)} />
 
-        {/* 05. Interactive Spatial Scale & Room Visualizer */}
+        {/* 07. Interactive Spatial Scale & Room Visualizer */}
         {isVisible('visualizer') && (
           <RoomVisualizer onOpenStudio={() => setStudioOpen(true)} />
         )}
 
-        {/* 06. The Vernox Quality Benchmark vs Commercial Decor */}
+        {/* 08. The Vernox Quality Benchmark vs Commercial Decor */}
         <QualityBenchmark />
 
-        {/* 07. Interactive 6-Stage Fabrication Protocol */}
+        {/* 09. Interactive 6-Stage Fabrication Protocol */}
         {isVisible('story') && (
           <CraftsmanshipSection />
         )}
 
-        {/* 08. Private Commissions & Custom Wall Studio */}
+        {/* 10. Noble Materials & Patinas Metallurgical Story */}
+        <MaterialStory />
+
+        {/* 11. Private Commissions & Custom Wall Studio */}
         {isVisible('studio-cta') && (
           <BespokeCommission
             onOpenStudio={() => setStudioOpen(true)}
@@ -71,12 +83,12 @@ export default function Home() {
           />
         )}
 
-        {/* 09. Verified Client Testimonials & Provenance */}
+        {/* 12. Verified Client Testimonials & Provenance */}
         {isVisible('authenticity') && (
           <ArchitecturalProof />
         )}
 
-        {/* 10. Architectural Trade & Corporate Supply */}
+        {/* 13. Architectural Trade & Corporate Supply */}
         {isVisible('b2b-trade') && (
           <section className="relative py-24 md:py-32 bg-[#141518] text-[#F4F2EE] border-b border-white/10 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6">
@@ -149,22 +161,22 @@ export default function Home() {
           </section>
         )}
 
-        {/* 11. Atelier Journal (Topics) */}
+        {/* 14. Atelier Journal (Topics) */}
         {isVisible('topics') && topics.length > 0 && (
-          <section className="relative py-24 md:py-32 bg-[#FAF8F5] text-[#18181B] border-b border-[#E6E2D8] overflow-hidden">
+          <section className="relative py-24 md:py-32 bg-[#0E0F12] text-[#F4F2EE] border-b border-white/10 overflow-hidden">
             <div className="max-w-7xl mx-auto px-6">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-[#18181B]/5 border border-[#18181B]/10 text-[#C5A880] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/10 text-[#C5A880] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3">
                     <span>Atelier Journal</span>
                   </div>
-                  <h2 className="font-editorial text-4xl sm:text-5xl text-[#18181B] font-normal leading-tight">
-                    Notes from the <span className="font-serif-italic text-[#8C7355] font-normal">workbench.</span>
+                  <h2 className="font-editorial text-4xl sm:text-5xl text-white font-normal leading-tight">
+                    Notes from the <span className="font-serif-italic text-[#C5A880] font-normal">workbench.</span>
                   </h2>
                 </div>
                 <Link
                   to="/notebook"
-                  className="text-xs uppercase tracking-widest text-[#18181B] hover:text-[#C5A880] font-semibold transition flex items-center gap-2 w-fit"
+                  className="text-xs uppercase tracking-widest text-white/80 hover:text-[#C5A880] font-semibold transition flex items-center gap-2 w-fit"
                 >
                   View All Journal Entries
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -175,23 +187,23 @@ export default function Home() {
                 {topics.slice(0, 2).map(t => (
                   <div
                     key={t.id}
-                    className="p-8 rounded-[4px] border border-[#E6E2D8] bg-white flex flex-col justify-between group hover:border-[#18181B]/30 hover:shadow-soft transition-all"
+                    className="p-8 rounded-[4px] border border-white/10 bg-[#141518] flex flex-col justify-between group hover:border-white/25 transition-all shadow-xl"
                   >
                     <div>
                       <div className="flex items-center justify-between text-[10px] uppercase font-mono tracking-widest text-[#C5A880] mb-3 font-semibold">
                         <span>{t.category}</span>
-                        <span className="text-[#18181B]/40">{t.readTime}</span>
+                        <span className="text-white/40">{t.readTime}</span>
                       </div>
-                      <h3 className="font-editorial text-2xl text-[#18181B] font-normal mb-3 group-hover:text-[#8C7355] transition">
+                      <h3 className="font-editorial text-2xl text-white font-normal mb-3 group-hover:text-[#C5A880] transition">
                         {t.title}
                       </h3>
-                      <p className="text-xs sm:text-sm text-[#18181B]/70 font-sans line-clamp-3 leading-relaxed mb-6">
+                      <p className="text-xs sm:text-sm text-white/70 font-sans line-clamp-3 leading-relaxed mb-6">
                         {t.content}
                       </p>
                     </div>
                     <Link
                       to="/notebook"
-                      className="text-xs uppercase tracking-widest text-[#18181B] hover:text-[#C5A880] font-semibold transition inline-flex items-center gap-1.5"
+                      className="text-xs uppercase tracking-widest text-white/80 hover:text-[#C5A880] font-semibold transition inline-flex items-center gap-1.5"
                     >
                       Read Full Article
                       <ArrowRight className="w-3.5 h-3.5" />

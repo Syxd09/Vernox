@@ -39,13 +39,13 @@ export function ProductShowcase() {
   return (
     <section 
       id="showcase" 
-      className="relative py-24 md:py-36 bg-[#0B0B0B] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
+      className="relative py-24 md:py-36 bg-[#111215] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-14">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#C5A880] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
               <span>Curated Atelier Highlights</span>
             </div>
             <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
@@ -61,7 +61,7 @@ export function ProductShowcase() {
                 key={p.id}
                 type="button"
                 onClick={() => setActiveIndex(idx)}
-                className={`px-4 py-2.5 rounded-[2px] text-xs uppercase tracking-wider font-mono transition-all whitespace-nowrap ${
+                className={`px-4 py-2.5 rounded-[2px] text-xs uppercase tracking-wider font-mono transition-all whitespace-nowrap cursor-pointer ${
                   activeIndex === idx
                     ? 'bg-white text-black font-semibold shadow-md'
                     : 'bg-white/5 border border-white/10 text-white/60 hover:text-white hover:border-white/25'
@@ -100,7 +100,7 @@ export function ProductShowcase() {
               </div>
 
               {/* Exhibition Tag */}
-              <div className="absolute top-5 left-5 bg-black/80 backdrop-blur-md px-3.5 py-1 rounded-[2px] border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-mono font-semibold">
+              <div className="absolute top-5 left-5 bg-black/80 backdrop-blur-md px-3.5 py-1 rounded-[2px] border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#C5A880] font-mono font-semibold">
                 Featured Artwork
               </div>
             </Link>
@@ -109,7 +109,7 @@ export function ProductShowcase() {
           {/* Right: Editorial Metadata & Actions */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-mono font-semibold">
+              <div className="text-[10px] uppercase tracking-[0.3em] text-[#C5A880] font-mono font-semibold">
                 HANDCRAFTED · METAL ART · SOLID PLATE
               </div>
               <h3 className="font-editorial text-4xl sm:text-5xl text-white font-normal leading-[1.08]">
@@ -128,7 +128,7 @@ export function ProductShowcase() {
             <div className="p-4 rounded-[2px] bg-white/5 border border-white/10 space-y-2">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-white/40 uppercase tracking-wider">Certified Alloy</span>
-                <span className="text-[#D4AF37] font-medium">{current.alloySpec || 'Solid 3.0mm Belgian CZ108 Brass'}</span>
+                <span className="text-[#C5A880] font-medium">{current.alloySpec || 'Solid 3.0mm Belgian CZ108 Brass'}</span>
               </div>
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-white/40 uppercase tracking-wider">Available Finishes</span>
@@ -143,14 +143,14 @@ export function ProductShowcase() {
                   Atelier Price
                 </span>
                 <div className="text-2xl sm:text-3xl font-editorial text-white font-normal mt-0.5">
-                  {storeConfig.currency || '₹'}{current.price.toLocaleString()}
+                  {(storeConfig.currency && storeConfig.currency !== '$') ? storeConfig.currency : '₹'}{current.price.toLocaleString()}
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <Link
                   to={`/product/${current.slug}`}
-                  className="flex-1 sm:flex-none px-7 py-3.5 rounded-[2px] bg-white text-black text-xs uppercase tracking-widest font-semibold hover:bg-[#E8E5DF] transition flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-none px-7 py-3.5 rounded-[2px] bg-[#FAF8F5] text-[#18181B] text-xs uppercase tracking-widest font-semibold hover:bg-white transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
                 >
                   View Artwork
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -159,7 +159,7 @@ export function ProductShowcase() {
                 <button
                   type="button"
                   onClick={handleQuickAdd}
-                  className="p-3.5 rounded-[2px] border border-white/20 hover:border-white text-white hover:text-[#D4AF37] transition flex items-center justify-center"
+                  className="p-3.5 rounded-[2px] border border-white/20 hover:border-[#C5A880] text-white hover:text-[#C5A880] transition flex items-center justify-center cursor-pointer bg-white/5 hover:bg-white/10"
                   title="Quick Add to Collection"
                 >
                   <ShoppingBag className="w-4 h-4" />

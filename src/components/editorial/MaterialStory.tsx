@@ -27,8 +27,8 @@ const MATERIALS: MaterialSpec[] = [
     alloyFamily: 'Copper-Zinc (CuZn37)',
     thickness: '3.0 mm Solid Plate',
     density: '8.44 g/cm³',
-    gradient: 'from-[#C29B38] via-[#E5C158] to-[#9E7A23]',
-    accentColor: '#D4AF37',
+    gradient: 'from-[#DFCBB2] via-[#C5A880] to-[#8C7355]',
+    accentColor: '#C5A880',
     tagline: 'Warm golden reflectivity with directional satin grain.',
     description: 'Cold-rolled solid brass milled with abrasive fleece belts to create continuous linear graining. Sealed in microcrystalline archival wax to retard uncontrolled tarnish while allowing natural depth to mature.',
     specDetails: {
@@ -114,17 +114,17 @@ export function MaterialStory() {
   return (
     <section 
       id="materials" 
-      className="relative py-24 md:py-36 bg-[#0B0B0B] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
+      className="relative py-24 md:py-36 bg-[#0E0F12] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
     >
       {/* Background ambient lighting */}
-      <div className="absolute top-1/2 right-10 w-96 h-96 bg-[#D4AF37]/[0.02] rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute top-1/2 right-10 w-96 h-96 bg-[#C5A880]/[0.02] rounded-full blur-[160px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
-              <Layers className="w-3 h-3 text-[#D4AF37]" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#C5A880] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
+              <Layers className="w-3 h-3 text-[#C5A880]" />
               <span>Metallurgical Archives</span>
             </div>
             <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
@@ -145,9 +145,9 @@ export function MaterialStory() {
               key={m.id}
               type="button"
               onClick={() => setSelectedMaterial(m)}
-              className={`flex items-center gap-3 px-5 py-3 rounded-[2px] border transition-all duration-300 text-xs ${
+              className={`flex items-center gap-3 px-5 py-3 rounded-[2px] border transition-all duration-300 text-xs cursor-pointer ${
                 selectedMaterial.id === m.id
-                  ? 'border-[#D4AF37] bg-white/10 text-white shadow-sm'
+                  ? 'border-[#C5A880] bg-white/10 text-white shadow-sm'
                   : 'border-white/10 hover:border-white/30 text-white/60 hover:text-white bg-black/40'
               }`}
             >
@@ -155,22 +155,22 @@ export function MaterialStory() {
                 className={`w-3.5 h-3.5 rounded-full bg-gradient-to-tr ${m.gradient} border border-white/30 shrink-0`} 
               />
               <span className="tracking-wider uppercase font-medium">{m.name.split(' ')[0]}</span>
-              {selectedMaterial.id === m.id && <Check className="w-3.5 h-3.5 text-[#D4AF37]" />}
+              {selectedMaterial.id === m.id && <Check className="w-3.5 h-3.5 text-[#C5A880]" />}
             </button>
           ))}
         </div>
 
         {/* Detailed Material Showcase Panel */}
-        <div className="rounded-[4px] border border-white/15 bg-[#121212] p-8 sm:p-12 md:p-16 grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center shadow-2xl relative overflow-hidden">
+        <div className="rounded-[4px] border border-white/15 bg-[#141518] p-8 sm:p-12 md:p-16 grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center shadow-2xl relative overflow-hidden">
           <div className="space-y-6">
             <div className="space-y-2">
-              <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#D4AF37]">
+              <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#C5A880]">
                 {selectedMaterial.alloyFamily} · {selectedMaterial.thickness}
               </div>
               <h3 className="font-editorial text-3xl sm:text-4xl text-white font-normal leading-tight">
                 {selectedMaterial.name}
               </h3>
-              <p className="font-editorial italic text-lg sm:text-xl text-[#D4AF37]">
+              <p className="font-editorial italic text-lg sm:text-xl text-[#C5A880]">
                 "{selectedMaterial.tagline}"
               </p>
             </div>
@@ -195,7 +195,7 @@ export function MaterialStory() {
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-white/40 block">Density & Mass</span>
-                <span className="text-[#D4AF37] font-semibold">{selectedMaterial.density}</span>
+                <span className="text-[#C5A880] font-semibold">{selectedMaterial.density}</span>
               </div>
             </div>
           </div>
@@ -211,7 +211,7 @@ export function MaterialStory() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/20" />
               
               {/* Corner Hallmark Tag */}
-              <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 backdrop-blur-md rounded-[1px] border border-white/20 text-[8px] font-mono uppercase tracking-widest text-[#D4AF37]">
+              <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/80 backdrop-blur-md rounded-[1px] border border-white/20 text-[8px] font-mono uppercase tracking-widest text-[#C5A880]">
                 3.0mm Plate Verified
               </div>
             </div>
