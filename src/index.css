@@ -120,26 +120,32 @@
   }
 
   h1, h2, h3, h4, .font-display {
-    font-family: 'Cormorant Garamond', 'Cinzel', Georgia, serif;
-    font-weight: 500;
-    letter-spacing: -0.015em;
+    font-family: 'Cormorant Garamond', 'Instrument Serif', 'Cinzel', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
     color: hsl(var(--foreground));
+  }
+
+  .font-editorial {
+    font-family: 'Instrument Serif', 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
   }
 
   .font-brand {
     font-family: 'Cinzel', 'Cormorant Garamond', Georgia, serif;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.22em;
   }
 
   .font-serif-italic {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: 'Instrument Serif', 'Cormorant Garamond', serif;
     font-style: italic;
     font-weight: 400;
   }
 
   code, pre { font-family: 'JetBrains Mono', monospace; }
 
-  ::selection { background: hsl(var(--oxblood) / 0.85); color: hsl(var(--ivory)); }
+  ::selection { background: #111111; color: #F4F2EE; }
 }
 
 @layer utilities {

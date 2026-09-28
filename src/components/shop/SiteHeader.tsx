@@ -1,12 +1,13 @@
 import { Link, NavLink } from 'react-router-dom';
-import { ShoppingBag, Menu, X, User, Sparkles, Heart } from 'lucide-react';
-import { useState } from 'react';
+import { ShoppingBag, Menu, X, User, Sparkles, Heart, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/lib/cartContext';
 import { cn } from '@/lib/utils';
 import { InlineStudio } from '@/components/experience/InlineStudio';
 import { useCatalog } from '@/lib/catalogContext';
 import { MobileBottomNav } from './MobileBottomNav';
+import { SearchModal } from '@/components/editorial/SearchModal';
 
 interface Props {
   onOpenStudio?: () => void;
@@ -17,51 +18,65 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
   const { wishlist } = useCatalog();
   const [open, setOpen] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const openStudio = onOpenStudio ?? (() => setStudioOpen(true));
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 25);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Global Cmd+K / Ctrl+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <>
-      {/* Refined Luxury Announcement Bar */}
-      <div className="bg-[#12161f] text-[#e8ded1] text-[9px] sm:text-[10px] tracking-[0.22em] uppercase py-2 px-6 border-b border-white/5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <span className="text-brass/90 hidden lg:inline-block text-[9px] tracking-[0.28em]">Antwerp Atelier</span>
-          <div className="flex-1 flex items-center justify-center gap-2 sm:gap-3 text-center">
-            <span className="opacity-90">Complimentary Insured Delivery Worldwide</span>
-            <span className="text-brass/50 text-xs hidden sm:inline">·</span>
-            <span className="text-brass font-medium hidden sm:inline">Signed Certificate of Authenticity</span>
-          </div>
-          <span className="text-muted-foreground/60 hidden lg:inline-block text-[9px] font-mono">EST. 2019</span>
-        </div>
-      </div>
-
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-background/95 border-b border-border/70 transition-colors">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-[74px]">
+      <header className={cn(
+        "sticky top-0 z-40 transition-all duration-500",
+        scrolled
+          ? "bg-[#0B0B0B]/90 backdrop-blur-md border-b border-white/10 shadow-2xl py-3.5"
+          : "bg-[#0B0B0B]/75 backdrop-blur-sm border-b border-white/5 py-4"
+      )}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
           {/* Brand Wordmark (Left) */}
           <Link to="/" className="flex items-center group" title="Vernox Atelier">
             <div className="flex flex-col">
-              <span className="font-brand text-2xl md:text-[26px] font-bold tracking-[0.26em] text-oxblood-deep uppercase leading-none group-hover:text-brass transition-colors">
+              <span className="font-brand text-2xl md:text-[25px] font-semibold tracking-[0.28em] text-white uppercase leading-none group-hover:text-[#D4AF37] transition-colors">
                 VERNOX
               </span>
-              <span className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground font-medium mt-1 font-sans">
+              <span className="text-[8px] uppercase tracking-[0.34em] text-white/50 font-medium mt-1 font-sans">
                 Atelier Antwerp
               </span>
             </div>
           </Link>
 
           {/* Clean Editorial Navigation (Center) */}
-          <nav className="hidden md:flex items-center gap-9 lg:gap-11">
+          <nav className="hidden md:flex items-center gap-8 lg:gap-10">
             <NavLink
               to="/shop"
               className={({ isActive }) => cn(
-                'relative text-[11px] uppercase tracking-[0.22em] font-medium py-1 transition-colors group/link',
-                isActive ? 'text-oxblood font-semibold' : 'text-foreground/75 hover:text-oxblood'
+                'relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 transition-colors group/link',
+                isActive ? 'text-white font-semibold' : 'text-white/70 hover:text-white'
               )}
             >
               {({ isActive }) => (
                 <>
                   <span>Collections</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-oxblood transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -71,25 +86,25 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <button
               type="button"
               onClick={openStudio}
-              className="relative text-[11px] uppercase tracking-[0.22em] font-medium py-1 text-foreground/75 hover:text-oxblood transition-colors group/link flex items-center gap-1.5 cursor-pointer"
+              className="relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 text-white/70 hover:text-white transition-colors group/link flex items-center gap-1.5 cursor-pointer"
             >
               <span>Studio</span>
-              <span className="text-[9px] text-brass group-hover/link:text-oxblood transition-colors">✦</span>
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-oxblood group-hover/link:w-full transition-all duration-300" />
+              <span className="text-[8px] text-[#D4AF37] group-hover/link:text-white transition-colors">✦</span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-[#D4AF37] group-hover/link:w-full transition-all duration-300" />
             </button>
 
             <NavLink
               to="/about"
               className={({ isActive }) => cn(
-                'relative text-[11px] uppercase tracking-[0.22em] font-medium py-1 transition-colors group/link',
-                isActive ? 'text-oxblood font-semibold' : 'text-foreground/75 hover:text-oxblood'
+                'relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 transition-colors group/link',
+                isActive ? 'text-white font-semibold' : 'text-white/70 hover:text-white'
               )}
             >
               {({ isActive }) => (
                 <>
                   <span>Craft</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-oxblood transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -98,25 +113,25 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
 
             <NavLink
               to="/about#b2b"
-              className="relative text-[11px] uppercase tracking-[0.22em] font-medium py-1 text-foreground/75 hover:text-oxblood transition-colors group/link flex items-center gap-1"
+              className="relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 text-white/70 hover:text-white transition-colors group/link flex items-center gap-1.5"
             >
               <span>Trade / B2B</span>
-              <span className="text-[8px] font-mono text-brass border border-brass/40 px-1 rounded-xs">BULK</span>
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-oxblood group-hover/link:w-full transition-all duration-300" />
+              <span className="text-[8px] font-mono text-[#D4AF37] border border-[#D4AF37]/40 px-1 rounded-xs">BULK</span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-[#D4AF37] group-hover/link:w-full transition-all duration-300" />
             </NavLink>
 
             <NavLink
               to="/notebook"
               className={({ isActive }) => cn(
-                'relative text-[11px] uppercase tracking-[0.22em] font-medium py-1 transition-colors group/link',
-                isActive ? 'text-oxblood font-semibold' : 'text-foreground/75 hover:text-oxblood'
+                'relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 transition-colors group/link',
+                isActive ? 'text-white font-semibold' : 'text-white/70 hover:text-white'
               )}
             >
               {({ isActive }) => (
                 <>
                   <span>Journal</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-oxblood transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -126,15 +141,25 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
 
           {/* Luxury Utility Icons (Right) */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search Catalog"
+              className="p-2 text-white/75 hover:text-[#D4AF37] transition-colors cursor-pointer"
+              title="Search Atelier Catalog (Cmd+K)"
+            >
+              <Search className="w-[18px] h-[18px]" />
+            </button>
+
             <Link 
               to="/account?tab=wishlist" 
               aria-label="Wishlist" 
-              className="relative p-2 text-foreground/75 hover:text-oxblood transition-colors"
+              className="relative p-2 text-white/75 hover:text-[#D4AF37] transition-colors"
               title="Private Wishlist"
             >
               <Heart className="w-[18px] h-[18px]" />
               {wishlist.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-oxblood text-ivory text-[9px] font-mono font-semibold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute top-0.5 right-0.5 bg-[#800020] text-white text-[9px] font-mono font-semibold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
                   {wishlist.length}
                 </span>
               )}
@@ -143,7 +168,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <Link 
               to="/account" 
               aria-label="Account" 
-              className="p-2 text-foreground/75 hover:text-oxblood transition-colors"
+              className="p-2 text-white/75 hover:text-[#D4AF37] transition-colors"
               title="Client Account"
             >
               <User className="w-[18px] h-[18px]" />
@@ -152,12 +177,12 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <button 
               onClick={() => setDrawerOpen(true)} 
               aria-label="Cart" 
-              className="relative p-2 text-foreground/75 hover:text-oxblood transition-colors cursor-pointer"
+              className="relative p-2 text-white/75 hover:text-[#D4AF37] transition-colors cursor-pointer"
               title="Shopping Bag"
             >
               <ShoppingBag className="w-[18px] h-[18px]" />
               {count > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-oxblood text-ivory text-[9px] font-mono font-semibold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute top-0.5 right-0.5 bg-[#800020] text-white text-[9px] font-mono font-semibold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
                   {count}
                 </span>
               )}
@@ -165,7 +190,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
 
             {/* Mobile Hamburger Toggle */}
             <button 
-              className="md:hidden p-2 text-foreground/80 hover:text-oxblood transition-colors cursor-pointer" 
+              className="md:hidden p-2 text-white/80 hover:text-white transition-colors cursor-pointer" 
               onClick={() => setOpen(o => !o)} 
               aria-label="Toggle Menu"
             >
@@ -251,6 +276,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
       </header>
 
       {!onOpenStudio && <InlineStudio open={studioOpen} onOpenChange={setStudioOpen} />}
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <MobileBottomNav />
     </>
   );

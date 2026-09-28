@@ -20,6 +20,8 @@ import Admin from "./pages/Admin.tsx";
 import Notebook from "./pages/Notebook.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { CartDrawer } from "@/components/shop/CartDrawer";
+import { SmoothScroll } from "@/components/editorial/SmoothScroll";
+import { CustomCursor } from "@/components/editorial/CustomCursor";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +34,8 @@ const App = () => (
         <CatalogProvider>
           <CartProvider>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <SmoothScroll />
+              <CustomCursor />
               <CartDrawer />
               <Routes>
                 <Route path="/" element={<Home />} />
