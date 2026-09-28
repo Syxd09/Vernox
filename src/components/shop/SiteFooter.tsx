@@ -3,53 +3,53 @@ import { ShieldCheck, Award, Truck, Lock, Phone, Mail, MapPin, Clock } from 'luc
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/80 bg-card/60 mt-24">
+    <footer className="border-t border-[#E6E2D8] bg-[#FAF8F5] text-[#18181B] mt-0">
       {/* 4 Trust & Authenticity Pillars Banner */}
-      <div className="border-b border-border/70 bg-background/50">
+      <div className="border-b border-[#E6E2D8] bg-white">
         <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-sm bg-oxblood/5 border border-oxblood/20 text-oxblood shrink-0">
+            <div className="p-2.5 rounded-[2px] bg-[#FAF8F5] border border-[#E6E2D8] text-[#C5A880] shrink-0">
               <Award className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] font-bold text-oxblood-deep">Numbered Hallmark</div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              <div className="text-xs uppercase tracking-[0.2em] font-bold text-[#18181B]">Numbered Hallmark</div>
+              <div className="text-xs text-[#18181B]/65 mt-0.5 leading-relaxed font-sans">
                 Every piece is stamped with the atelier seal and accompanied by a signed Certificate of Authenticity.
               </div>
             </div>
           </div>
 
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-sm bg-brass/10 border border-brass/30 text-brass shrink-0">
+            <div className="p-2.5 rounded-[2px] bg-[#FAF8F5] border border-[#E6E2D8] text-[#C5A880] shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] font-bold text-oxblood-deep">Solid Metallurgical Plate</div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              <div className="text-xs uppercase tracking-[0.2em] font-bold text-[#18181B]">Solid Metallurgical Plate</div>
+              <div className="text-xs text-[#18181B]/65 mt-0.5 leading-relaxed font-sans">
                 Precision laser-sliced from solid 3mm Belgian sheet steel, CZ108 brass, and marine 304 stainless.
               </div>
             </div>
           </div>
 
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-sm bg-oxblood/5 border border-oxblood/20 text-oxblood shrink-0">
+            <div className="p-2.5 rounded-[2px] bg-[#FAF8F5] border border-[#E6E2D8] text-[#C5A880] shrink-0">
               <Truck className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] font-bold text-oxblood-deep">Insured White-Glove Transit</div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              <div className="text-xs uppercase tracking-[0.2em] font-bold text-[#18181B]">Insured White-Glove Transit</div>
+              <div className="text-xs text-[#18181B]/65 mt-0.5 leading-relaxed font-sans">
                 Packed in reinforced archival wooden crates with 100% transit insurance and door-to-door tracking.
               </div>
             </div>
           </div>
 
           <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-sm bg-brass/10 border border-brass/30 text-brass shrink-0">
+            <div className="p-2.5 rounded-[2px] bg-[#FAF8F5] border border-[#E6E2D8] text-[#C5A880] shrink-0">
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] font-bold text-oxblood-deep">Level-1 Encrypted Checkout</div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              <div className="text-xs uppercase tracking-[0.2em] font-bold text-[#18181B]">Level-1 Encrypted Checkout</div>
+              <div className="text-xs text-[#18181B]/65 mt-0.5 leading-relaxed font-sans">
                 Bank-grade 256-bit SSL encryption powered by Razorpay. Seamless UPI, cards, and net banking.
               </div>
             </div>
@@ -137,50 +137,50 @@ export function SiteFooter() {
       </div>
 
       {/* Architectural Press & International Trade Endorsements Bar */}
-      <div className="border-b border-border/60 bg-[#0d1017] text-[#c9bfae] py-6 px-6">
+      <div className="border-b border-white/10 bg-[#121316] text-[#E5E0D8] py-6 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
           <div className="space-y-0.5">
-            <span className="text-[9px] uppercase tracking-[0.3em] text-brass font-bold block">
+            <span className="text-[9px] uppercase tracking-[0.3em] text-[#C5A880] font-mono font-bold block">
               Architectural Acclaim & Trade Specification
             </span>
-            <span className="text-xs text-muted-foreground/80 font-serif-italic">
+            <span className="text-xs text-white/70 font-serif-italic">
               Featured in international publications and specified by residential & hospitality practices worldwide.
             </span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs font-serif tracking-widest text-[#d8cebe]/70 uppercase">
-            <span className="hover:text-brass transition cursor-default">Architectural Digest</span>
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs font-serif tracking-widest text-white/80 uppercase">
+            <span className="hover:text-[#C5A880] transition cursor-default">Architectural Digest</span>
             <span>·</span>
-            <span className="hover:text-brass transition cursor-default">Wallpaper*</span>
+            <span className="hover:text-[#C5A880] transition cursor-default">Wallpaper*</span>
             <span>·</span>
-            <span className="hover:text-brass transition cursor-default">Dezeen</span>
+            <span className="hover:text-[#C5A880] transition cursor-default">Dezeen</span>
             <span>·</span>
-            <span className="hover:text-brass transition cursor-default">Elle Décor</span>
+            <span className="hover:text-[#C5A880] transition cursor-default">Elle Décor</span>
             <span>·</span>
-            <span className="hover:text-brass transition cursor-default">The World of Interiors</span>
+            <span className="hover:text-[#C5A880] transition cursor-default">The World of Interiors</span>
           </div>
         </div>
       </div>
 
       {/* Bottom Payment Marks & Legal Bar */}
-      <div className="border-t border-border/80 py-8 bg-background/80">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+      <div className="border-t border-[#E6E2D8] py-8 bg-[#FAF8F5]">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#18181B]/70">
           <div className="space-y-1">
-            <div className="text-[11px] uppercase tracking-widest font-semibold text-oxblood-deep">
+            <div className="text-[11px] uppercase tracking-widest font-semibold text-[#18181B]">
               © {new Date().getFullYear()} VERNOX ATELIER · SCULPTED IN ANTWERP, BELGIUM
             </div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-[10px] text-[#18181B]/55">
               Solid 3.0mm Belgian Plate · Archival Crated Freight · 10-Year Weathering Warranty
             </div>
           </div>
 
           {/* Accepted Secure Payment Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground/80 font-mono">
-            <span className="px-2 py-0.5 bg-card border border-border rounded">Visa</span>
-            <span className="px-2 py-0.5 bg-card border border-border rounded">Mastercard</span>
-            <span className="px-2 py-0.5 bg-card border border-border rounded">American Express</span>
-            <span className="px-2 py-0.5 bg-card border border-border rounded">UPI / QR</span>
-            <span className="px-2 py-0.5 bg-card border border-border rounded">Razorpay</span>
-            <span className="px-2 py-0.5 bg-card border border-border rounded">NetBanking</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-wider text-[#18181B]/70 font-mono">
+            <span className="px-2 py-0.5 bg-white border border-[#E6E2D8] rounded-[2px]">Visa</span>
+            <span className="px-2 py-0.5 bg-white border border-[#E6E2D8] rounded-[2px]">Mastercard</span>
+            <span className="px-2 py-0.5 bg-white border border-[#E6E2D8] rounded-[2px]">American Express</span>
+            <span className="px-2 py-0.5 bg-white border border-[#E6E2D8] rounded-[2px]">Apple Pay</span>
+            <span className="px-2 py-0.5 bg-white border border-[#E6E2D8] rounded-[2px]">Bank Wire / SEPA</span>
+            <span className="px-2 py-0.5 bg-white border border-[#E6E2D8] rounded-[2px]">Razorpay</span>
           </div>
         </div>
       </div>

@@ -6,100 +6,102 @@
 
 @layer base {
   :root {
-    /* Vernox Atelier — Gallery Warm-White, Deep Obsidian & Burnished Brass */
-    --background: 40 25% 98%;
-    --foreground: 220 15% 12%;
+    /* Vernox Atelier — Gallery Warm-Alabaster, Architectural Obsidian & Champagne Bronze */
+    --background: 38 25% 97%;             /* Warm architectural alabaster #FAF8F5 */
+    --foreground: 220 15% 12%;            /* Deep architectural graphite #18191B */
 
-    --card: 40 20% 99%;
+    --card: 0 0% 100%;                    /* Crisp museum art mount #FFFFFF */
     --card-foreground: 220 15% 12%;
 
-    --popover: 40 20% 99%;
+    --popover: 0 0% 100%;
     --popover-foreground: 220 15% 12%;
 
-    --primary: 354 57% 24%;              /* Royal Antwerp oxblood #611821 */
-    --primary-foreground: 40 25% 98%;
+    --primary: 220 15% 12%;               /* Tailored obsidian #18181B */
+    --primary-foreground: 38 25% 98%;
 
-    --secondary: 40 15% 92%;
-    --secondary-foreground: 220 15% 15%;
+    --secondary: 38 18% 93%;              /* Warm cashmere #F3EFE8 */
+    --secondary-foreground: 220 15% 12%;
 
-    --muted: 40 15% 93%;
-    --muted-foreground: 220 10% 42%;
+    --muted: 38 14% 92%;
+    --muted-foreground: 220 10% 45%;      /* Architectural slate #6E7075 */
 
-    --accent: 38 52% 52%;                /* Burnished atelier brass #B98B48 */
-    --accent-foreground: 40 25% 98%;
+    --accent: 37 38% 64%;                 /* Muted champagne bronze #C5A880 */
+    --accent-foreground: 220 15% 12%;
 
     --destructive: 0 62% 40%;
-    --destructive-foreground: 40 25% 98%;
+    --destructive-foreground: 38 25% 98%;
 
-    --border: 40 15% 88%;
-    --input: 40 15% 90%;
-    --ring: 354 57% 24%;
+    --border: 38 15% 88%;                 /* Fine architectural hairline #E6E2D8 */
+    --input: 38 15% 88%;
+    --ring: 37 38% 64%;
 
     --radius: 0.25rem;
 
-    --surface: 40 20% 99%;
+    --surface: 0 0% 100%;
     --surface-foreground: 220 15% 12%;
-    --toolbar: 220 20% 9%;
-    --toolbar-foreground: 40 25% 96%;
+    --toolbar: 220 16% 9%;
+    --toolbar-foreground: 38 25% 96%;
 
-    --oxblood: 354 57% 24%;
-    --oxblood-deep: 354 60% 12%;
-    --brass: 38 52% 52%;
-    --brass-soft: 38 50% 75%;
-    --ivory: 40 25% 98%;
-    --ivory-warm: 40 18% 92%;
+    --oxblood: 220 15% 12%;               /* Modern obsidian replaces dark wine */
+    --oxblood-deep: 220 20% 8%;
+    --brass: 37 38% 64%;                  /* Refined champagne bronze #C5A880 */
+    --brass-soft: 37 30% 78%;             /* #D8C5A8 */
+    --ivory: 38 25% 98%;
+    --ivory-warm: 38 18% 92%;
+    --champagne: 37 38% 64%;
+    --forest-trust: 152 35% 22%;          /* Architectural heritage green for trust */
 
-    --gradient-oxblood: linear-gradient(135deg, hsl(354 60% 18%), hsl(354 57% 28%));
-    --gradient-brass: linear-gradient(135deg, hsl(38 65% 68%), hsl(34 55% 42%));
-    --gradient-ivory: linear-gradient(180deg, hsl(40 25% 99%), hsl(40 18% 92%));
-    --gradient-metal: linear-gradient(160deg, #2d0b10 0%, #611821 35%, #b98b48 55%, #7a3e20 75%, #2d0b10 100%);
-    --shadow-luxe: 0 25px 60px -20px rgba(27, 30, 35, 0.12), 0 0 1px 1px rgba(27, 30, 35, 0.04);
-    --shadow-soft: 0 8px 24px -10px rgba(27, 30, 35, 0.08);
-    --shadow-brass: 0 0 35px hsl(38 65% 55% / 0.2);
+    --gradient-oxblood: linear-gradient(135deg, hsl(220 20% 10%), hsl(220 15% 16%));
+    --gradient-brass: linear-gradient(135deg, #DFCBB2 0%, #C5A880 50%, #A88B63 100%);
+    --gradient-ivory: linear-gradient(180deg, hsl(38 25% 99%), hsl(38 18% 93%));
+    --gradient-metal: linear-gradient(160deg, #121316 0%, #202227 40%, #C5A880 60%, #1A1C20 100%);
+    --shadow-luxe: 0 25px 60px -20px rgba(24, 25, 27, 0.08), 0 0 1px 1px rgba(24, 25, 27, 0.04);
+    --shadow-soft: 0 8px 24px -10px rgba(24, 25, 27, 0.06);
+    --shadow-brass: 0 0 35px hsl(37 38% 64% / 0.18);
 
-    --sidebar-background: 40 20% 99%;
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 15% 15%;
-    --sidebar-primary: 354 57% 24%;
-    --sidebar-primary-foreground: 40 25% 98%;
-    --sidebar-accent: 40 15% 92%;
+    --sidebar-primary: 220 15% 12%;
+    --sidebar-primary-foreground: 38 25% 98%;
+    --sidebar-accent: 38 18% 93%;
     --sidebar-accent-foreground: 220 15% 15%;
-    --sidebar-border: 40 15% 88%;
-    --sidebar-ring: 354 57% 24%;
+    --sidebar-border: 38 15% 88%;
+    --sidebar-ring: 37 38% 64%;
   }
 
   .dark {
-    --background: 220 18% 7%;
-    --foreground: 40 20% 94%;
-    --card: 220 16% 9%;
-    --card-foreground: 40 20% 94%;
-    --popover: 220 16% 9%;
-    --popover-foreground: 40 20% 94%;
-    --primary: 38 52% 56%;
+    --background: 220 14% 8%;             /* Titanium graphite #121316 */
+    --foreground: 38 20% 94%;             /* Warm pearl #F4F2EC */
+    --card: 220 14% 11%;                  /* Deep charcoal card #18191D */
+    --card-foreground: 38 20% 94%;
+    --popover: 220 14% 11%;
+    --popover-foreground: 38 20% 94%;
+    --primary: 37 38% 64%;
     --primary-foreground: 220 20% 8%;
-    --secondary: 220 14% 14%;
-    --secondary-foreground: 40 20% 94%;
-    --muted: 220 14% 15%;
+    --secondary: 220 12% 16%;
+    --secondary-foreground: 38 20% 94%;
+    --muted: 220 12% 16%;
     --muted-foreground: 220 10% 65%;
-    --accent: 38 52% 56%;
+    --accent: 37 38% 64%;
     --accent-foreground: 220 20% 8%;
-    --border: 220 14% 18%;
-    --input: 220 14% 18%;
-    --ring: 38 52% 56%;
-    --surface: 220 16% 9%;
-    --surface-foreground: 40 20% 94%;
-    --toolbar: 220 20% 6%;
-    --toolbar-foreground: 40 20% 94%;
-    --sidebar-background: 220 18% 7%;
-    --sidebar-foreground: 40 20% 92%;
-    --sidebar-primary: 38 52% 56%;
+    --border: 220 12% 18%;
+    --input: 220 12% 18%;
+    --ring: 37 38% 64%;
+    --surface: 220 14% 11%;
+    --surface-foreground: 38 20% 94%;
+    --toolbar: 220 16% 7%;
+    --toolbar-foreground: 38 20% 94%;
+    --sidebar-background: 220 14% 8%;
+    --sidebar-foreground: 38 20% 92%;
+    --sidebar-primary: 37 38% 64%;
     --sidebar-primary-foreground: 220 20% 8%;
-    --sidebar-accent: 220 14% 13%;
-    --sidebar-accent-foreground: 40 20% 92%;
-    --sidebar-border: 220 14% 18%;
-    --sidebar-ring: 38 52% 56%;
-    --oxblood: 38 52% 56%;
-    --oxblood-deep: 40 20% 94%;
-    --brass: 38 55% 65%;
+    --sidebar-accent: 220 12% 15%;
+    --sidebar-accent-foreground: 38 20% 92%;
+    --sidebar-border: 220 12% 18%;
+    --sidebar-ring: 37 38% 64%;
+    --oxblood: 38 20% 94%;
+    --oxblood-deep: 38 25% 98%;
+    --brass: 37 38% 64%;
   }
 }
 
@@ -174,24 +176,24 @@
   .shadow-brass { box-shadow: var(--shadow-brass); }
 
   .text-gradient-brass {
-    background: linear-gradient(135deg, hsl(30 65% 45%), hsl(35 75% 62%), hsl(30 55% 38%));
+    background: linear-gradient(135deg, #DFCBB2 0%, #C5A880 50%, #A88B63 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
   .text-gradient-oxblood {
-    background: linear-gradient(135deg, hsl(354 60% 22%), hsl(354 50% 38%));
+    background: linear-gradient(135deg, hsl(220 20% 12%), hsl(220 15% 28%));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
   /* Backwards compat with existing components using --gold */
-  .text-gold { color: hsl(30 65% 42%); }
-  .bg-gold { background-color: hsl(var(--oxblood)); color: hsl(var(--ivory)); }
-  .border-gold { border-color: hsl(var(--oxblood)); }
-  .bg-gradient-gold { background: var(--gradient-oxblood); }
+  .text-gold { color: #C5A880; }
+  .bg-gold { background-color: #18181B; color: #FAF8F5; }
+  .border-gold { border-color: #C5A880; }
+  .bg-gradient-gold { background: var(--gradient-brass); }
 
   /* ────────── Texture & Material Overlays ────────── */
   .paper-grain {

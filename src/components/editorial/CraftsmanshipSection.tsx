@@ -90,12 +90,12 @@ export function CraftsmanshipSection() {
   return (
     <section 
       id="craftsmanship" 
-      className="relative py-24 md:py-32 bg-[#0E0E0E] text-[#F4F2EE] border-b border-white/10"
+      className="relative py-24 md:py-32 bg-[#121316] text-[#F4F2EE] border-b border-white/10"
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="max-w-3xl mb-14">
-          <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-mono font-semibold mb-2">
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[#C5A880] font-mono font-semibold mb-2">
             Atelier Fabrication Protocol
           </div>
           <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
@@ -114,13 +114,13 @@ export function CraftsmanshipSection() {
               key={s.step}
               type="button"
               onClick={() => setActiveStage(idx)}
-              className={`p-3.5 rounded-[2px] text-left transition-all duration-300 relative ${
+              className={`p-3.5 rounded-[2px] text-left transition-all duration-300 relative cursor-pointer ${
                 activeStage === idx
                   ? 'bg-white/10 text-white'
                   : 'hover:bg-white/5 text-white/50 hover:text-white/80'
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-[#D4AF37] mb-1 font-semibold">
+              <div className="flex items-center justify-between text-[10px] font-mono tracking-widest text-[#C5A880] mb-1 font-semibold">
                 <span>{s.step}</span>
                 <span className="text-[9px] text-white/40 uppercase">{s.phase}</span>
               </div>
@@ -130,7 +130,7 @@ export function CraftsmanshipSection() {
 
               {/* Active Indicator Underline */}
               {activeStage === idx && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4AF37]" />
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#C5A880]" />
               )}
             </button>
           ))}
@@ -140,11 +140,11 @@ export function CraftsmanshipSection() {
         <div className="rounded-[4px] border border-white/15 bg-black/60 backdrop-blur-xl p-8 sm:p-12 md:p-16 grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center shadow-2xl relative overflow-hidden">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-[2px] border border-[#D4AF37]/30 bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37]">
+              <div className="w-12 h-12 rounded-[2px] border border-[#C5A880]/30 bg-[#C5A880]/10 flex items-center justify-center text-[#C5A880]">
                 <IconComponent className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#D4AF37]">
+                <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#C5A880]">
                   Phase {current.step} / 06 · {current.phase}
                 </div>
                 <div className="text-xs text-white/60 font-mono">
@@ -165,7 +165,7 @@ export function CraftsmanshipSection() {
                 <h3 className="font-editorial text-3xl sm:text-4xl text-white font-normal leading-tight">
                   {current.title}
                 </h3>
-                <p className="font-editorial italic text-lg sm:text-xl text-[#D4AF37]">
+                <p className="font-editorial italic text-lg sm:text-xl text-[#C5A880]">
                   "{current.tagline}"
                 </p>
                 <p className="text-xs sm:text-sm text-[#F4F2EE]/75 leading-relaxed font-sans max-w-xl">
@@ -181,7 +181,7 @@ export function CraftsmanshipSection() {
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-white/40 block">Precision Metric</span>
-                <span className="text-[#D4AF37] font-semibold">{current.tolerance}</span>
+                <span className="text-[#C5A880] font-semibold">{current.tolerance}</span>
               </div>
             </div>
           </div>
@@ -195,7 +195,7 @@ export function CraftsmanshipSection() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4 p-4 rounded-[2px] bg-black/80 backdrop-blur-md border border-white/10 text-xs">
-              <div className="text-[9px] uppercase tracking-widest text-[#D4AF37] font-mono">
+              <div className="text-[9px] uppercase tracking-widest text-[#C5A880] font-mono">
                 Antwerp Atelier Studio
               </div>
               <div className="font-editorial text-sm text-white mt-0.5">

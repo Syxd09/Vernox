@@ -37,7 +37,7 @@ export function EditorialCollections() {
   ];
 
   return (
-    <section className="bg-[#0B0B0B] text-[#F4F2EE] py-24 sm:py-32 px-6 border-b border-white/10 noise-overlay">
+    <section className="bg-[#16171A] text-[#F4F2EE] py-24 sm:py-32 px-6 border-b border-white/10 noise-overlay">
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
@@ -54,7 +54,7 @@ export function EditorialCollections() {
             className="text-xs uppercase tracking-[0.2em] font-medium text-white/80 hover:text-[#C5A880] transition inline-flex items-center gap-2 group"
           >
             <span>View All Atelier Works</span>
-            <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[#C5A880]" />
           </Link>
         </div>
 
@@ -67,7 +67,7 @@ export function EditorialCollections() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.8, delay: idx * 0.15 }}
-              className={`relative group rounded-[2px] overflow-hidden border border-white/10 bg-[#111111] ${col.aspect}`}
+              className={`relative group rounded-[2px] overflow-hidden border border-white/10 bg-[#1C1D21] ${col.aspect}`}
             >
               <Link to={`/shop/${col.id}`} className="block w-full h-full relative">
                 {/* Background Image with slow zoom */}
@@ -77,12 +77,12 @@ export function EditorialCollections() {
                     alt={col.title}
                     className="w-full h-full object-cover object-center transition-transform duration-1000 ease-out group-hover:scale-105 brightness-[0.75] group-hover:brightness-[0.85]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-black/30 to-transparent opacity-85 group-hover:opacity-70 transition-opacity duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#16171A] via-black/35 to-transparent opacity-85 group-hover:opacity-70 transition-opacity duration-700" />
                 </div>
 
                 {/* Top Badge */}
                 <div className="absolute top-5 left-5 z-10">
-                  <span className="px-2.5 py-1 rounded-[1px] bg-black/80 backdrop-blur-md border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-mono font-semibold">
+                  <span className="px-2.5 py-1 rounded-[1px] bg-black/80 backdrop-blur-md border border-white/15 text-[9px] uppercase tracking-[0.25em] text-[#C5A880] font-mono font-semibold">
                     {col.badge}
                   </span>
                 </div>

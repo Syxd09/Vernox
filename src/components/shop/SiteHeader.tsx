@@ -44,17 +44,34 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
 
   return (
     <>
+      {/* Top Architectural Trust & Announcement Ribbon */}
+      <div className="bg-[#121316] text-[#E5E0D8] border-b border-white/10 text-[9px] uppercase tracking-[0.28em] py-2 px-6 font-mono hidden sm:flex items-center justify-between z-50 relative">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[#C5A880]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C5A880] animate-pulse" />
+            <span>Complimentary Reinforced Timber Crate Delivery Worldwide</span>
+          </div>
+          <div className="flex items-center gap-6 text-white/55 text-[8px]">
+            <span>Solid 3.0mm Belgian Plate Guarantee</span>
+            <span className="text-white/20">/</span>
+            <span>Bespoke CAD Studio</span>
+            <span className="text-white/20">/</span>
+            <span className="text-[#C5A880]">Antwerp Atelier Guild</span>
+          </div>
+        </div>
+      </div>
+
       <header className={cn(
         "sticky top-0 z-40 transition-all duration-500",
         scrolled
-          ? "bg-[#0B0B0B]/90 backdrop-blur-md border-b border-white/10 shadow-2xl py-3.5"
-          : "bg-[#0B0B0B]/75 backdrop-blur-sm border-b border-white/5 py-4"
+          ? "bg-[#121316]/95 backdrop-blur-md border-b border-white/10 shadow-2xl py-3.5"
+          : "bg-[#121316]/85 backdrop-blur-sm border-b border-white/5 py-4"
       )}>
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
           {/* Brand Wordmark (Left) */}
           <Link to="/" className="flex items-center group" title="Vernox Atelier">
             <div className="flex flex-col">
-              <span className="font-brand text-2xl md:text-[25px] font-semibold tracking-[0.28em] text-white uppercase leading-none group-hover:text-[#D4AF37] transition-colors">
+              <span className="font-brand text-2xl md:text-[25px] font-semibold tracking-[0.28em] text-white uppercase leading-none group-hover:text-[#C5A880] transition-colors">
                 VERNOX
               </span>
               <span className="text-[8px] uppercase tracking-[0.34em] text-white/50 font-medium mt-1 font-sans">
@@ -76,7 +93,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                 <>
                   <span>Collections</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#C5A880] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -89,7 +106,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
               className="relative text-[10px] uppercase tracking-[0.24em] font-medium py-1 text-white/70 hover:text-white transition-colors group/link cursor-pointer"
             >
               <span>Studio</span>
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-[#D4AF37] group-hover/link:w-full transition-all duration-300" />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1.5px] bg-[#C5A880] group-hover/link:w-full transition-all duration-300" />
             </button>
 
             <NavLink
@@ -103,7 +120,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                 <>
                   <span>Craft</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#C5A880] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -121,7 +138,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                 <>
                   <span>Trade</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#C5A880] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -139,7 +156,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                 <>
                   <span>Journal</span>
                   <span className={cn(
-                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#D4AF37] transition-all duration-300',
+                    'absolute bottom-0 left-1/2 -translate-x-1/2 h-[1.5px] bg-[#C5A880] transition-all duration-300',
                     isActive ? 'w-full' : 'w-0 group-hover/link:w-full'
                   )} />
                 </>
@@ -153,7 +170,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label="Search Catalog"
-              className="p-2 text-white/75 hover:text-[#D4AF37] transition-colors cursor-pointer"
+              className="p-2 text-white/75 hover:text-[#C5A880] transition-colors cursor-pointer"
               title="Search Atelier Catalog (Cmd+K)"
             >
               <Search className="w-[18px] h-[18px]" />
@@ -162,12 +179,12 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <Link 
               to="/account?tab=wishlist" 
               aria-label="Wishlist" 
-              className="relative p-2 text-white/75 hover:text-[#D4AF37] transition-colors"
+              className="relative p-2 text-white/75 hover:text-[#C5A880] transition-colors"
               title="Private Wishlist"
             >
               <Heart className="w-[18px] h-[18px]" />
               {wishlist.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-[#800020] text-white text-[9px] font-mono font-semibold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute top-0.5 right-0.5 bg-[#C5A880] text-black text-[9px] font-mono font-bold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
                   {wishlist.length}
                 </span>
               )}
@@ -176,7 +193,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <Link 
               to="/account" 
               aria-label="Account" 
-              className="p-2 text-white/75 hover:text-[#D4AF37] transition-colors"
+              className="p-2 text-white/75 hover:text-[#C5A880] transition-colors"
               title="Client Account"
             >
               <User className="w-[18px] h-[18px]" />
@@ -185,12 +202,12 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <button 
               onClick={() => setDrawerOpen(true)} 
               aria-label="Cart" 
-              className="relative p-2 text-white/75 hover:text-[#D4AF37] transition-colors cursor-pointer"
+              className="relative p-2 text-white/75 hover:text-[#C5A880] transition-colors cursor-pointer"
               title="Shopping Bag"
             >
               <ShoppingBag className="w-[18px] h-[18px]" />
               {count > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-[#800020] text-white text-[9px] font-mono font-semibold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute top-0.5 right-0.5 bg-[#C5A880] text-black text-[9px] font-mono font-bold min-w-3.5 h-3.5 px-0.5 rounded-full flex items-center justify-center leading-none">
                   {count}
                 </span>
               )}

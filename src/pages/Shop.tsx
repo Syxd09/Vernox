@@ -100,7 +100,7 @@ export default function Shop() {
       {/* Shop Banner */}
       <section className="border-b border-border/60 bg-card/30">
         <div className="max-w-7xl mx-auto px-6 py-12 md:py-16">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] mb-2 font-mono font-semibold">{active ? 'Atelier Collection' : 'Atelier Catalog'}</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#C5A880] mb-2 font-mono font-semibold">{active ? 'Atelier Collection' : 'Atelier Catalog'}</p>
           <h1 className="font-editorial text-4xl sm:text-6xl mb-2.5 text-oxblood-deep">{active ? active.name : 'Sculptural Metal Art'}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl leading-relaxed font-sans">
             {active ? active.description : 'Discover sculptural wall pieces precision-cut from solid 3.0mm plate and hand-patinated in our Antwerp workshop.'}

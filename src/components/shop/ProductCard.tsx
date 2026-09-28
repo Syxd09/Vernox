@@ -78,7 +78,7 @@ export function ProductCard({ product }: { product: Product }) {
         {/* Heritage Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
           {product.bestseller && (
-            <span className="text-[8px] uppercase tracking-[0.25em] bg-black/75 backdrop-blur-md text-[#D4AF37] px-2 py-0.5 rounded-[1px] font-mono border border-white/10">
+            <span className="text-[8px] uppercase tracking-[0.25em] bg-black/75 backdrop-blur-md text-[#C5A880] px-2 py-0.5 rounded-[1px] font-mono border border-white/10">
               Curated
             </span>
           )}

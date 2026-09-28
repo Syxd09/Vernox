@@ -65,16 +65,16 @@ export function ArchitecturalProof() {
   return (
     <section 
       id="testimonials" 
-      className="relative py-24 md:py-36 bg-[#0E0E0E] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
+      className="relative py-24 md:py-36 bg-[#141518] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
     >
       {/* Background ambient lighting */}
-      <div className="absolute top-1/2 left-1/3 w-96 h-96 bg-[#D4AF37]/[0.02] rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/3 w-96 h-96 bg-[#C5A880]/[0.03] rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto px-6">
         {/* Section Pill */}
         <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#D4AF37] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
-            <ShieldCheck className="w-3 h-3 text-[#D4AF37]" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#C5A880] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
             <span>Architectural Provenance & Client Feedback</span>
           </div>
           <h2 className="font-editorial text-3xl sm:text-4xl md:text-5xl text-white font-normal">
@@ -84,7 +84,7 @@ export function ArchitecturalProof() {
 
         {/* Large Editorial Quote Stage */}
         <div className="relative rounded-[4px] border border-white/15 bg-black/60 backdrop-blur-xl p-8 sm:p-14 md:p-20 shadow-2xl">
-          <Quote className="w-12 h-12 text-[#D4AF37]/30 mb-8" />
+          <Quote className="w-12 h-12 text-[#C5A880]/30 mb-8" />
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -104,16 +104,16 @@ export function ArchitecturalProof() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     {Array.from({ length: current.rating }).map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-[#D4AF37] text-[#D4AF37]" />
+                      <Star key={i} className="w-3.5 h-3.5 fill-[#C5A880] text-[#C5A880]" />
                     ))}
-                    <span className="text-[10px] font-mono text-[#D4AF37] ml-1.5">5.0 Verified Installation</span>
+                    <span className="text-[10px] font-mono text-[#C5A880] ml-1.5">5.0 Verified Installation</span>
                   </div>
 
                   <div className="font-editorial text-xl text-white font-normal">
                     {current.client}
                   </div>
                   <div className="text-xs text-white/60 font-mono mt-0.5">
-                    {current.role} · <span className="text-[#D4AF37]">{current.location}</span>
+                    {current.role} · <span className="text-[#C5A880]">{current.location}</span>
                   </div>
                   <div className="text-[11px] text-white/40 font-mono mt-1">
                     Commission: {current.product}

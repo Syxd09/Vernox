@@ -95,13 +95,13 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
   return (
     <section 
       id="visualizer" 
-      className="relative py-24 md:py-32 bg-[#0B0B0B] text-[#F4F2EE] border-b border-white/10"
+      className="relative py-24 md:py-32 bg-[#141518] text-[#F4F2EE] border-b border-white/10"
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-mono font-semibold mb-2">
+            <div className="text-[10px] uppercase tracking-[0.3em] text-[#C5A880] font-mono font-semibold mb-2">
               Spatial Scale & Architecture
             </div>
             <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-white font-normal leading-[1.05] tracking-tight">
@@ -136,14 +136,14 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
 
             {/* Top Architectural Badge */}
             <div className="absolute top-4 left-4 z-10 bg-black/80 backdrop-blur-md px-4 py-2 border border-white/15 rounded-[2px]">
-              <div className="text-[8px] uppercase tracking-[0.28em] text-[#D4AF37] font-mono font-semibold">
+              <div className="text-[8px] uppercase tracking-[0.28em] text-[#C5A880] font-mono font-semibold">
                 {current.category}
               </div>
               <div className="font-editorial text-sm sm:text-base text-white mt-0.5">
                 {current.name}
               </div>
               <div className="text-[10px] text-white/50 font-mono flex items-center gap-1.5 mt-0.5">
-                <MapPin className="w-3 h-3 text-[#D4AF37]" />
+                <MapPin className="w-3 h-3 text-[#C5A880]" />
                 {current.location}
               </div>
             </div>
@@ -151,7 +151,7 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
             {/* Bottom In-Situ Placard */}
             <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4 p-4 rounded-[2px] bg-black/85 backdrop-blur-md border border-white/15">
               <div>
-                <div className="text-[9px] uppercase tracking-widest text-[#D4AF37] font-mono font-semibold">
+                <div className="text-[9px] uppercase tracking-widest text-[#C5A880] font-mono font-semibold">
                   Installed Artwork
                 </div>
                 <div className="font-editorial text-xl sm:text-2xl text-white font-normal mt-0.5">
@@ -165,7 +165,7 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
               <div className="flex items-center gap-3">
                 <Link
                   to={`/product/${current.artworkSlug}`}
-                  className="px-5 py-2.5 rounded-[2px] bg-white text-black text-xs uppercase tracking-widest font-semibold hover:bg-[#E8E5DF] transition flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-[2px] bg-[#FAF8F5] text-[#18181B] text-xs uppercase tracking-widest font-semibold hover:bg-white transition flex items-center gap-2"
                 >
                   Configure Artwork
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -175,9 +175,9 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
                   <button
                     type="button"
                     onClick={onOpenStudio}
-                    className="px-4 py-2.5 rounded-[2px] border border-white/20 hover:border-white text-white text-xs uppercase tracking-widest font-semibold transition flex items-center gap-2"
+                    className="px-4 py-2.5 rounded-[2px] border border-white/20 hover:border-white text-white text-xs uppercase tracking-widest font-semibold transition flex items-center gap-2 cursor-pointer"
                   >
-                    <Compass className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <Compass className="w-3.5 h-3.5 text-[#C5A880]" />
                     Bespoke Studio
                   </button>
                 )}
@@ -186,8 +186,8 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
           </div>
 
           {/* Interactive Environment Tabs */}
-          <div className="p-6 md:p-8 bg-[#111111] border-t border-white/10">
-            <div className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-mono font-semibold mb-3">
+          <div className="p-6 md:p-8 bg-[#18191D] border-t border-white/10">
+            <div className="text-[9px] uppercase tracking-[0.25em] text-[#C5A880] font-mono font-semibold mb-3">
               Select Interior Environment & Installation
             </div>
 
@@ -197,21 +197,20 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
                   key={inst.id}
                   type="button"
                   onClick={() => setSelectedIndex(idx)}
-                  className={`p-3.5 rounded-[2px] text-left border transition-all text-xs ${
+                  className={`p-3.5 rounded-[2px] text-left transition-all border cursor-pointer ${
                     selectedIndex === idx
-                      ? 'border-[#D4AF37] bg-white/10 text-white shadow-sm'
-                      : 'border-white/10 hover:border-white/30 text-white/60 hover:text-white bg-black/40'
+                      ? 'bg-white/15 border-[#C5A880] text-white'
+                      : 'bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/20'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wider text-[#D4AF37] mb-1">
-                    <span>0{idx + 1}</span>
-                    <span className="text-white/40">{inst.location.split(',')[0]}</span>
+                  <div className="text-[9px] font-mono text-[#C5A880] uppercase tracking-wider">
+                    0{idx + 1} · {inst.category}
                   </div>
-                  <div className="font-editorial text-sm text-white truncate">
-                    {inst.name.split(' ')[0]} {inst.name.split(' ')[1]}
+                  <div className="text-xs font-semibold text-white mt-1 truncate">
+                    {inst.name}
                   </div>
-                  <div className="text-[10px] text-white/50 font-mono truncate mt-0.5">
-                    {inst.substrate}
+                  <div className="text-[10px] text-white/50 truncate mt-0.5">
+                    {inst.artworkName}
                   </div>
                 </button>
               ))}
@@ -233,7 +232,7 @@ export function RoomVisualizer({ onOpenStudio }: { onOpenStudio?: () => void }) 
               </div>
               <div>
                 <span className="text-[9px] uppercase tracking-wider text-white/40 block">Architectural Credit</span>
-                <span className="text-[#D4AF37] font-medium">{current.architect}</span>
+                <span className="text-[#C5A880] font-medium">{current.architect}</span>
               </div>
             </div>
           </div>
