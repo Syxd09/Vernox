@@ -63,6 +63,7 @@ const NotFound = () => {
             <p className="text-[11px] uppercase tracking-[0.45em] text-brass mb-6">Error · 404 · off the bench</p>
             <h1 className="font-display text-7xl md:text-[9rem] leading-none mb-6 text-gradient-oxblood">
               Lost in <span className="font-serif-italic">transit.</span>
+            </h1>
             <div className="w-16 h-[1px] bg-border mx-auto my-8" />
             <p className="text-muted-foreground leading-relaxed max-w-xl mx-auto font-serif-italic text-lg md:text-xl">
               This page slipped past the polishing wheel. Let's route you back to something we've actually finished — or start a new piece together.
