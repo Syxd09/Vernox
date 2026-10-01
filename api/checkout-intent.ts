@@ -21,7 +21,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { items, currency = 'INR', idempotencyKey, customer } = req.body || {};
+  const { 
+    items, 
+    currency = 'INR', 
+    idempotencyKey, 
+    customer,
+    taxRate,
+    freeShippingThreshold,
+    shippingFee 
+  } = req.body || {};
 
   // 1. Input Validation
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -67,7 +75,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 3. Server-Authoritative Pricing Recalculation
   let pricing: ReturnType<typeof calculateServerOrderPricing>;
   try {
-    pricing = calculateServerOrderPricing(items, currency);
+    pricing = calculateServerOrderPricing(items, currency, {
+      taxRate: typeof taxRate === 'number' ? taxRate : undefined,
+      freeShippingThreshold: typeof freeShippingThreshold === 'number' ? freeShippingThreshold : undefined,
+      shippingFee: typeof shippingFee === 'number' ? shippingFee : undefined,
+    });
   } catch (priceErr: any) {
     return res.status(400).json({ error: priceErr.message || 'Invalid item parameters for pricing' });
   }

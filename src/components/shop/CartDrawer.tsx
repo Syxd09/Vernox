@@ -33,7 +33,7 @@ export function CartDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 cursor-pointer"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] cursor-pointer"
           />
 
           {/* SLIDE OUT DRAWER CARD */}
@@ -42,7 +42,7 @@ export function CartDrawer() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 240 }}
-            className="fixed right-0 top-0 bottom-0 w-full sm:w-[460px] bg-card border-l border-border/80 shadow-2xl z-50 flex flex-col noise-overlay"
+            className="fixed right-0 top-0 bottom-0 w-full sm:w-[460px] bg-card border-l border-border/80 shadow-2xl z-[9999] flex flex-col noise-overlay"
           >
             {/* DRAWER HEADER */}
             <div className="px-6 py-4 border-b border-border/70 flex items-center justify-between bg-card/95 backdrop-blur-md">
@@ -241,10 +241,12 @@ export function CartDrawer() {
 
                 <div className="space-y-2 pt-1">
                   <button 
+                    type="button"
                     onClick={handleCheckoutClick}
-                    className="w-full bg-gradient-oxblood hover:bg-oxblood-deep text-primary-foreground font-semibold py-3.5 rounded-full hover:shadow-luxe active:scale-[0.99] transition-all text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-soft"
+                    className="w-full bg-[#2D2321] hover:bg-[#6B2732] text-white font-semibold py-4 rounded-full hover:shadow-md active:scale-[0.99] transition-all text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                   >
-                    Proceed to Secure Checkout <ArrowRight className="w-4 h-4" />
+                    <span>PROCEED TO SECURE CHECKOUT</span>
+                    <ArrowRight className="w-4 h-4 text-[#C6A15B]" />
                   </button>
                   <Link 
                     to="/cart" 

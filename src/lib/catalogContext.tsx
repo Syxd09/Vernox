@@ -336,7 +336,7 @@ const DEFAULT_TOPICS: Topic[] = [
 
 const DEFAULT_STORE_CONFIG: StoreConfig = {
   storeName: "Vernox Atelier",
-  currency: "₹",
+  currency: "$",
   taxRate: 8,
   freeShippingThreshold: 150,
   shippingFee: 15,
@@ -350,10 +350,24 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((p: Product) => {
+          // Identify any default products missing from saved cache
+          const existingIds = new Set(parsed.map((p: Product) => p.id));
+          const missingDefaults = defaultProducts.filter(d => !existingIds.has(d.id));
+
+          const updatedParsed = parsed.map((p: Product) => {
             const def = defaultProducts.find(d => d.id === p.id);
             return def ? { ...def, ...p, imageUrl: p.imageUrl || def.imageUrl, lifestyleImage: p.lifestyleImage || def.lifestyleImage, alloySpec: p.alloySpec || def.alloySpec } : p;
           });
+
+          // Combined with defaultProducts order prioritized so prod-01 .. prod-08 stay at the top
+          const combined = [...missingDefaults, ...updatedParsed];
+          const defaultOrderMap = new Map(defaultProducts.map((p, idx) => [p.id, idx]));
+          combined.sort((a, b) => {
+            const orderA = defaultOrderMap.has(a.id) ? defaultOrderMap.get(a.id)! : 999;
+            const orderB = defaultOrderMap.has(b.id) ? defaultOrderMap.get(b.id)! : 999;
+            return orderA - orderB;
+          });
+          return combined;
         }
       }
       return defaultProducts;
@@ -435,8 +449,8 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('vernox-store-config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (!parsed.currency || parsed.currency === '$' || parsed.currency === 'USD') {
-          parsed.currency = '₹';
+        if (!parsed.currency || parsed.currency === '₹' || parsed.currency === 'INR') {
+          parsed.currency = '$';
           try {
             localStorage.setItem('vernox-store-config', JSON.stringify(parsed));
           } catch {}
@@ -568,7 +582,26 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
             defaultProducts.forEach(p => { setDoc(doc(db, 'products', p.id), p).catch(() => {}); });
             setProducts(defaultProducts);
           } else {
-            setProducts(productsSnap.docs.map(d => d.data() as Product));
+            const firestoreProducts = productsSnap.docs.map(d => d.data() as Product);
+            const existingIds = new Set(firestoreProducts.map(p => p.id));
+            const missingDefaults = defaultProducts.filter(d => !existingIds.has(d.id));
+            // Backfill Firestore with any missing default products (e.g. prod-01 .. prod-08)
+            missingDefaults.forEach(p => { setDoc(doc(db, 'products', p.id), p).catch(() => {}); });
+
+            const updatedFirestore = firestoreProducts.map((p: Product) => {
+              const def = defaultProducts.find(d => d.id === p.id);
+              return def ? { ...def, ...p, imageUrl: p.imageUrl || def.imageUrl, lifestyleImage: p.lifestyleImage || def.lifestyleImage, alloySpec: p.alloySpec || def.alloySpec } : p;
+            });
+
+            // Prioritize defaultProducts order so homepage creations appear first in collections
+            const combined = [...missingDefaults, ...updatedFirestore];
+            const defaultOrderMap = new Map(defaultProducts.map((p, idx) => [p.id, idx]));
+            combined.sort((a, b) => {
+              const orderA = defaultOrderMap.has(a.id) ? defaultOrderMap.get(a.id)! : 999;
+              const orderB = defaultOrderMap.has(b.id) ? defaultOrderMap.get(b.id)! : 999;
+              return orderA - orderB;
+            });
+            setProducts(combined);
           }
         }
 
@@ -613,9 +646,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
             setStoreConfig(DEFAULT_STORE_CONFIG);
           } else {
             const loaded = configDoc.data() as StoreConfig;
-            if (loaded.currency === '$') {
-              loaded.currency = '₹';
-              updateDoc(doc(db, 'config', 'store'), { currency: '₹' }).catch(() => {});
+            if (!loaded.currency || loaded.currency === '₹' || loaded.currency === 'INR') {
+              loaded.currency = '$';
+              updateDoc(doc(db, 'config', 'store'), { currency: '$' }).catch(() => {});
             }
             setStoreConfig(loaded);
           }

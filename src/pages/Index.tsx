@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Square, Layers, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StudioOpeningAnimation } from '@/components/editor/StudioOpeningAnimation';
 
 function EditorLayout() {
   const { state, dispatch, addImage } = useEditor();
@@ -63,10 +64,13 @@ function EditorLayout() {
 
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden bg-background"
+      className="h-screen flex flex-col overflow-hidden bg-background relative"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
+      {/* Studio Opening Calibration & Aperture Reveal Animation */}
+      <StudioOpeningAnimation />
+
       <TopBar />
       <div className="flex flex-1 overflow-hidden relative min-w-0">
         {/* Desktop Sidebars */}

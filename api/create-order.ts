@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { items, currency = 'INR', receipt, amount } = req.body || {};
+  const { items, currency = 'INR', receipt, amount, taxRate, freeShippingThreshold, shippingFee } = req.body || {};
 
   let orderAmount: number = 0;
   let pricing: any = null;
@@ -16,7 +16,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Case A: Cart items provided - authoritative server pricing
   if (items && Array.isArray(items) && items.length > 0) {
     try {
-      pricing = calculateServerOrderPricing(items, currency);
+      pricing = calculateServerOrderPricing(items, currency, {
+        taxRate: typeof taxRate === 'number' ? taxRate : undefined,
+        freeShippingThreshold: typeof freeShippingThreshold === 'number' ? freeShippingThreshold : undefined,
+        shippingFee: typeof shippingFee === 'number' ? shippingFee : undefined,
+      });
       orderAmount = pricing.amountInSubunits;
     } catch (err: any) {
       return res.status(400).json({ error: err.message || 'Invalid item parameters for pricing' });

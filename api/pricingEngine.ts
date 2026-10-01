@@ -2,14 +2,18 @@
  * Server-Authoritative Pricing Engine
  * Calculates deterministic pricing for standard catalog items and custom CAD/CAM pieces
  */
+import { products as defaultCatalogProducts } from '../src/lib/catalog';
 
 export interface PricingLineItem {
   productId?: string;
   productSlug?: string;
+  productName?: string;
   shapeId?: string;
+  sizeLabel?: string;
   widthMm?: number;
   heightMm?: number;
   finish?: string;
+  unitPrice?: number;
   quantity: number;
   customDesignRef?: string;
 }
@@ -33,6 +37,12 @@ export interface CalculatedPricingResult {
   items: CalculatedLineItem[];
 }
 
+export interface PricingEngineOptions {
+  taxRate?: number;
+  freeShippingThreshold?: number;
+  shippingFee?: number;
+}
+
 interface CatalogProductPricing {
   id: string;
   slug: string;
@@ -42,6 +52,67 @@ interface CatalogProductPricing {
 }
 
 export const CATALOG_PRODUCTS: Record<string, CatalogProductPricing> = {
+  // Main Curated Masterworks & Sculptures
+  'prod-01': {
+    id: 'prod-01', slug: 'abstract-horizon', name: 'Abstract Horizon', basePrice: 240,
+    sizes: [
+      { label: 'Standard · 90 × 50 cm', widthMm: 900, heightMm: 500, priceDelta: 0 },
+      { label: 'Statement · 140 × 80 cm', widthMm: 1400, heightMm: 800, priceDelta: 160 },
+      { label: 'Grand · 180 × 100 cm', widthMm: 1800, heightMm: 1000, priceDelta: 320 },
+    ],
+  },
+  'prod-02': {
+    id: 'prod-02', slug: 'golden-silence', name: 'Golden Silence', basePrice: 310,
+    sizes: [
+      { label: 'Tabletop · 38 cm Height', widthMm: 220, heightMm: 380, priceDelta: 0 },
+      { label: 'Pedestal · 60 cm Height', widthMm: 320, heightMm: 600, priceDelta: 180 },
+    ],
+  },
+  'prod-03': {
+    id: 'prod-03', slug: 'sculptural-form', name: 'Sculptural Form', basePrice: 285,
+    sizes: [
+      { label: 'Studio · 42 cm Height', widthMm: 360, heightMm: 420, priceDelta: 0 },
+      { label: 'Monument · 65 cm Height', widthMm: 540, heightMm: 650, priceDelta: 210 },
+    ],
+  },
+  'prod-04': {
+    id: 'prod-04', slug: 'maroon-geometry', name: 'Maroon Geometry', basePrice: 195,
+    sizes: [
+      { label: 'Gallery · 60 × 60 cm', widthMm: 600, heightMm: 600, priceDelta: 0 },
+      { label: 'Statement · 90 × 90 cm', widthMm: 900, heightMm: 900, priceDelta: 130 },
+      { label: 'Foyer · 120 × 120 cm', widthMm: 1200, heightMm: 1200, priceDelta: 280 },
+    ],
+  },
+  'prod-05': {
+    id: 'prod-05', slug: 'contemporary-bloom', name: 'Contemporary Bloom', basePrice: 260,
+    sizes: [
+      { label: 'Square · 70 × 70 cm', widthMm: 700, heightMm: 700, priceDelta: 0 },
+      { label: 'Grand · 100 × 100 cm', widthMm: 1000, heightMm: 1000, priceDelta: 190 },
+    ],
+  },
+  'prod-06': {
+    id: 'prod-06', slug: 'minimal-lines', name: 'Minimal Lines', basePrice: 175,
+    sizes: [
+      { label: 'Medium · 60 × 80 cm', widthMm: 600, heightMm: 800, priceDelta: 0 },
+      { label: 'Large · 90 × 120 cm', widthMm: 900, heightMm: 1200, priceDelta: 140 },
+    ],
+  },
+  'prod-07': {
+    id: 'prod-07', slug: 'bronze-figure', name: 'Bronze Figure', basePrice: 340,
+    sizes: [
+      { label: 'Mantle · 48 cm Height', widthMm: 140, heightMm: 480, priceDelta: 0 },
+      { label: 'Console · 72 cm Height', widthMm: 180, heightMm: 720, priceDelta: 240 },
+    ],
+  },
+  'prod-08': {
+    id: 'prod-08', slug: 'textured-canvas', name: 'Textured Canvas', basePrice: 290,
+    sizes: [
+      { label: 'Round · 80 cm Diameter', widthMm: 800, heightMm: 800, priceDelta: 0 },
+      { label: 'Grand · 120 cm Diameter', widthMm: 1200, heightMm: 1200, priceDelta: 260 },
+    ],
+  },
+
+  // Geometric & Metal Frames Series
   'p-01': {
     id: 'p-01', slug: 'ember-round-frame', name: 'Ember Round Frame', basePrice: 189,
     sizes: [
@@ -128,9 +199,26 @@ export const CATALOG_PRODUCTS: Record<string, CatalogProductPricing> = {
   },
 };
 
-// Map slugs to product IDs as well
+// Augment and index from defaultCatalogProducts
+if (Array.isArray(defaultCatalogProducts)) {
+  for (const p of defaultCatalogProducts) {
+    const item: CatalogProductPricing = {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      basePrice: p.price,
+      sizes: p.sizes || [],
+    };
+    CATALOG_PRODUCTS[p.id] = item;
+    CATALOG_PRODUCTS[p.slug] = item;
+  }
+}
+
+// Map slugs to product entries
 for (const p of Object.values(CATALOG_PRODUCTS)) {
-  CATALOG_PRODUCTS[p.slug] = p;
+  if (p.slug) {
+    CATALOG_PRODUCTS[p.slug] = p;
+  }
 }
 
 const FINISH_MARKUPS: Record<string, number> = {
@@ -160,7 +248,8 @@ export const PRICING_CONFIG = {
 
 export function calculateServerOrderPricing(
   items: PricingLineItem[],
-  currency = 'INR'
+  currency = 'INR',
+  options?: PricingEngineOptions
 ): CalculatedPricingResult {
   if (!items || !Array.isArray(items) || items.length === 0) {
     throw new Error('Order must contain at least one line item');
@@ -180,7 +269,7 @@ export function calculateServerOrderPricing(
     const areaSqM = (width * height) / 1000000;
 
     let unitPrice = 0;
-    let name = 'Bespoke Architectural Sign';
+    let name = item.productName || 'Bespoke Architectural Masterwork';
 
     // 1. Catalog item lookup
     const lookupKey = item.productId || item.productSlug || '';
@@ -189,20 +278,63 @@ export function calculateServerOrderPricing(
       name = cat.name;
       unitPrice = cat.basePrice;
 
-      // Find closest size delta match
-      const matchingSize = cat.sizes.find(
-        s => Math.abs(s.widthMm - width) <= 50 && Math.abs(s.heightMm - height) <= 50
-      );
-      if (matchingSize) {
-        unitPrice += matchingSize.priceDelta;
+      let sizeMatched = false;
+
+      // Priority 1: Match by sizeLabel
+      if (item.sizeLabel && cat.sizes && cat.sizes.length > 0) {
+        const normLabel = item.sizeLabel.toLowerCase().trim();
+        const matchingSizeByLabel = cat.sizes.find(
+          s => s.label.toLowerCase().trim() === normLabel ||
+               normLabel.includes(s.label.toLowerCase().trim()) ||
+               s.label.toLowerCase().trim().includes(normLabel)
+        );
+        if (matchingSizeByLabel) {
+          unitPrice += matchingSizeByLabel.priceDelta;
+          sizeMatched = true;
+        }
       }
+
+      // Priority 2: Match by closest dimensions
+      if (!sizeMatched && cat.sizes && cat.sizes.length > 0) {
+        const matchingSize = cat.sizes.find(
+          s => Math.abs(s.widthMm - width) <= 60 && Math.abs(s.heightMm - height) <= 60
+        );
+        if (matchingSize) {
+          unitPrice += matchingSize.priceDelta;
+          sizeMatched = true;
+        }
+      }
+
+      // Priority 3: If item.unitPrice matches any valid basePrice or size delta, honor item.unitPrice
+      if (typeof item.unitPrice === 'number' && item.unitPrice > 0) {
+        const validPrices = [cat.basePrice, ...(cat.sizes?.map(s => cat.basePrice + s.priceDelta) || [])];
+        if (validPrices.includes(item.unitPrice)) {
+          unitPrice = item.unitPrice;
+        }
+      }
+    } else if (item.productId === 'custom-bespoke' || item.customDesignRef) {
+      // 2. Custom CAD Crafting Studio Piece
+      name = item.productName || 'Bespoke Architectural Metal Sign';
+      const finishKey = (item.finish || 'steel').toLowerCase();
+      const basePrice = 149;
+      const areaRate = finishKey.includes('brass') || finishKey.includes('copper') || finishKey.includes('gold') ? 450 : 250;
+      const expectedCustom = Math.round(basePrice + areaSqM * areaRate);
+      if (typeof item.unitPrice === 'number' && item.unitPrice >= 95) {
+        unitPrice = item.unitPrice;
+      } else {
+        unitPrice = expectedCustom;
+      }
+    } else if (typeof item.unitPrice === 'number' && item.unitPrice > 0) {
+      // 3. Admin / Firestore custom product
+      unitPrice = item.unitPrice;
+      name = item.productName || `Vernox Commission (${lookupKey})`;
     } else {
-      // 2. Custom CAD sign pricing formula: Base + (Area * Rate)
+      // 4. Fallback CAD area formula
       unitPrice = Math.round(95 + areaSqM * 260);
-      name = `Custom Plate (${width}×${height}mm)`;
+      name = item.productName || `Custom Plate (${width}×${height}mm)`;
     }
 
-    // 3. Finish markup if applicable
+    // 5. Finish markup if applicable
     const finishKey = (item.finish || 'steel').toLowerCase().replace(/\s+/g, '_');
     const finishMarkup = FINISH_MARKUPS[finishKey] ?? 0;
     unitPrice += finishMarkup;
@@ -220,10 +352,15 @@ export function calculateServerOrderPricing(
     });
   }
 
-  // Free shipping on orders >= $150
-  const shipping = subtotal >= 150 ? 0 : 15;
-  // Standard 8% tax
-  const tax = Math.round(subtotal * 0.08 * 100) / 100;
+  const freeShippingThreshold = options?.freeShippingThreshold ?? PRICING_CONFIG.freeShippingThreshold;
+  const shippingFee = options?.shippingFee ?? PRICING_CONFIG.shippingFee;
+  const rawTaxRate = options?.taxRate ?? PRICING_CONFIG.taxRate;
+  const taxRate = rawTaxRate > 1 ? rawTaxRate / 100 : rawTaxRate;
+
+  // Free shipping on orders >= threshold
+  const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFee;
+  // Tax calculation
+  const tax = Math.round(subtotal * taxRate * 100) / 100;
   const total = Math.round((subtotal + shipping + tax) * 100) / 100;
   const amountInSubunits = Math.round(total * 100);
 

@@ -83,14 +83,20 @@ export default function Checkout() {
           items: items.map(item => ({
             productId: item.productId,
             productSlug: item.productSlug,
+            productName: item.productName,
+            sizeLabel: item.sizeLabel,
             widthMm: item.widthMm,
             heightMm: item.heightMm,
             finish: item.finish,
+            unitPrice: item.unitPrice,
             quantity: item.quantity,
             shapeId: item.shapeId,
             customDesignRef: item.customDesignRef
           })),
           currency: currencyCode,
+          taxRate: storeConfig.taxRate,
+          freeShippingThreshold: storeConfig.freeShippingThreshold,
+          shippingFee: storeConfig.shippingFee,
           idempotencyKey,
           customer: {
             email: form.email.trim().toLowerCase(),
@@ -171,7 +177,7 @@ export default function Checkout() {
         amount: orderData.amount,
         currency: orderData.currency,
         name: storeConfig.storeName,
-        description: "Bespoke Architectural Metal Sign",
+        description: items.length === 1 ? items[0].productName : `${items.length} Atelier Masterworks`,
         order_id: orderData.order_id,
         handler: async function (response: any) {
           const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = response;
@@ -229,7 +235,7 @@ export default function Checkout() {
           email: form.email,
           ...(preferredMethod === 'upi' && upiId ? { vpa: upiId } : {})
         },
-        theme: { color: "#6b1e28" },
+        theme: { color: "#6B2732" },
         modal: {
           ondismiss: function () {
             toast.error('Payment window closed.');
@@ -478,7 +484,7 @@ export default function Checkout() {
           <button 
             type="submit"
             disabled={placing}
-            className="w-full bg-gradient-oxblood hover:bg-oxblood-deep text-primary-foreground font-semibold py-4 rounded-full hover:shadow-luxe hover:scale-[1.005] active:scale-[0.99] transition text-xs uppercase tracking-[0.2em] disabled:opacity-60 shadow-soft flex items-center justify-center gap-2"
+            className="w-full bg-[#2D2321] hover:bg-[#6B2732] text-white font-semibold py-4 rounded-full hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.2em] font-sans disabled:opacity-60 shadow-sm flex items-center justify-center gap-2 cursor-pointer"
           >
             {placing ? (
               <span className="flex items-center gap-2">

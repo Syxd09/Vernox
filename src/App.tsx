@@ -20,18 +20,21 @@ import Admin from "./pages/Admin.tsx";
 import Notebook from "./pages/Notebook.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { CartDrawer } from "@/components/shop/CartDrawer";
+import { PageCurtain } from "@/components/experience/PageCurtain";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange storageKey="vernox-theme">
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange storageKey="vernox-theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <CatalogProvider>
           <CartProvider>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              {/* Professional Luxury Curtain Transition for First Load, Reload & Navigation */}
+              <PageCurtain />
               <CartDrawer />
               <Routes>
                 <Route path="/" element={<Home />} />

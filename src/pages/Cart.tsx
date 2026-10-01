@@ -452,10 +452,12 @@ export default function Cart() {
 
                 {/* Primary CTA */}
                 <button 
+                  type="button"
                   onClick={() => navigate('/checkout')}
-                  className="w-full bg-gradient-oxblood hover:bg-oxblood-deep text-primary-foreground font-semibold py-4 rounded-full hover:shadow-luxe active:scale-[0.99] transition text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-soft"
+                  className="w-full bg-[#2D2321] hover:bg-[#6B2732] text-white font-semibold py-4 rounded-full hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
-                  Proceed to Secure Checkout <ArrowRight className="w-4 h-4" />
+                  <span>PROCEED TO SECURE CHECKOUT</span>
+                  <ArrowRight className="w-4 h-4 text-[#C6A15B]" />
                 </button>
 
                 <Link 

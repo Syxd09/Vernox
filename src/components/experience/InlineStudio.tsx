@@ -8,6 +8,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useEditor } from '@/hooks/useEditor';
 import { useEffect } from 'react';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { StudioOpeningAnimation } from '@/components/editor/StudioOpeningAnimation';
 
 interface Props {
   open: boolean;
@@ -34,11 +35,12 @@ function StudioBootstrap({ shapeId, w, h, finish }: { shapeId?: string; w?: numb
 export function InlineStudio({ open, onOpenChange, initialShapeId, initialWidthMm, initialHeightMm, initialFinish, productName }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] p-0 gap-0 bg-background border-oxblood/30 overflow-hidden [&>button]:hidden">
+      <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] p-0 gap-0 bg-background border-oxblood/30 overflow-hidden [&>button]:hidden relative">
         <VisuallyHidden>
           <DialogTitle>Design Studio {productName ? `— ${productName}` : ''}</DialogTitle>
           <DialogDescription>Interactive 2D Vector CAD/CAM Studio Workspace</DialogDescription>
         </VisuallyHidden>
+        {open && <StudioOpeningAnimation />}
         <EditorProvider>
           <StudioBootstrap shapeId={initialShapeId} w={initialWidthMm} h={initialHeightMm} finish={initialFinish} />
           <div className="flex flex-col h-full overflow-hidden">

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..700&family=Cinzel:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Instrument+Serif:ital@0;1&family=Italiana&family=Tenor+Sans&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..700&family=Instrument+Serif:ital@0;1&family=Italiana&family=Tenor+Sans&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,102 +6,112 @@
 
 @layer base {
   :root {
-    /* Vernox Atelier — Luxury Editorial + Art-Directed + Cinematic Obsidian & Champagne Bronze */
-    --background: 220 16% 5%;             /* Deep architectural obsidian #0B0B0C */
-    --foreground: 38 20% 95%;             /* Warm museum ivory #F4F2EE */
+    /* ==========================================================================
+       🎨 EDIT YOUR BRAND COLORS HERE DIRECTLY (CHANGE ANY HEX / RGB VALUE)
+       ========================================================================== */
+    --maroon-deep: #6B2732;       /* ← Deep maroon color from your reference image */
+    --maroon-light: #6B2732;      /* ← Unified maroon accent */
+    --gold: #C6A15B;              /* ← Elegant gold */
+    --cream: #F8F3EA;             /* ← Warm cream / ivory background */
+    --dark-brown: #332522;        /* ← Dark brown text */
+    --soft-white: #FFFFFF;        /* ← Pure soft white cards */
 
-    --card: 220 14% 8.5%;                 /* Tailored gallery mount #131417 */
-    --card-foreground: 38 20% 95%;
+    /* HSL Framework Tokens */
+    --background: 38 43% 95%;             /* Warm cream / ivory #F8F3EA */
+    --foreground: 12 20% 17%;             /* Dark brown #332522 */
 
-    --popover: 220 14% 8.5%;
-    --popover-foreground: 38 20% 95%;
+    --card: 0 0% 100%;                    /* Soft white #FFFFFF */
+    --card-foreground: 12 20% 17%;        /* Dark brown #332522 */
 
-    --primary: 37 38% 64%;                /* Champagne bronze #C5A880 */
-    --primary-foreground: 220 20% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 12 20% 17%;
 
-    --secondary: 220 12% 14%;             /* Deep titanium graphite #1E2025 */
-    --secondary-foreground: 38 20% 95%;
+    --primary: 351 47% 29%;               /* Deep maroon #6B2732 */
+    --primary-foreground: 38 43% 95%;     /* Warm cream #F8F3EA */
 
-    --muted: 220 12% 13%;
-    --muted-foreground: 220 10% 65%;      /* Architectural slate #9E9FA5 */
+    --secondary: 38 28% 91%;              /* Soft cream-beige #F1EADC */
+    --secondary-foreground: 12 20% 17%;
 
-    --accent: 37 38% 64%;                 /* Muted champagne bronze #C5A880 */
-    --accent-foreground: 220 20% 6%;
+    --muted: 38 22% 92%;
+    --muted-foreground: 12 14% 45%;
+
+    --accent: 39 49% 57%;                 /* Elegant gold #C6A15B */
+    --accent-foreground: 12 20% 17%;
 
     --destructive: 0 62% 45%;
-    --destructive-foreground: 38 25% 98%;
+    --destructive-foreground: 38 43% 95%;
 
-    --border: 220 12% 16%;                /* Fine architectural hairline */
-    --input: 220 12% 16%;
-    --ring: 37 38% 64%;
+    --border: 38 18% 88%;                 /* Thin subtle hairline #EBE4D6 */
+    --input: 38 18% 88%;
+    --ring: 39 49% 57%;
 
-    --radius: 0.25rem;
+    --radius: 0.125rem;                   /* Subtle, not excessive */
 
-    --surface: 220 14% 8.5%;
-    --surface-foreground: 38 20% 95%;
-    --toolbar: 220 16% 6%;
-    --toolbar-foreground: 38 20% 95%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 12 20% 17%;
+    --toolbar: 12 20% 17%;
+    --toolbar-foreground: 38 43% 95%;
 
-    --oxblood: 37 38% 64%;                /* Champagne bronze accent */
-    --oxblood-deep: 38 20% 95%;
-    --brass: 37 38% 64%;                  /* Refined champagne bronze #C5A880 */
-    --brass-soft: 37 30% 78%;             /* #D8C5A8 */
-    --ivory: 38 20% 95%;
-    --ivory-warm: 38 18% 85%;
-    --champagne: 37 38% 64%;
-    --forest-trust: 152 35% 30%;          /* Architectural heritage green */
+    --oxblood: 351 47% 29%;               /* Deep maroon #6B2732 */
+    --oxblood-deep: 12 20% 17%;           /* Dark brown #332522 */
+    --brass: 39 49% 57%;                  /* Elegant gold #C6A15B */
+    --brass-soft: 39 40% 75%;
+    --ivory: 38 43% 95%;
+    --ivory-warm: 38 28% 91%;
+    --champagne: 39 49% 57%;
+    --forest-trust: 152 35% 26%;
+    --gradient-oxblood: linear-gradient(135deg, #2D2321 0%, #4A1E25 100%);
 
-    --gradient-oxblood: linear-gradient(135deg, #131417, #1E2025);
-    --gradient-brass: linear-gradient(135deg, #DFCBB2 0%, #C5A880 50%, #A88B63 100%);
-    --gradient-ivory: linear-gradient(180deg, #F4F2EE, #E6E2D8);
-    --gradient-metal: linear-gradient(160deg, #121316 0%, #202227 40%, #C5A880 60%, #1A1C20 100%);
-    --shadow-luxe: 0 25px 60px -20px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.08);
-    --shadow-soft: 0 8px 24px -10px rgba(0, 0, 0, 0.5);
-    --shadow-brass: 0 0 35px hsl(37 38% 64% / 0.18);
-
-    --sidebar-background: 220 16% 5%;
-    --sidebar-foreground: 38 20% 95%;
-    --sidebar-primary: 37 38% 64%;
-    --sidebar-primary-foreground: 220 20% 6%;
-    --sidebar-accent: 220 12% 14%;
-    --sidebar-accent-foreground: 38 20% 95%;
-    --sidebar-border: 220 12% 16%;
-    --sidebar-ring: 37 38% 64%;
+    --sidebar-background: 38 43% 95%;
+    --sidebar-foreground: 12 20% 17%;
+    --sidebar-primary: 351 47% 29%;
+    --sidebar-primary-foreground: 38 43% 95%;
+    --sidebar-accent: 38 28% 91%;
+    --sidebar-accent-foreground: 12 20% 17%;
+    --sidebar-border: 38 18% 88%;
+    --sidebar-ring: 39 49% 57%;
   }
 
   .dark {
-    --background: 220 16% 5%;             /* Deep architectural obsidian #0B0B0C */
-    --foreground: 38 20% 95%;             /* Warm pearl #F4F2EC */
-    --card: 220 14% 8.5%;                 /* Deep charcoal card #131417 */
-    --card-foreground: 38 20% 95%;
-    --popover: 220 14% 8.5%;
-    --popover-foreground: 38 20% 95%;
-    --primary: 37 38% 64%;
-    --primary-foreground: 220 20% 6%;
-    --secondary: 220 12% 14%;
-    --secondary-foreground: 38 20% 95%;
-    --muted: 220 12% 13%;
-    --muted-foreground: 220 10% 65%;
-    --accent: 37 38% 64%;
-    --accent-foreground: 220 20% 6%;
-    --border: 220 12% 16%;
-    --input: 220 12% 16%;
-    --ring: 37 38% 64%;
-    --surface: 220 14% 8.5%;
-    --surface-foreground: 38 20% 95%;
-    --toolbar: 220 16% 6%;
-    --toolbar-foreground: 38 20% 95%;
-    --sidebar-background: 220 16% 5%;
-    --sidebar-foreground: 38 20% 92%;
-    --sidebar-primary: 37 38% 64%;
-    --sidebar-primary-foreground: 220 20% 6%;
-    --sidebar-accent: 220 12% 14%;
-    --sidebar-accent-foreground: 38 20% 92%;
-    --sidebar-border: 220 12% 16%;
-    --sidebar-ring: 37 38% 64%;
-    --oxblood: 37 38% 64%;
-    --oxblood-deep: 38 25% 98%;
-    --brass: 37 38% 64%;
+    --maroon-deep: #6B2732;
+    --maroon-light: #6B2732;
+    --gold: #C6A15B;
+    --cream: #F8F3EA;
+    --dark-brown: #332522;
+    --soft-white: #FFFFFF;
+
+    --background: 38 43% 95%;
+    --foreground: 12 20% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 12 20% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 12 20% 17%;
+    --primary: 351 47% 29%;
+    --primary-foreground: 38 43% 95%;
+    --secondary: 38 28% 91%;
+    --secondary-foreground: 12 20% 17%;
+    --muted: 38 22% 92%;
+    --muted-foreground: 12 14% 45%;
+    --accent: 39 49% 57%;
+    --accent-foreground: 12 20% 17%;
+    --border: 38 18% 88%;
+    --input: 38 18% 88%;
+    --ring: 39 49% 57%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 12 20% 17%;
+    --toolbar: 12 20% 17%;
+    --toolbar-foreground: 38 43% 95%;
+    --sidebar-background: 38 43% 95%;
+    --sidebar-foreground: 12 20% 17%;
+    --sidebar-primary: 351 47% 29%;
+    --sidebar-primary-foreground: 38 43% 95%;
+    --sidebar-accent: 38 28% 91%;
+    --sidebar-accent-foreground: 12 20% 17%;
+    --sidebar-border: 38 18% 88%;
+    --sidebar-ring: 39 49% 57%;
+    --oxblood: 351 47% 29%;
+    --oxblood-deep: 12 20% 17%;
+    --brass: 39 49% 57%;
   }
 }
 
@@ -166,7 +176,11 @@
   .bg-ivory { background-color: hsl(var(--ivory)); }
   .bg-ivory-warm { background-color: hsl(var(--ivory-warm)); }
 
-  .bg-gradient-oxblood { background: var(--gradient-oxblood); }
+  .bg-gradient-oxblood {
+    background-color: #2D2321 !important;
+    background-image: linear-gradient(135deg, #2D2321 0%, #4A1E25 100%) !important;
+    color: #FFFFFF !important;
+  }
   .bg-gradient-brass { background: var(--gradient-brass); }
   .bg-gradient-ivory { background: var(--gradient-ivory); }
   .bg-gradient-metal { background: var(--gradient-metal); }
@@ -190,10 +204,10 @@
   }
 
   /* Backwards compat with existing components using --gold */
-  .text-gold { color: #C5A880; }
-  .bg-gold { background-color: #18181B; color: #FAF8F5; }
-  .border-gold { border-color: #C5A880; }
-  .bg-gradient-gold { background: var(--gradient-brass); }
+  .text-gold { color: var(--gold, #C6A15B); }
+  .bg-gold { background-color: var(--gold, #C6A15B) !important; color: #332522; }
+  .border-gold { border-color: var(--gold, #C6A15B); }
+  .bg-gradient-gold { background: linear-gradient(135deg, #C6A15B, #E2C37E, #C6A15B); }
 
   /* ────────── Texture & Material Overlays ────────── */
   .paper-grain {
