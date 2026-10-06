@@ -19,6 +19,7 @@ export function PageCurtain() {
     }
 
     // Subsequent page navigation
+    window.scrollTo(0, 0);
     setIsAnimating(true);
     setTransitionKey(prev => prev + 1);
 
@@ -44,8 +45,8 @@ export function PageCurtain() {
           className="fixed inset-0 z-[99999] pointer-events-none select-none flex flex-col justify-end overflow-hidden"
           style={{ willChange: 'transform' }}
         >
-          {/* Main Full Curtain Panel in Deep Maroon */}
-          <div className="w-full h-full bg-[#6B2732] flex flex-col items-center justify-center relative shadow-2xl">
+          {/* Main Full Curtain Panel in Deep Burgundy */}
+          <div className="w-full h-full bg-burgundy flex flex-col items-center justify-center relative shadow-2xl">
             {/* Center Hallmark & Emblem */}
             <motion.div
               initial={{ opacity: 1, scale: 1 }}
@@ -53,25 +54,25 @@ export function PageCurtain() {
               transition={{ duration: 0.35, delay: 0.15 }}
               className="text-center space-y-3 px-6"
             >
-              <span className="font-brand text-3xl sm:text-4xl lg:text-5xl text-[#F8F3EA] tracking-[0.32em] font-semibold uppercase block leading-none">
+              <span className="font-brand text-3xl sm:text-4xl lg:text-5xl text-cream tracking-[0.32em] font-semibold uppercase block leading-none">
                 VERNOX
               </span>
 
               <div className="flex items-center justify-center gap-3 pt-1">
-                <span className="w-8 sm:w-12 h-[1px] bg-[#C6A15B]" />
-                <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.38em] text-[#C6A15B] font-sans font-medium">
+                <span className="w-8 sm:w-12 h-[1px] bg-dusty-pink" />
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.38em] text-dusty-pink font-sans font-medium">
                   Atelier d'Art Métallique
                 </span>
-                <span className="w-8 sm:w-12 h-[1px] bg-[#C6A15B]" />
+                <span className="w-8 sm:w-12 h-[1px] bg-dusty-pink" />
               </div>
 
-              <div className="text-[8px] uppercase tracking-[0.3em] text-[#F8F3EA]/50 font-mono pt-1">
+              <div className="text-[8px] uppercase tracking-[0.3em] text-cream/60 font-mono pt-1">
                 Antwerp · Milan · New York
               </div>
             </motion.div>
 
-            {/* Bottom Razor-Thin Gold Laser Accent Line */}
-            <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#C6A15B] to-transparent shadow-[0_0_16px_rgba(198,161,91,0.7)]" />
+            {/* Bottom Razor-Thin Dusty Pink Accent Line */}
+            <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-dusty-pink to-transparent shadow-[0_0_16px_rgba(215,167,177,0.7)]" />
           </div>
         </motion.div>
       )}

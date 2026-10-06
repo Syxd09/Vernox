@@ -47,14 +47,14 @@ export function CartDrawer() {
             {/* DRAWER HEADER */}
             <div className="px-6 py-4 border-b border-border/70 flex items-center justify-between bg-card/95 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-sm bg-oxblood/10 text-oxblood">
+                <div className="p-2 rounded-sm bg-burgundy/10 text-burgundy">
                   <ShoppingBag className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg text-oxblood-deep font-semibold leading-none">Your Atelier Order</h3>
+                  <h3 className="font-display text-lg text-burgundy font-semibold leading-none">Your Atelier Order</h3>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Antwerp Crated Commissions</p>
                 </div>
-                <span className="ml-1 bg-oxblood text-ivory text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                <span className="ml-1 bg-burgundy text-cream text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
                   {items.reduce((sum, i) => sum + i.quantity, 0)}
                 </span>
               </div>
@@ -69,22 +69,22 @@ export function CartDrawer() {
 
             {/* DYNAMIC FREE INSURED SHIPPING TRACKER */}
             {items.length > 0 && (
-              <div className="px-6 py-3 bg-gradient-to-r from-oxblood/5 via-brass/5 to-oxblood/5 border-b border-border/60">
+              <div className="px-6 py-3 bg-gradient-to-r from-burgundy/5 via-gold/5 to-burgundy/5 border-b border-border/60">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   {remainingForFreeShipping === 0 ? (
-                    <span className="font-medium text-oxblood-deep flex items-center gap-1.5 text-[11px]">
+                    <span className="font-medium text-burgundy flex items-center gap-1.5 text-[11px]">
                       Complimentary Worldwide Insured Delivery Unlocked
                     </span>
                   ) : (
                     <span className="text-muted-foreground text-[11px]">
-                      Add <span className="font-bold text-oxblood-deep font-mono">{storeConfig.currency}{remainingForFreeShipping.toFixed(2)}</span> for Free Insured Delivery
+                      Add <span className="font-bold text-burgundy font-mono">{storeConfig.currency}{remainingForFreeShipping.toFixed(2)}</span> for Free Insured Delivery
                     </span>
                   )}
-                  <span className="font-mono text-[10px] font-semibold text-oxblood">{progressPercent}%</span>
+                  <span className="font-mono text-[10px] font-semibold text-burgundy">{progressPercent}%</span>
                 </div>
                 <div className="w-full bg-border/60 h-1.5 rounded-full overflow-hidden">
                   <motion.div 
-                    className="h-full bg-gradient-to-r from-oxblood via-brass to-oxblood transition-all duration-500 rounded-full"
+                    className="h-full bg-gradient-to-r from-burgundy via-gold to-burgundy transition-all duration-500 rounded-full"
                     style={{ width: `${progressPercent}%` }}
                     initial={{ width: 0 }}
                     animate={{ width: `${progressPercent}%` }}
@@ -95,22 +95,22 @@ export function CartDrawer() {
 
             {/* TRUST REASSURANCE PILLS BAR */}
             <div className="px-6 py-2 bg-muted/30 border-b border-border/40 flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-              <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-brass" /> 10-Yr Guarantee</span>
+              <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-gold" /> 10-Yr Guarantee</span>
               <span>·</span>
-              <span className="flex items-center gap-1.5"><Truck className="w-3 h-3 text-brass" /> Crated Transit</span>
+              <span className="flex items-center gap-1.5"><Truck className="w-3 h-3 text-gold" /> Crated Transit</span>
               <span>·</span>
-              <span className="flex items-center gap-1.5"><Award className="w-3 h-3 text-brass" /> Signed Hallmark</span>
+              <span className="flex items-center gap-1.5"><Award className="w-3 h-3 text-gold" /> Signed Hallmark</span>
             </div>
 
             {/* DRAWER BODY (SCROLLABLE ITEMS LIST) */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 divide-y divide-border/40">
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-5 px-6">
-                  <div className="w-16 h-16 rounded-full bg-oxblood/5 border border-oxblood/15 flex items-center justify-center text-oxblood">
+                  <div className="w-16 h-16 rounded-full bg-burgundy/5 border border-burgundy/15 flex items-center justify-center text-burgundy">
                     <ShoppingBag className="w-8 h-8 opacity-70" />
                   </div>
                   <div className="space-y-1.5">
-                    <p className="font-display text-xl text-oxblood-deep font-semibold">Your Cart is Empty</p>
+                    <p className="font-display text-xl text-burgundy font-semibold">Your Cart is Empty</p>
                     <p className="text-xs text-muted-foreground font-serif-italic max-w-xs leading-relaxed">
                       "Metal is not an ordinary medium; it holds memory, architecture, and light."
                     </p>
@@ -121,7 +121,7 @@ export function CartDrawer() {
                       setDrawerOpen(false);
                       navigate('/shop');
                     }}
-                    className="bg-oxblood text-ivory hover:bg-oxblood-deep text-[11px] uppercase tracking-[0.2em] px-7 py-3 rounded-full transition font-semibold shadow-soft hover:shadow-luxe"
+                    className="bg-burgundy text-cream hover:bg-burgundy-hover text-[11px] uppercase tracking-[0.2em] px-7 py-3 rounded-full transition font-semibold shadow-soft hover:shadow-luxe"
                   >
                     Browse Collections
                   </button>
@@ -137,7 +137,7 @@ export function CartDrawer() {
                         <ShapeThumb shapeId={item.shapeId} finish={item.finish} className="w-full h-full" />
                       )}
                       {item.customDesignRef && (
-                        <span className="absolute bottom-1 right-1 bg-brass text-black text-[7px] font-mono px-1 rounded uppercase font-bold">
+                        <span className="absolute bottom-1 right-1 bg-gold text-black text-[7px] font-mono px-1 rounded uppercase font-bold">
                           CAD
                         </span>
                       )}
@@ -149,11 +149,11 @@ export function CartDrawer() {
                         <Link 
                           to={`/product/${item.productSlug}`} 
                           onClick={() => setDrawerOpen(false)}
-                          className="font-display text-sm text-oxblood-deep hover:text-brass transition truncate font-semibold block leading-tight"
+                          className="font-display text-sm text-burgundy hover:text-gold transition truncate font-semibold block leading-tight"
                         >
                           {item.productName}
                         </Link>
-                        <div className="text-right text-xs font-semibold font-mono text-oxblood-deep shrink-0">
+                        <div className="text-right text-xs font-semibold font-mono text-burgundy shrink-0">
                           {storeConfig.currency}{(item.unitPrice * item.quantity).toFixed(2)}
                         </div>
                       </div>
@@ -215,7 +215,7 @@ export function CartDrawer() {
                   <div className="flex justify-between text-muted-foreground">
                     <span className="flex items-center gap-1">
                       Insured Freight
-                      <span className="text-[9px] text-brass uppercase font-semibold">(Reinforced Crate)</span>
+                      <span className="text-[9px] text-gold uppercase font-semibold">(Reinforced Crate)</span>
                     </span>
                     <span className="font-mono font-medium text-foreground">
                       {shipping === 0 ? (
@@ -230,12 +230,12 @@ export function CartDrawer() {
                     <span className="font-mono">{storeConfig.currency}{tax.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between border-t border-border/70 pt-3 text-sm font-semibold text-oxblood-deep">
+                  <div className="flex justify-between border-t border-border/70 pt-3 text-sm font-semibold text-burgundy">
                     <div className="flex flex-col">
                       <span>Total Investment</span>
                       <span className="text-[10px] text-muted-foreground font-normal">All import duties & crate included</span>
                     </div>
-                    <span className="font-mono text-lg font-bold text-oxblood">{storeConfig.currency}{total.toFixed(2)}</span>
+                    <span className="font-mono text-lg font-bold text-burgundy">{storeConfig.currency}{total.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -243,15 +243,15 @@ export function CartDrawer() {
                   <button 
                     type="button"
                     onClick={handleCheckoutClick}
-                    className="w-full bg-[#2D2321] hover:bg-[#6B2732] text-white font-semibold py-4 rounded-full hover:shadow-md active:scale-[0.99] transition-all text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                    className="w-full bg-burgundy hover:bg-burgundy-hover text-cream font-semibold py-4 rounded-[2px] hover:shadow-md active:scale-[0.99] transition-all text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer border border-transparent hover:border-dusty-pink"
                   >
                     <span>PROCEED TO SECURE CHECKOUT</span>
-                    <ArrowRight className="w-4 h-4 text-[#C6A15B]" />
+                    <ArrowRight className="w-4 h-4 text-dusty-pink" />
                   </button>
                   <Link 
                     to="/cart" 
                     onClick={() => setDrawerOpen(false)}
-                    className="block text-center text-[10px] uppercase tracking-widest text-muted-foreground hover:text-oxblood font-semibold py-1.5 transition"
+                    className="block text-center text-[10px] uppercase tracking-widest text-muted-foreground hover:text-burgundy font-semibold py-1.5 transition"
                   >
                     Review Detailed Cart & Guarantees →
                   </Link>

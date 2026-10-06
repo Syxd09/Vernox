@@ -7,17 +7,24 @@
 @layer base {
   :root {
     /* ==========================================================================
-       🎨 EDIT YOUR BRAND COLORS HERE DIRECTLY (CHANGE ANY HEX / RGB VALUE)
+       🎨 UNIVERSAL BRAND PALETTE (ONE-STOP EDITING)
+       Changing ANY color here will automatically and universally update that
+       color across EVERY component, button, footer, header, curtain, and badge!
        ========================================================================== */
-    --maroon-deep: #6B2732;       /* ← Deep maroon color from your reference image */
-    --maroon-light: #6B2732;      /* ← Unified maroon accent */
-    --gold: #C6A15B;              /* ← Elegant gold */
-    --cream: #F8F3EA;             /* ← Warm cream / ivory background */
-    --dark-brown: #332522;        /* ← Dark brown text */
-    --soft-white: #FFFFFF;        /* ← Pure soft white cards */
+    --burgundy: #722F37;          /* Primary anchor: buttons, footer, curtains, dark sections */
+    --burgundy-hover: #5C2329;    /* Hover state for burgundy buttons and links */
+    --cream: #F8F4E7;             /* Universal light canvas background & light text */
+    --dusty-pink: #D7A7B1;        /* Accent pill badges, tags, dividers & subtle highlights */
+    --gold: #C6A15B;              /* Metallic gold details */
+    --dark-brown: #332522;        /* Primary typography color */
 
-    /* HSL Framework Tokens */
-    --background: 38 43% 95%;             /* Warm cream / ivory #F8F3EA */
+    /* Universal Aliases */
+    --maroon-deep: var(--burgundy);
+    --maroon-light: var(--dusty-pink);
+    --soft-white: var(--cream);
+
+    /* HSL Framework Tokens (Linked directly to universal palette) */
+    --background: 44 44% 94%;             /* Warm cream #F8F4E7 */
     --foreground: 12 20% 17%;             /* Dark brown #332522 */
 
     --card: 0 0% 100%;                    /* Soft white #FFFFFF */
@@ -26,90 +33,92 @@
     --popover: 0 0% 100%;
     --popover-foreground: 12 20% 17%;
 
-    --primary: 351 47% 29%;               /* Deep maroon #6B2732 */
-    --primary-foreground: 38 43% 95%;     /* Warm cream #F8F3EA */
+    --primary: 353 42% 32%;               /* Burgundy #722F37 */
+    --primary-foreground: 44 44% 94%;     /* Warm cream #F8F4E7 */
 
-    --secondary: 38 28% 91%;              /* Soft cream-beige #F1EADC */
-    --secondary-foreground: 12 20% 17%;
+    --secondary: 348 37% 75%;             /* Dusty pink #D7A7B1 */
+    --secondary-foreground: 353 42% 32%;  /* Burgundy text */
 
-    --muted: 38 22% 92%;
+    --muted: 44 25% 91%;
     --muted-foreground: 12 14% 45%;
 
     --accent: 39 49% 57%;                 /* Elegant gold #C6A15B */
     --accent-foreground: 12 20% 17%;
 
     --destructive: 0 62% 45%;
-    --destructive-foreground: 38 43% 95%;
+    --destructive-foreground: 44 44% 94%;
 
-    --border: 38 18% 88%;                 /* Thin subtle hairline #EBE4D6 */
-    --input: 38 18% 88%;
-    --ring: 39 49% 57%;
+    --border: 44 20% 88%;                 /* Thin subtle hairline */
+    --input: 44 20% 88%;
+    --ring: 353 42% 32%;
 
     --radius: 0.125rem;                   /* Subtle, not excessive */
 
     --surface: 0 0% 100%;
     --surface-foreground: 12 20% 17%;
     --toolbar: 12 20% 17%;
-    --toolbar-foreground: 38 43% 95%;
+    --toolbar-foreground: 44 44% 94%;
 
-    --oxblood: 351 47% 29%;               /* Deep maroon #6B2732 */
+    --oxblood: 353 42% 32%;               /* Burgundy #722F37 */
     --oxblood-deep: 12 20% 17%;           /* Dark brown #332522 */
     --brass: 39 49% 57%;                  /* Elegant gold #C6A15B */
     --brass-soft: 39 40% 75%;
-    --ivory: 38 43% 95%;
-    --ivory-warm: 38 28% 91%;
+    --ivory: 44 44% 94%;
+    --ivory-warm: 44 28% 90%;
     --champagne: 39 49% 57%;
     --forest-trust: 152 35% 26%;
-    --gradient-oxblood: linear-gradient(135deg, #2D2321 0%, #4A1E25 100%);
+    --gradient-oxblood: linear-gradient(135deg, #2D2321 0%, #722F37 100%);
 
-    --sidebar-background: 38 43% 95%;
+    --sidebar-background: 44 44% 94%;
     --sidebar-foreground: 12 20% 17%;
-    --sidebar-primary: 351 47% 29%;
-    --sidebar-primary-foreground: 38 43% 95%;
-    --sidebar-accent: 38 28% 91%;
-    --sidebar-accent-foreground: 12 20% 17%;
-    --sidebar-border: 38 18% 88%;
-    --sidebar-ring: 39 49% 57%;
+    --sidebar-primary: 353 42% 32%;
+    --sidebar-primary-foreground: 44 44% 94%;
+    --sidebar-accent: 348 37% 75%;
+    --sidebar-accent-foreground: 353 42% 32%;
+    --sidebar-border: 44 20% 88%;
+    --sidebar-ring: 353 42% 32%;
   }
 
   .dark {
-    --maroon-deep: #6B2732;
-    --maroon-light: #6B2732;
+    --burgundy: #722F37;
+    --maroon-deep: #722F37;
+    --dusty-pink: #D7A7B1;
+    --maroon-light: #D7A7B1;
     --gold: #C6A15B;
-    --cream: #F8F3EA;
+    --cream: #F8F4E7;
     --dark-brown: #332522;
     --soft-white: #FFFFFF;
 
-    --background: 38 43% 95%;
+    --background: 44 44% 94%;
     --foreground: 12 20% 17%;
     --card: 0 0% 100%;
     --card-foreground: 12 20% 17%;
     --popover: 0 0% 100%;
     --popover-foreground: 12 20% 17%;
-    --primary: 351 47% 29%;
-    --primary-foreground: 38 43% 95%;
-    --secondary: 38 28% 91%;
-    --secondary-foreground: 12 20% 17%;
-    --muted: 38 22% 92%;
+    --primary: 353 42% 32%;
+    --primary-foreground: 44 44% 94%;
+    --secondary: 348 37% 75%;
+    --secondary-foreground: 353 42% 32%;
+    --muted: 44 25% 91%;
     --muted-foreground: 12 14% 45%;
     --accent: 39 49% 57%;
     --accent-foreground: 12 20% 17%;
-    --border: 38 18% 88%;
-    --input: 38 18% 88%;
-    --ring: 39 49% 57%;
+    --border: 44 20% 88%;
+    --input: 44 20% 88%;
+    --ring: 353 42% 32%;
     --surface: 0 0% 100%;
     --surface-foreground: 12 20% 17%;
     --toolbar: 12 20% 17%;
-    --toolbar-foreground: 38 43% 95%;
-    --sidebar-background: 38 43% 95%;
+    --toolbar-foreground: 44 44% 94%;
+    --sidebar-background: 44 44% 94%;
     --sidebar-foreground: 12 20% 17%;
-    --sidebar-primary: 351 47% 29%;
-    --sidebar-primary-foreground: 38 43% 95%;
-    --sidebar-accent: 38 28% 91%;
-    --sidebar-accent-foreground: 12 20% 17%;
-    --sidebar-border: 38 18% 88%;
-    --sidebar-ring: 39 49% 57%;
-    --oxblood: 351 47% 29%;
+    --sidebar-primary: 353 42% 32%;
+    --sidebar-primary-foreground: 44 44% 94%;
+    --sidebar-accent: 348 37% 75%;
+    --sidebar-accent-foreground: 353 42% 32%;
+    --sidebar-border: 44 20% 88%;
+    --sidebar-ring: 353 42% 32%;
+    --oxblood: 353 42% 32%;
     --oxblood-deep: 12 20% 17%;
     --brass: 39 49% 57%;
   }
@@ -118,7 +127,7 @@
 @layer base {
   * { @apply border-border; }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: auto; }
 
   body {
     @apply bg-background text-foreground antialiased;
@@ -494,4 +503,43 @@
 /* ────────── Smooth Page Transitions ────────── */
 .page-enter {
   animation: reveal-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ────────── Universal Theme Components ────────── */
+.brand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--dusty-pink) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dusty-pink) 50%, transparent);
+  color: var(--burgundy);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-family: var(--font-sans, "Plus Jakarta Sans", sans-serif);
+}
+
+.btn-burgundy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  border-radius: 2px;
+  background-color: var(--burgundy);
+  color: var(--cream);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-family: var(--font-sans, "Plus Jakarta Sans", sans-serif);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.btn-burgundy:hover {
+  background-color: var(--burgundy-hover);
+  border-color: var(--dusty-pink);
 }

@@ -75,20 +75,20 @@ export default function Cart() {
   const recommended = products.slice(0, 3);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background selection:bg-oxblood/80 selection:text-ivory">
+    <div className="min-h-screen flex flex-col bg-background selection:bg-burgundy/80 selection:text-cream">
       <SiteHeader />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
         {/* Breadcrumb & Header */}
         <div className="mb-8 md:mb-12">
           <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground mb-3 font-semibold">
-            <Link to="/shop" className="hover:text-oxblood transition">Atelier Catalog</Link>
+            <Link to="/shop" className="hover:text-burgundy transition">Atelier Catalog</Link>
             <span>/</span>
             <span className="text-foreground">Shopping Cart</span>
           </div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/80 pb-6">
             <div>
-              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-oxblood-deep font-semibold tracking-tight">
+              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl text-burgundy font-semibold tracking-tight">
                 Your Atelier Cart
               </h1>
               <p className="text-muted-foreground text-xs sm:text-sm mt-1.5 font-serif-italic">
@@ -97,7 +97,7 @@ export default function Cart() {
             </div>
             {items.length > 0 && (
               <div className="flex items-center gap-4 text-xs font-mono">
-                <span className="px-3 py-1 rounded-full bg-oxblood/10 text-oxblood font-bold">
+                <span className="px-3 py-1 rounded-full bg-burgundy/10 text-burgundy font-bold">
                   {items.reduce((acc, i) => acc + i.quantity, 0)} Items Selected
                 </span>
                 <button 
@@ -119,25 +119,25 @@ export default function Cart() {
         {items.length === 0 ? (
           /* EMPTY CART LUXURY STATE */
           <div className="py-16 md:py-24 text-center max-w-2xl mx-auto px-4">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-oxblood/5 border border-oxblood/20 flex items-center justify-center text-oxblood shadow-soft">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-burgundy/5 border border-burgundy/20 flex items-center justify-center text-burgundy shadow-soft">
               <ShoppingBag className="w-9 h-9 stroke-[1.5]" />
             </div>
-            <h2 className="font-display text-3xl text-oxblood-deep mb-3 font-semibold">Your Cart is Currently Empty</h2>
+            <h2 className="font-display text-3xl text-burgundy mb-3 font-semibold">Your Cart is Currently Empty</h2>
             <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-serif-italic">
               No bespoke metal pieces have been reserved. Each Vernox piece is precision-cut from solid 3.0mm Belgian metallurgical plate, hand-finished in Antwerp, and backed by a 10-year structural warranty.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link 
                 to="/shop" 
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-oxblood text-primary-foreground font-semibold px-8 py-4 rounded-full text-xs uppercase tracking-widest hover:shadow-luxe transition"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-burgundy hover:bg-burgundy-hover text-cream font-semibold px-8 py-4 rounded-full text-xs uppercase tracking-widest hover:shadow-luxe transition"
               >
                 Explore Signature Collections <ArrowRight className="w-4 h-4" />
               </Link>
               <Link 
                 to="/customize" 
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-oxblood/40 hover:border-oxblood text-oxblood px-8 py-4 rounded-full text-xs uppercase tracking-widest font-semibold hover:bg-oxblood/5 transition"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-burgundy/40 hover:border-burgundy text-burgundy px-8 py-4 rounded-full text-xs uppercase tracking-widest font-semibold hover:bg-burgundy/5 transition"
               >
-                <Compass className="w-4 h-4 text-brass" /> Launch CAD Studio
+                <Compass className="w-4 h-4 text-gold" /> Launch CAD Studio
               </Link>
             </div>
 
@@ -179,22 +179,22 @@ export default function Cart() {
               <div className="bg-card border border-border/80 rounded-lg p-5 noise-overlay shadow-soft">
                 <div className="flex items-center justify-between text-xs mb-2">
                   <div className="flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-oxblood" />
+                    <Truck className="w-4 h-4 text-burgundy" />
                     {remainingForFreeShipping === 0 ? (
-                      <span className="font-semibold text-oxblood-deep">
+                      <span className="font-semibold text-burgundy">
                         Complimentary Worldwide Insured Delivery Unlocked
                       </span>
                     ) : (
                       <span className="text-muted-foreground">
-                        Add <span className="font-bold text-oxblood-deep font-mono">{storeConfig.currency}{remainingForFreeShipping.toFixed(2)}</span> more to qualify for <strong className="text-foreground">Free Insured White-Glove Shipping</strong>.
+                        Add <span className="font-bold text-burgundy font-mono">{storeConfig.currency}{remainingForFreeShipping.toFixed(2)}</span> more to qualify for <strong className="text-foreground">Free Insured White-Glove Shipping</strong>.
                       </span>
                     )}
                   </div>
-                  <span className="font-mono text-xs font-bold text-oxblood">{progressPercent}%</span>
+                  <span className="font-mono text-xs font-bold text-burgundy">{progressPercent}%</span>
                 </div>
                 <div className="w-full bg-border/60 h-2 rounded-full overflow-hidden">
                   <motion.div 
-                    className="h-full bg-gradient-to-r from-oxblood via-brass to-oxblood rounded-full"
+                    className="h-full bg-gradient-to-r from-burgundy via-gold to-burgundy rounded-full"
                     style={{ width: `${progressPercent}%` }}
                     initial={{ width: 0 }}
                     animate={{ width: `${progressPercent}%` }}
@@ -224,7 +224,7 @@ export default function Cart() {
                         <ShapeThumb shapeId={item.shapeId} finish={item.finish} className="w-full h-full drop-shadow-sm" />
                       )}
                       {item.customDesignRef && (
-                        <span className="absolute top-1.5 left-1.5 bg-brass text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow">
+                        <span className="absolute top-1.5 left-1.5 bg-gold text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow">
                           STUDIO CAD
                         </span>
                       )}
@@ -236,7 +236,7 @@ export default function Cart() {
                         <div>
                           <Link 
                             to={`/product/${item.productSlug}`} 
-                            className="font-display text-lg text-oxblood-deep font-semibold hover:text-brass transition leading-snug block"
+                            className="font-display text-lg text-burgundy font-semibold hover:text-gold transition leading-snug block"
                           >
                             {item.productName}
                           </Link>
@@ -245,11 +245,11 @@ export default function Cart() {
                             <span>·</span>
                             <span>{item.sizeLabel}</span>
                             <span>·</span>
-                            <span className="text-brass font-mono font-semibold">Solid 3.0mm Plate</span>
+                            <span className="text-gold font-mono font-semibold">Solid 3.0mm Plate</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-mono text-base font-bold text-oxblood-deep">
+                          <div className="font-mono text-base font-bold text-burgundy">
                             {storeConfig.currency}{(item.unitPrice * item.quantity).toFixed(2)}
                           </div>
                           {item.quantity > 1 && (
@@ -303,11 +303,11 @@ export default function Cart() {
               {/* 4 E-Commerce Trust Pillars Grid */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-oxblood/10 text-oxblood shrink-0">
+                  <div className="p-2.5 rounded-sm bg-burgundy/10 text-burgundy shrink-0">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-oxblood-deep">10-Year Weathering Warranty</h4>
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">10-Year Weathering Warranty</h4>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                       Industrial anti-corrosion guarantee. Guaranteed against warping, delamination, and metallurgical rust.
                     </p>
@@ -315,11 +315,11 @@ export default function Cart() {
                 </div>
 
                 <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-brass/10 text-brass shrink-0">
+                  <div className="p-2.5 rounded-sm bg-gold/10 text-gold shrink-0">
                     <Truck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-oxblood-deep">Zero-Risk Crated Transit</h4>
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">Zero-Risk Crated Transit</h4>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                       Reinforced archival timber crating with 100% full-value insurance. Immediate zero-cost replacement for any transit damage.
                     </p>
@@ -327,11 +327,11 @@ export default function Cart() {
                 </div>
 
                 <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-oxblood/10 text-oxblood shrink-0">
+                  <div className="p-2.5 rounded-sm bg-burgundy/10 text-burgundy shrink-0">
                     <Award className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-oxblood-deep">Numbered Hallmark & Certificate</h4>
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">Numbered Hallmark & Certificate</h4>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                       Each piece bears an embossed Antwerp serial stamp and is accompanied by a signed artisan certificate.
                     </p>
@@ -339,11 +339,11 @@ export default function Cart() {
                 </div>
 
                 <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-brass/10 text-brass shrink-0">
+                  <div className="p-2.5 rounded-sm bg-gold/10 text-gold shrink-0">
                     <RotateCcw className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-oxblood-deep">30-Day Interior Evaluation</h4>
+                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">30-Day Interior Evaluation</h4>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                       Examine the piece in your natural interior light with complete peace of mind. Hassle-free return policy.
                     </p>
@@ -356,14 +356,14 @@ export default function Cart() {
             <aside className="space-y-6 sticky top-24">
               <div className="bg-card border border-border/80 rounded-lg p-6 noise-overlay shadow-luxe space-y-6">
                 <div className="border-b border-border/70 pb-4">
-                  <h2 className="font-display text-2xl text-oxblood-deep font-semibold">Order Summary</h2>
+                  <h2 className="font-display text-2xl text-burgundy font-semibold">Order Summary</h2>
                   <p className="text-xs text-muted-foreground mt-0.5">Calculated in real-time with insured transit</p>
                 </div>
 
                 {/* Promotional Code Form */}
                 <form onSubmit={handleApplyPromo} className="space-y-2">
                   <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <Tag className="w-3 h-3 text-brass" />
+                    <Tag className="w-3 h-3 text-gold" />
                     <span>Collector or Trade Voucher</span>
                   </label>
                   {appliedDiscount ? (
@@ -390,11 +390,11 @@ export default function Cart() {
                         placeholder="e.g. ATELIER10 or TRADE15" 
                         value={promoCode}
                         onChange={e => setPromoCode(e.target.value)}
-                        className="flex-1 bg-background border border-border rounded px-3 py-2 text-xs outline-none focus:border-oxblood font-mono uppercase"
+                        className="flex-1 bg-background border border-border rounded px-3 py-2 text-xs outline-none focus:border-burgundy font-mono uppercase"
                       />
                       <button 
                         type="submit"
-                        className="bg-oxblood hover:bg-oxblood-deep text-ivory text-xs px-4 py-2 rounded font-semibold uppercase tracking-wider transition"
+                        className="bg-burgundy hover:bg-burgundy-hover text-cream text-xs px-4 py-2 rounded font-semibold uppercase tracking-wider transition"
                       >
                         Apply
                       </button>
@@ -441,10 +441,10 @@ export default function Cart() {
 
                   <div className="border-t border-border/80 pt-4 flex justify-between items-baseline">
                     <div>
-                      <span className="font-display text-lg text-oxblood-deep font-semibold block">Total Investment</span>
+                      <span className="font-display text-lg text-burgundy font-semibold block">Total Investment</span>
                       <span className="text-[10px] text-muted-foreground">Includes insurance, customs & packaging</span>
                     </div>
-                    <span className="font-mono text-2xl font-bold text-oxblood">
+                    <span className="font-mono text-2xl font-bold text-burgundy">
                       {storeConfig.currency}{total.toFixed(2)}
                     </span>
                   </div>
@@ -454,15 +454,15 @@ export default function Cart() {
                 <button 
                   type="button"
                   onClick={() => navigate('/checkout')}
-                  className="w-full bg-[#2D2321] hover:bg-[#6B2732] text-white font-semibold py-4 rounded-full hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                  className="w-full bg-burgundy hover:bg-burgundy-hover text-cream font-semibold py-4 rounded-[2px] hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer border border-transparent hover:border-dusty-pink"
                 >
                   <span>PROCEED TO SECURE CHECKOUT</span>
-                  <ArrowRight className="w-4 h-4 text-[#C6A15B]" />
+                  <ArrowRight className="w-4 h-4 text-dusty-pink" />
                 </button>
 
                 <Link 
                   to="/shop" 
-                  className="block text-center text-xs uppercase tracking-widest text-muted-foreground hover:text-oxblood font-semibold transition"
+                  className="block text-center text-xs uppercase tracking-widest text-muted-foreground hover:text-burgundy font-semibold transition"
                 >
                   ← Return to Atelier Collections
                 </Link>
@@ -470,7 +470,7 @@ export default function Cart() {
                 {/* Bank-Grade Security Seals */}
                 <div className="border-t border-border/60 pt-4 space-y-3">
                   <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <Lock className="w-3.5 h-3.5 text-brass" />
+                    <Lock className="w-3.5 h-3.5 text-gold" />
                     <span>256-Bit Bank-Grade SSL Encryption</span>
                   </div>
 
@@ -487,14 +487,14 @@ export default function Cart() {
 
               {/* Atelier Concierge Live Help Callout */}
               <div className="bg-muted/40 border border-border/70 rounded-lg p-4 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-oxblood/10 text-oxblood shrink-0">
+                <div className="p-2 rounded-full bg-burgundy/10 text-burgundy shrink-0">
                   <PhoneCall className="w-4 h-4" />
                 </div>
                 <div className="text-xs">
-                  <div className="font-semibold text-oxblood-deep">Direct Atelier Concierge</div>
+                  <div className="font-semibold text-burgundy">Direct Atelier Concierge</div>
                   <div className="text-muted-foreground text-[11px] mt-0.5">
                     Need custom sizing or project consultation?{' '}
-                    <a href="tel:+3232314490" className="text-oxblood font-semibold hover:underline">
+                    <a href="tel:+3232314490" className="text-burgundy font-semibold hover:underline">
                       +32 3 231 44 90
                     </a>
                   </div>

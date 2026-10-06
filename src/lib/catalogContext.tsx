@@ -42,13 +42,20 @@ export interface Topic {
   date: string;
 }
 
+import { defaultReviews } from './reviewsData';
+
 export interface Review {
   id: string;
   productId: string;
   customerName: string;
+  customerRole?: string;
+  location?: string;
   rating: number;
   comment: string;
   placedAt: number;
+  verified?: boolean;
+  featured?: boolean;
+  helpfulCount?: number;
 }
 
 export interface HomepageSettings {
@@ -464,7 +471,30 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   });
 
   const [currentCustomer, setCurrentCustomer] = useState<CustomerAccount | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(() => {
+    try {
+      const saved = localStorage.getItem('vernox-reviews');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((r: Review) => r.id));
+          const missingDefaults = defaultReviews.filter(d => !existingIds.has(d.id));
+          return [...parsed, ...missingDefaults];
+        }
+      }
+      return defaultReviews;
+    } catch {
+      return defaultReviews;
+    }
+  });
+
+  // Persist reviews locally
+  useEffect(() => {
+    try {
+      localStorage.setItem('vernox-reviews', JSON.stringify(reviews));
+    } catch {}
+  }, [reviews]);
+
   const [wishlist, setWishlist] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('vernox-wishlist');
@@ -538,7 +568,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           }
         } catch (e: any) {
           // Gracefully fallback to local profile when Firestore rules or network are offline
-          console.info("Using local customer profile fallback (Firestore offline or restricted):", e?.message || e);
+          console.debug("Using local customer profile fallback (Firestore offline or restricted):", e?.message || e);
           const email = (user.email || '').toLowerCase();
           const isAdminUser = email === 'admin@vernox.com' || email === 'concierge@vernoxatelier.com';
           const fallbackProfile: CustomerAccount = {
@@ -1134,6 +1164,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     setTopics(DEFAULT_TOPICS);
     setStoreConfig(DEFAULT_STORE_CONFIG);
     setCurrentCustomer(null);
+    setReviews(defaultReviews);
     localStorage.removeItem('vernox-products');
     localStorage.removeItem('vernox-categories');
     localStorage.removeItem('vernox-homepage');
@@ -1141,6 +1172,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('vernox-topics');
     localStorage.removeItem('vernox-store-config');
     localStorage.removeItem('vernox-customer-email');
+    localStorage.removeItem('vernox-reviews');
   };
 
   return (

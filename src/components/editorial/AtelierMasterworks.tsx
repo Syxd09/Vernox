@@ -59,8 +59,8 @@ export function AtelierMasterworks({ onOpenStudio }: Props = {}) {
           </div>
         </div>
 
-        {/* Product Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7">
+        {/* Product Cards Grid (2 columns on mobile) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-7">
           {filteredProducts.map(p => (
             <ProductCard key={p.id} product={p} />
           ))}

@@ -6,7 +6,7 @@ import { ProductCard } from '@/components/shop/ProductCard';
 import { useCatalog } from '@/lib/catalogContext';
 import { ProductCategory } from '@/lib/catalog';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Check, Search, SlidersHorizontal, X, Sparkles, Shield, Hammer, Award } from 'lucide-react';
+import { ChevronDown, Check, Search, SlidersHorizontal, X, Sparkles, Shield, Hammer, Award, Grid2x2, Grid3x3 } from 'lucide-react';
 
 export default function Shop() {
   const { products, categories, storeConfig } = useCatalog();
@@ -17,8 +17,9 @@ export default function Shop() {
     return Math.ceil(highest / 50) * 50;
   }, [products]);
 
-  // Filtering & Sorting States
+  // Filtering, Sorting & View States
   const [sort, setSort] = useState<'featured' | 'price-asc' | 'price-desc' | 'bestsellers' | 'new'>('featured');
+  const [columns, setColumns] = useState<2 | 3>(2);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [maxPrice, setMaxPrice] = useState(maxCatalogPrice);
@@ -108,23 +109,24 @@ export default function Shop() {
   }, [products]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F3EA]">
+    <div className="min-h-screen flex flex-col bg-cream">
       <SiteHeader />
       
       {/* Editorial Hero Header */}
-      <section className="border-b border-[#EBE4D6] bg-gradient-to-b from-[#F5EFE4] to-[#F8F3EA] pt-14 pb-12 sm:pt-20 sm:pb-16">
+      <section className="border-b border-[#EBE4D6] bg-gradient-to-b from-[#F5EFE4] to-cream pt-14 pb-12 sm:pt-20 sm:pb-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-sans text-[#6B2732] font-semibold mb-3">
-              <span className="w-6 h-[1.5px] bg-[#C6A15B]" />
-              <span>{activeCategory ? 'Curated Collection' : 'Permanent Atelier Catalog'}</span>
+            <div className="inline-flex items-center gap-2 mb-3">
+              <span className="brand-pill">
+                {activeCategory ? 'Curated Collection' : 'Permanent Atelier Catalog'}
+              </span>
             </div>
             
-            <h1 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-[#332522] tracking-tight leading-[1.05] font-normal mb-4">
+            <h1 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-dark-brown tracking-tight leading-[1.05] font-normal mb-4">
               {activeCategory ? activeCategory.name.toUpperCase() : 'WORKS OF ART & SCULPTURES'}
             </h1>
             
-            <p className="text-xs sm:text-sm md:text-[15px] text-[#332522]/75 font-sans leading-relaxed max-w-2xl">
+            <p className="text-xs sm:text-sm md:text-[15px] text-dark-brown/75 font-sans leading-relaxed max-w-2xl">
               {activeCategory
                 ? activeCategory.description
                 : 'A curated dialogue of original canvas compositions, heavy bronze castings, tactile mineral reliefs, and precision-cut metal wall sculptures for refined modern interiors.'}
@@ -138,12 +140,12 @@ export default function Shop() {
               className={cn(
                 'px-4 py-2 rounded-[2px] text-[11px] uppercase tracking-[0.2em] font-sans transition-all duration-200 shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-2',
                 !category
-                  ? 'bg-maroon-deep text-cream font-semibold shadow-xs'
-                  : 'bg-white/80 hover:bg-white text-[#332522]/80 hover:text-[#332522] border border-[#EBE4D6]'
+                  ? 'bg-burgundy text-cream font-semibold shadow-xs'
+                  : 'bg-white/80 hover:bg-white text-dark-brown/80 hover:text-dark-brown border border-[#EBE4D6]'
               )}
             >
               <span>All Works</span>
-              <span className={cn('text-[9px] font-mono px-1.5 py-0.2 rounded-full', !category ? 'bg-white/20 text-cream' : 'bg-[#EBE4D6]/60 text-[#332522]/60')}>
+              <span className={cn('text-[9px] font-mono px-1.5 py-0.2 rounded-full', !category ? 'bg-white/20 text-cream' : 'bg-[#EBE4D6]/60 text-dark-brown/60')}>
                 {categoryCounts.all || products.length}
               </span>
             </Link>
@@ -158,12 +160,12 @@ export default function Shop() {
                   className={cn(
                     'px-4 py-2 rounded-[2px] text-[11px] uppercase tracking-[0.2em] font-sans transition-all duration-200 shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-2',
                     isActive
-                      ? 'bg-maroon-deep text-cream font-semibold shadow-xs'
-                      : 'bg-white/80 hover:bg-white text-[#332522]/80 hover:text-[#332522] border border-[#EBE4D6]'
+                      ? 'bg-burgundy text-cream font-semibold shadow-xs'
+                      : 'bg-white/80 hover:bg-white text-dark-brown/80 hover:text-dark-brown border border-[#EBE4D6]'
                   )}
                 >
                   <span>{c.name}</span>
-                  <span className={cn('text-[9px] font-mono px-1.5 py-0.2 rounded-full', isActive ? 'bg-white/20 text-cream' : 'bg-[#EBE4D6]/60 text-[#332522]/60')}>
+                  <span className={cn('text-[9px] font-mono px-1.5 py-0.2 rounded-full', isActive ? 'bg-white/20 text-cream' : 'bg-[#EBE4D6]/60 text-dark-brown/60')}>
                     {count}
                   </span>
                 </Link>
@@ -188,14 +190,14 @@ export default function Shop() {
                 placeholder="Search artwork, medium, motif..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] pl-9 pr-8 py-2 text-xs text-[#332522] placeholder:text-[#332522]/40 outline-none focus:border-[#6B2732] focus:bg-white transition-colors"
+                className="w-full bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] pl-9 pr-8 py-2 text-xs text-dark-brown placeholder:text-dark-brown/40 outline-none focus:border-burgundy focus:bg-white transition-colors"
               />
-              <Search className="w-3.5 h-3.5 text-[#332522]/50 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-dark-brown/50 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#332522]/40 hover:text-[#332522] p-0.5"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-brown/40 hover:text-dark-brown p-0.5"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -209,14 +211,14 @@ export default function Shop() {
               className={cn(
                 'inline-flex items-center gap-2 px-3.5 py-2 rounded-[2px] text-xs uppercase tracking-[0.16em] font-sans font-medium transition-colors border cursor-pointer',
                 filterPanelOpen || activeFiltersCount > 0
-                  ? 'border-[#6B2732] bg-[#6B2732]/5 text-[#6B2732]'
-                  : 'border-[#EBE4D6] bg-[#FAF8F5] text-[#332522] hover:bg-white'
+                  ? 'border-burgundy bg-burgundy/5 text-burgundy'
+                  : 'border-[#EBE4D6] bg-[#FAF8F5] text-dark-brown hover:bg-white'
               )}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#C6A15B]" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-gold" />
               <span>Refine</span>
               {activeFiltersCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[#6B2732] text-white text-[9px] font-mono flex items-center justify-center font-bold">
+                <span className="w-4 h-4 rounded-full bg-burgundy text-white text-[9px] font-mono flex items-center justify-center font-bold">
                   {activeFiltersCount}
                 </span>
               )}
@@ -227,31 +229,65 @@ export default function Shop() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-[10px] uppercase tracking-[0.2em] font-sans font-semibold text-[#6B2732] hover:text-[#6B2732] underline cursor-pointer ml-1"
+                className="text-[10px] uppercase tracking-[0.2em] font-sans font-semibold text-burgundy hover:text-burgundy-hover underline cursor-pointer ml-1"
               >
                 Reset All
               </button>
             )}
           </div>
 
-          {/* Right: Works count & Sort Dropdown */}
-          <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#EBE4D6]">
-            <span className="text-xs text-[#332522]/60 font-sans">
-              Showing <strong className="text-[#332522] font-semibold">{filteredList.length}</strong> works
+          {/* Right: Works count, Column density toggle & Sort Dropdown */}
+          <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#EBE4D6]">
+            <span className="text-xs text-dark-brown/60 font-sans hidden sm:inline">
+              Showing <strong className="text-dark-brown font-semibold">{filteredList.length}</strong> works
             </span>
+
+            {/* Density switcher for 2 or 3 products per row */}
+            <div className="flex items-center border border-[#EBE4D6] rounded-[2px] bg-[#FAF8F5] p-0.5">
+              <button
+                type="button"
+                onClick={() => setColumns(2)}
+                title="Display 2 items per row"
+                aria-label="2 columns"
+                className={cn(
+                  'px-2 py-1.5 rounded-[1px] text-[10px] font-sans font-medium transition-all cursor-pointer flex items-center gap-1',
+                  columns === 2
+                    ? 'bg-burgundy text-white shadow-xs font-semibold'
+                    : 'text-dark-brown/70 hover:text-dark-brown hover:bg-white'
+                )}
+              >
+                <Grid2x2 className="w-3.5 h-3.5" />
+                <span className="font-mono text-[9px] hidden sm:inline">2 col</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setColumns(3)}
+                title="Display 3 items per row"
+                aria-label="3 columns"
+                className={cn(
+                  'px-2 py-1.5 rounded-[1px] text-[10px] font-sans font-medium transition-all cursor-pointer flex items-center gap-1',
+                  columns === 3
+                    ? 'bg-burgundy text-white shadow-xs font-semibold'
+                    : 'text-dark-brown/70 hover:text-dark-brown hover:bg-white'
+                )}
+              >
+                <Grid3x3 className="w-3.5 h-3.5" />
+                <span className="font-mono text-[9px] hidden sm:inline">3 col</span>
+              </button>
+            </div>
 
             {/* Sort Dropdown */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(prev => !prev)}
-                className="bg-[#FAF8F5] hover:bg-white border border-[#EBE4D6] rounded-[2px] px-3.5 py-2 flex items-center gap-2 text-xs uppercase tracking-[0.15em] font-sans font-medium text-[#332522] cursor-pointer transition-colors"
+                className="bg-[#FAF8F5] hover:bg-white border border-[#EBE4D6] rounded-[2px] px-3.5 py-2 flex items-center gap-2 text-xs uppercase tracking-[0.15em] font-sans font-medium text-dark-brown cursor-pointer transition-colors"
               >
-                <span className="text-[#332522]/60 text-[10px]">Sort:</span>
+                <span className="text-dark-brown/60 text-[10px]">Sort:</span>
                 <span>{getSortLabel(sort)}</span>
                 <ChevronDown
                   className={cn(
-                    'w-3.5 h-3.5 text-[#C6A15B] transition-transform duration-200',
+                    'w-3.5 h-3.5 text-gold transition-transform duration-200',
                     isDropdownOpen && 'rotate-180'
                   )}
                 />
@@ -275,8 +311,8 @@ export default function Shop() {
                         className={cn(
                           'w-full text-left px-4 py-2.5 text-[11px] uppercase tracking-[0.16em] font-sans transition-colors flex items-center justify-between cursor-pointer',
                           sort === option
-                            ? 'bg-[#6B2732] text-white font-semibold'
-                            : 'text-[#332522] hover:bg-[#F8F3EA]'
+                            ? 'bg-burgundy text-white font-semibold'
+                            : 'text-dark-brown hover:bg-cream'
                         )}
                       >
                         <span>{getSortLabel(option)}</span>
@@ -294,14 +330,14 @@ export default function Shop() {
         {filterPanelOpen && (
           <div className="bg-white border border-[#EBE4D6] rounded-[2px] p-6 mb-8 shadow-xs animate-in fade-in duration-200">
             <div className="flex items-center justify-between border-b border-[#EBE4D6] pb-3 mb-5">
-              <h3 className="text-xs uppercase tracking-[0.24em] font-sans font-semibold text-[#332522] flex items-center gap-2">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#C6A15B]" />
+              <h3 className="text-xs uppercase tracking-[0.24em] font-sans font-semibold text-dark-brown flex items-center gap-2">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-gold" />
                 <span>Refine by Specification & Price</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setFilterPanelOpen(false)}
-                className="text-xs text-[#332522]/60 hover:text-[#332522] p-1 cursor-pointer"
+                className="text-xs text-dark-brown/60 hover:text-dark-brown p-1 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -310,7 +346,7 @@ export default function Shop() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Finishes & Materials */}
               <div>
-                <label className="text-[10px] uppercase tracking-[0.24em] font-sans font-semibold text-[#6B2732] block mb-3">
+                <label className="text-[10px] uppercase tracking-[0.24em] font-sans font-semibold text-burgundy block mb-3">
                   Material Finish & Patina
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -324,8 +360,8 @@ export default function Shop() {
                         className={cn(
                           'inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-xs font-sans transition-all cursor-pointer border',
                           isChecked
-                            ? 'bg-[#6B2732] text-white border-[#6B2732] font-semibold shadow-xs'
-                            : 'bg-[#FAF8F5] text-[#332522] border-[#EBE4D6] hover:bg-white'
+                            ? 'bg-burgundy text-white border-burgundy font-semibold shadow-xs'
+                            : 'bg-[#FAF8F5] text-dark-brown border-[#EBE4D6] hover:bg-white'
                         )}
                       >
                         <span
@@ -343,10 +379,10 @@ export default function Shop() {
               {/* Price Ceiling */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[10px] uppercase tracking-[0.24em] font-sans font-semibold text-[#6B2732]">
+                  <label className="text-[10px] uppercase tracking-[0.24em] font-sans font-semibold text-burgundy">
                     Maximum Investment
                   </label>
-                  <span className="font-mono text-sm font-semibold text-[#332522]">
+                  <span className="font-mono text-sm font-semibold text-dark-brown">
                     ${maxPrice}
                   </span>
                 </div>
@@ -357,9 +393,9 @@ export default function Shop() {
                   step={10}
                   value={maxPrice}
                   onChange={e => setMaxPrice(Number(e.target.value))}
-                  className="w-full accent-[#6B2732] cursor-pointer"
+                  className="w-full accent-burgundy cursor-pointer"
                 />
-                <div className="flex justify-between text-[10px] text-[#332522]/50 font-mono mt-1">
+                <div className="flex justify-between text-[10px] text-dark-brown/50 font-mono mt-1">
                   <span>$100</span>
                   <span>${maxCatalogPrice}</span>
                 </div>
@@ -374,8 +410,8 @@ export default function Shop() {
                       className={cn(
                         'px-2.5 py-1 text-[10px] font-sans rounded-[1px] border cursor-pointer transition-colors',
                         maxPrice === val
-                          ? 'border-[#6B2732] bg-[#6B2732]/10 text-[#6B2732] font-semibold'
-                          : 'border-[#EBE4D6] bg-white text-[#332522]/70 hover:text-[#332522]'
+                          ? 'border-burgundy bg-burgundy/10 text-burgundy font-semibold'
+                          : 'border-[#EBE4D6] bg-white text-dark-brown/70 hover:text-dark-brown'
                       )}
                     >
                       {val === maxCatalogPrice ? 'All Prices' : `Under $${val}`}
@@ -390,25 +426,32 @@ export default function Shop() {
         {/* Product Grid */}
         {filteredList.length === 0 ? (
           <div className="text-center py-20 px-6 bg-white border border-[#EBE4D6] rounded-[2px] max-w-lg mx-auto">
-            <Sparkles className="w-8 h-8 text-[#C6A15B] mx-auto mb-3 opacity-80" />
-            <h3 className="font-editorial text-2xl text-[#332522] font-normal mb-2">
+            <Sparkles className="w-8 h-8 text-gold mx-auto mb-3 opacity-80" />
+            <h3 className="font-editorial text-2xl text-dark-brown font-normal mb-2">
               No Pieces Match Your Current Selection
             </h3>
-            <p className="text-xs text-[#332522]/70 font-sans mb-6 leading-relaxed">
+            <p className="text-xs text-dark-brown/70 font-sans mb-6 leading-relaxed">
               We couldn't find any artwork matching your active search keywords or filter criteria.
             </p>
             <button 
               type="button"
               onClick={clearFilters}
-              className="bg-maroon-deep hover:opacity-90 text-cream px-6 py-2.5 rounded-[2px] text-xs uppercase tracking-[0.2em] font-sans font-semibold transition cursor-pointer shadow-xs"
+              className="bg-burgundy hover:bg-burgundy-hover text-cream px-6 py-2.5 rounded-[2px] text-xs uppercase tracking-[0.2em] font-sans font-semibold transition cursor-pointer shadow-xs"
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div
+            className={cn(
+              "grid transition-all duration-300",
+              columns === 2
+                ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8"
+                : "grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6"
+            )}
+          >
             {filteredList.map(p => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard key={p.id} product={p} compact={columns === 3} />
             ))}
           </div>
         )}
@@ -417,36 +460,36 @@ export default function Shop() {
         <div className="mt-20 pt-12 border-t border-[#EBE4D6]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center sm:text-left">
             <div className="flex items-start gap-3.5">
-              <Hammer className="w-5 h-5 text-[#C6A15B] shrink-0 mt-0.5" />
+              <Hammer className="w-5 h-5 text-gold shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-[#332522] mb-1">
+                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown mb-1">
                   Solid Metallurgical Precision
                 </h4>
-                <p className="text-xs text-[#332522]/70 font-sans leading-relaxed">
+                <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
                   Every work is crafted in 3.0mm Belgian alloy plate or cast noble bronze, hand-patinated in our Antwerp workshop.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3.5">
-              <Award className="w-5 h-5 text-[#C6A15B] shrink-0 mt-0.5" />
+              <Award className="w-5 h-5 text-gold shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-[#332522] mb-1">
+                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown mb-1">
                   Signed & Authenticated
                 </h4>
-                <p className="text-xs text-[#332522]/70 font-sans leading-relaxed">
+                <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
                   Numbered hallmark seal, signed certificate of authenticity, and museum-grade concealed hanging standoffs included.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3.5">
-              <Shield className="w-5 h-5 text-[#C6A15B] shrink-0 mt-0.5" />
+              <Shield className="w-5 h-5 text-gold shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-[#332522] mb-1">
+                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown mb-1">
                   Architect & Trade Inquiries
                 </h4>
-                <p className="text-xs text-[#332522]/70 font-sans leading-relaxed">
+                <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
                   Custom scale commissions, 3D CAD models, DXF vector files, and trade trade tier terms available upon request.
                 </p>
               </div>

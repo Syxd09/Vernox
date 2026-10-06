@@ -62,7 +62,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
       {/* Main Clean Sticky Header */}
       <header
         className={cn(
-          "sticky top-0 z-40 transition-all duration-300 bg-[#F8F3EA]/95 backdrop-blur-md border-b border-[#EBE4D6]",
+          "sticky top-0 z-40 transition-all duration-300 bg-cream/95 backdrop-blur-md border-b border-[#EBE4D6]",
           scrolled ? "py-3 shadow-xs" : "py-4.5"
         )}
       >
@@ -70,7 +70,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
           {/* Left: Brand Logo */}
           <Link to="/" className="flex items-center group py-1" title="Vernox Art & Sculptures">
             <div className="flex flex-col">
-              <span className="font-brand text-2xl sm:text-[25px] tracking-[0.28em] font-semibold text-dark-brown uppercase leading-none group-hover:text-maroon-deep transition-colors">
+              <span className="font-brand text-2xl sm:text-[25px] tracking-[0.28em] font-semibold text-dark-brown uppercase leading-none group-hover:text-burgundy transition-colors">
                 VERNOX
               </span>
               <span className="text-[8px] uppercase tracking-[0.38em] text-dark-brown/60 font-sans mt-1">
@@ -88,7 +88,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                 className={({ isActive }) => cn(
                   "relative text-[11px] xl:text-[11.5px] uppercase tracking-[0.24em] font-sans font-medium transition-colors py-1 group/nav",
                   isActive
-                    ? "text-maroon-deep font-semibold"
+                    ? "text-burgundy font-semibold"
                     : "text-dark-brown hover:text-gold"
                 )}
               >
@@ -97,10 +97,9 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                     <span>{item.label}</span>
                     <span
                       className={cn(
-                        "absolute bottom-0 left-0 w-full h-[1.5px] transition-transform duration-300 origin-left",
+                        "absolute bottom-0 left-0 w-full h-[1.5px] transition-transform duration-300 origin-left bg-gold",
                         isActive ? "scale-x-100" : "scale-x-0 group-hover/nav:scale-x-100"
                       )}
-                      style={{ backgroundColor: '#C6A15B' }}
                     />
                   </>
                 )}
@@ -109,12 +108,12 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
           </nav>
 
           {/* Right: Functional Action Icons */}
-          <div className="flex items-center gap-4 sm:gap-5 text-[#332522]">
+          <div className="flex items-center gap-4 sm:gap-5 text-dark-brown">
             {/* Search */}
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="p-1.5 hover:text-[#C6A15B] transition-colors cursor-pointer relative"
+              className="p-1.5 hover:text-gold transition-colors cursor-pointer relative"
               title="Search collection (⌘K)"
               aria-label="Search"
             >
@@ -124,7 +123,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             {/* Account */}
             <Link
               to="/account"
-              className="p-1.5 hover:text-[#C6A15B] transition-colors hidden sm:block"
+              className="p-1.5 hover:text-gold transition-colors hidden sm:block"
               title="Collector Account"
               aria-label="Account"
             >
@@ -134,13 +133,13 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             {/* Wishlist */}
             <Link
               to="/account?tab=wishlist"
-              className="p-1.5 hover:text-[#C6A15B] transition-colors relative"
+              className="p-1.5 hover:text-gold transition-colors relative"
               title="Wishlist"
               aria-label="Wishlist"
             >
               <Heart className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               {wishlist.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-maroon-deep text-[#F8F3EA] text-[8px] font-mono flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-burgundy text-cream text-[8px] font-mono flex items-center justify-center font-bold">
                   {wishlist.length}
                 </span>
               )}
@@ -150,13 +149,13 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="p-1.5 hover:text-[#C6A15B] transition-colors relative cursor-pointer"
+              className="p-1.5 hover:text-gold transition-colors relative cursor-pointer"
               title="Shopping Cart"
               aria-label="Cart"
             >
               <ShoppingBag className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               {count > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-maroon-deep text-[#F8F3EA] text-[9px] font-mono flex items-center justify-center font-bold shadow-xs">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-burgundy text-cream text-[9px] font-mono flex items-center justify-center font-bold shadow-xs">
                   {count}
                 </span>
               )}
@@ -166,7 +165,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 lg:hidden hover:text-[#C6A15B] transition-colors cursor-pointer ml-1"
+              className="p-1.5 lg:hidden hover:text-gold transition-colors cursor-pointer ml-1"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -182,7 +181,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.25 }}
-              className="lg:hidden border-t border-[#EBE4D6] bg-[#F8F3EA] px-6 py-6 overflow-hidden"
+              className="lg:hidden border-t border-[#EBE4D6] bg-cream px-6 py-6 overflow-hidden"
             >
               <div className="flex flex-col space-y-4">
                 {navLinks.map(item => (
@@ -192,17 +191,17 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) => cn(
                       "text-xs uppercase tracking-[0.24em] font-sans py-1.5 transition-colors",
-                      isActive ? "text-maroon-deep font-bold" : "text-[#332522] hover:text-[#C6A15B]"
+                      isActive ? "text-burgundy font-bold" : "text-dark-brown hover:text-gold"
                     )}
                   >
                     {item.label}
                   </NavLink>
                 ))}
-                <div className="pt-4 border-t border-[#EBE4D6] flex items-center justify-between text-xs text-[#332522]/80">
+                <div className="pt-4 border-t border-[#EBE4D6] flex items-center justify-between text-xs text-dark-brown/80">
                   <Link
                     to="/account"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 hover:text-maroon-deep"
+                    className="flex items-center gap-2 hover:text-burgundy"
                   >
                     <User className="w-4 h-4" />
                     <span>My Account</span>
@@ -210,7 +209,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                   <Link
                     to="/account?tab=wishlist"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 hover:text-maroon-deep"
+                    className="flex items-center gap-2 hover:text-burgundy"
                   >
                     <Heart className="w-4 h-4" />
                     <span>Wishlist ({wishlist.length})</span>
@@ -223,7 +222,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
       </header>
 
       {/* Quick Search Modal */}
-      <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} onOpenChange={setSearchOpen} />
     </>
   );
 }

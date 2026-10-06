@@ -10,7 +10,7 @@ export function EditorialHero({ onOpenStudio }: { onOpenStudio?: () => void }) {
           src="/images/hero-penthouse-brass.jpg"
           alt="Bespoke solid brushed brass architectural wall relief in luxury residence"
           className="w-full h-full object-cover object-center brightness-[0.74] contrast-[1.05]"
-          priority="true"
+          loading="eager"
         />
         {/* Architectural subtle gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#121316] via-[#121316]/35 to-[#121316]/75" />

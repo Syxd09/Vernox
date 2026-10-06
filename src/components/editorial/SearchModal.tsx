@@ -7,13 +7,19 @@ import { ShapeThumb } from '@/components/shop/ShapeThumb';
 
 interface Props {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function SearchModal({ open, onClose }: Props) {
+export function SearchModal({ open, onClose, onOpenChange }: Props) {
   const { products, categories, storeConfig } = useCatalog();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleClose = () => {
+    onClose?.();
+    onOpenChange?.(false);
+  };
 
   useEffect(() => {
     if (open) {
@@ -26,16 +32,15 @@ export function SearchModal({ open, onClose }: Props) {
   // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) onClose();
+      if (e.key === 'Escape' && open) handleClose();
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        if (open) onClose();
-        else onClose(); // parent can toggle
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, onOpenChange]);
 
   const filteredProducts = query.trim()
     ? products.filter((p) =>
@@ -64,7 +69,7 @@ export function SearchModal({ open, onClose }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-[#0B0B0B]/80 backdrop-blur-xl cursor-pointer"
           />
 
@@ -96,7 +101,7 @@ export function SearchModal({ open, onClose }: Props) {
                 </button>
               )}
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-1 rounded text-white/60 hover:text-white transition"
                 aria-label="Close search"
               >
@@ -158,7 +163,7 @@ export function SearchModal({ open, onClose }: Props) {
                       <Link
                         key={p.id}
                         to={`/product/${p.slug}`}
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="p-3 rounded bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-3.5 group transition"
                       >
                         <div className="w-14 h-14 bg-black/40 rounded p-1.5 shrink-0 flex items-center justify-center border border-white/10">
@@ -199,7 +204,7 @@ export function SearchModal({ open, onClose }: Props) {
                   <div className="pt-3">
                     <Link
                       to="/customize"
-                      onClick={onClose}
+                      onClick={handleClose}
                       className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#C5A880] hover:underline font-semibold"
                     >
                       <Compass className="w-3.5 h-3.5" /> Launch CAD Customizer

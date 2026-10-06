@@ -235,7 +235,11 @@ export default function Checkout() {
           email: form.email,
           ...(preferredMethod === 'upi' && upiId ? { vpa: upiId } : {})
         },
-        theme: { color: "#6B2732" },
+        theme: { 
+          color: typeof window !== 'undefined' 
+            ? getComputedStyle(document.documentElement).getPropertyValue('--burgundy').trim() || '#722F37' 
+            : '#722F37' 
+        },
         modal: {
           ondismiss: function () {
             toast.error('Payment window closed.');
@@ -294,11 +298,11 @@ export default function Checkout() {
           {/* Header & Stepper */}
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground mb-2">
-              <Link to="/cart" className="hover:text-oxblood transition">Cart</Link>
+              <Link to="/cart" className="hover:text-burgundy transition">Cart</Link>
               <span>/</span>
-              <span className="text-oxblood font-semibold">Secure Checkout</span>
+              <span className="text-burgundy font-semibold">Secure Checkout</span>
             </div>
-            <h1 className="font-display text-3xl sm:text-4xl text-oxblood-deep leading-tight font-semibold">
+            <h1 className="font-display text-3xl sm:text-4xl text-burgundy leading-tight font-semibold">
               Atelier Commission Checkout
             </h1>
             <p className="text-muted-foreground text-xs mt-1 font-serif-italic">
@@ -308,12 +312,12 @@ export default function Checkout() {
 
           {/* Step Badges */}
           <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider font-semibold border-y border-border/70 py-3">
-            <div className="flex items-center gap-2 text-oxblood">
-              <span className="w-5 h-5 rounded-full bg-oxblood text-ivory flex items-center justify-center font-mono">1</span>
+            <div className="flex items-center gap-2 text-burgundy">
+              <span className="w-5 h-5 rounded-full bg-burgundy text-cream flex items-center justify-center font-mono">1</span>
               <span>Destination</span>
             </div>
-            <div className="flex items-center gap-2 text-oxblood font-bold">
-              <span className="w-5 h-5 rounded-full bg-brass text-black flex items-center justify-center font-mono">2</span>
+            <div className="flex items-center gap-2 text-burgundy font-bold">
+              <span className="w-5 h-5 rounded-full bg-gold text-black flex items-center justify-center font-mono">2</span>
               <span>Payment</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground/60">
@@ -325,7 +329,7 @@ export default function Checkout() {
           {/* Contact Information */}
           <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-oxblood-deep font-semibold">1. Recipient & Contact Information</h2>
+              <h2 className="font-display text-lg text-burgundy font-semibold">1. Recipient & Contact Information</h2>
               <span className="text-[10px] text-muted-foreground font-mono">Instant Confirmation</span>
             </div>
             <div>
@@ -334,15 +338,15 @@ export default function Checkout() {
               </label>
               <input required type="email" placeholder="client@architecturalstudio.com" value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-oxblood font-sans transition" />
+                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy font-sans transition" />
             </div>
           </div>
 
           {/* Shipping Destination */}
           <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-oxblood-deep font-semibold">2. Insured Freight Delivery Destination</h2>
-              <span className="text-[10px] text-brass uppercase font-semibold flex items-center gap-1">
+              <h2 className="font-display text-lg text-burgundy font-semibold">2. Insured Freight Delivery Destination</h2>
+              <span className="text-[10px] text-gold uppercase font-semibold flex items-center gap-1">
                 <Truck className="w-3.5 h-3.5" /> Archival Crate
               </span>
             </div>
@@ -353,7 +357,7 @@ export default function Checkout() {
               </label>
               <input required placeholder="e.g. Jean Dupont" value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-oxblood transition" />
+                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
             </div>
 
             <div>
@@ -362,7 +366,7 @@ export default function Checkout() {
               </label>
               <input required placeholder="Kloosterstraat 44, Suite 3B" value={form.address}
                 onChange={e => setForm({ ...form, address: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-oxblood transition" />
+                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -372,7 +376,7 @@ export default function Checkout() {
                 </label>
                 <input required placeholder="Antwerp / London / New York" value={form.city}
                   onChange={e => setForm({ ...form, city: e.target.value })}
-                  className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-oxblood transition" />
+                  className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
@@ -380,7 +384,7 @@ export default function Checkout() {
                 </label>
                 <input required placeholder="2000" value={form.zip}
                   onChange={e => setForm({ ...form, zip: e.target.value })}
-                  className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-oxblood transition" />
+                  className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
               </div>
             </div>
 
@@ -390,14 +394,14 @@ export default function Checkout() {
               </label>
               <input required placeholder="United States, Belgium, United Kingdom, India..." value={form.country}
                 onChange={e => setForm({ ...form, country: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-oxblood transition" />
+                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
             </div>
           </div>
 
           {/* PAYMENT OPTIONS SELECTOR */}
           <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-5">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-oxblood-deep font-semibold">3. Payment Authorization Rail</h2>
+              <h2 className="font-display text-lg text-burgundy font-semibold">3. Payment Authorization Rail</h2>
               <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" /> 3D-Secure 2.0
               </span>
@@ -418,8 +422,8 @@ export default function Checkout() {
                     onClick={() => setPaymentMethod(method.id as any)}
                     className={`p-3.5 border rounded-lg flex flex-col items-center justify-center gap-1.5 text-xs transition-all font-semibold uppercase tracking-wider ${
                       isSelected 
-                        ? 'border-oxblood bg-oxblood/5 text-oxblood ring-2 ring-oxblood/15 shadow-sm' 
-                        : 'border-border bg-background hover:border-oxblood/40 text-muted-foreground hover:text-foreground'
+                        ? 'border-burgundy bg-burgundy/5 text-burgundy ring-2 ring-burgundy/15 shadow-sm' 
+                        : 'border-border bg-background hover:border-burgundy/40 text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <MethodIcon className="w-5 h-5" />
@@ -434,7 +438,7 @@ export default function Checkout() {
             <div className="bg-background border border-border/70 rounded p-4 space-y-3">
               {paymentMethod === 'card' && (
                 <div className="space-y-2.5 animate-fade-in">
-                  <div className="text-xs font-semibold text-oxblood uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
                     <CreditCard className="w-4 h-4" /> Bank-Grade 256-Bit Encrypted Card Authorization
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -451,7 +455,7 @@ export default function Checkout() {
 
               {paymentMethod === 'upi' && (
                 <div className="space-y-3 animate-fade-in">
-                  <div className="text-xs font-semibold text-oxblood uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
                     <QrCode className="w-4 h-4" /> UPI Virtual Private Address (VPA) / Instant QR
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -462,14 +466,14 @@ export default function Checkout() {
                     placeholder="username@upi or mobile@okhdfcbank (Optional)" 
                     value={upiId}
                     onChange={e => setUpiId(e.target.value)}
-                    className="w-full bg-card border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono" 
+                    className="w-full bg-card border border-border rounded px-3 py-2 text-sm outline-none focus:border-burgundy font-mono" 
                   />
                 </div>
               )}
 
               {paymentMethod === 'razorpay' && (
                 <div className="space-y-2 animate-fade-in">
-                  <div className="text-xs font-semibold text-oxblood uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
                     <Smartphone className="w-4 h-4" /> Unified Razorpay Multi-Rail Gateway
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -484,11 +488,11 @@ export default function Checkout() {
           <button 
             type="submit"
             disabled={placing}
-            className="w-full bg-[#2D2321] hover:bg-[#6B2732] text-white font-semibold py-4 rounded-full hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.2em] font-sans disabled:opacity-60 shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full bg-burgundy hover:bg-burgundy-hover text-cream font-semibold py-4 rounded-[2px] hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.2em] font-sans disabled:opacity-60 shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-transparent hover:border-dusty-pink"
           >
             {placing ? (
               <span className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-ivory border-t-transparent rounded-full animate-spin" />
+                <span className="w-3.5 h-3.5 border-2 border-cream border-t-transparent rounded-full animate-spin" />
                 Connecting to Secure Gateway…
               </span>
             ) : (
@@ -502,10 +506,10 @@ export default function Checkout() {
           <div className="bg-card border border-border/80 rounded-lg p-5 noise-overlay shadow-luxe space-y-5">
             <div className="flex items-center justify-between border-b border-border/70 pb-3">
               <div>
-                <h2 className="font-display text-xl text-oxblood-deep font-semibold">Commission Manifest</h2>
+                <h2 className="font-display text-xl text-dark-brown font-semibold">Commission Manifest</h2>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">Antwerp Reserved Items</p>
               </div>
-              <span className="bg-oxblood/10 text-oxblood text-xs px-2.5 py-0.5 rounded-full font-mono font-bold">
+              <span className="bg-burgundy/10 text-burgundy text-xs px-2.5 py-0.5 rounded-full font-mono font-bold">
                 {items.reduce((acc, i) => acc + i.quantity, 0)}
               </span>
             </div>
@@ -520,20 +524,20 @@ export default function Checkout() {
                     ) : (
                       <ShapeThumb shapeId={i.shapeId} finish={i.finish} className="w-full h-full" />
                     )}
-                    <span className="absolute -top-1.5 -right-1.5 bg-oxblood text-ivory text-[9px] font-mono px-1 rounded-full font-bold">
+                    <span className="absolute -top-1.5 -right-1.5 bg-burgundy text-cream text-[9px] font-mono px-1 rounded-full font-bold">
                       ×{i.quantity}
                     </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-oxblood-deep truncate">{i.productName}</div>
+                    <div className="font-semibold text-dark-brown truncate">{i.productName}</div>
                     <div className="text-muted-foreground text-[10px] mt-0.5 capitalize">
                       {i.finish} · {i.sizeLabel}
                     </div>
-                    <div className="text-[9px] text-brass font-mono font-semibold mt-0.5">Solid 3.0mm Plate</div>
+                    <div className="text-[9px] text-gold font-mono font-semibold mt-0.5">Solid 3.0mm Plate</div>
                   </div>
 
-                  <div className="font-semibold font-mono text-oxblood-deep shrink-0 text-right">
+                  <div className="font-semibold font-mono text-dark-brown shrink-0 text-right">
                     {storeConfig.currency}{(i.unitPrice * i.quantity).toFixed(2)}
                   </div>
                 </div>
@@ -542,8 +546,8 @@ export default function Checkout() {
 
             {/* Estimated Arrival Banner */}
             <div className="bg-muted/40 border border-border/70 rounded p-3 text-xs space-y-1">
-              <div className="flex items-center gap-1.5 font-semibold text-oxblood-deep">
-                <Truck className="w-3.5 h-3.5 text-brass" />
+              <div className="flex items-center gap-1.5 font-semibold text-dark-brown">
+                <Truck className="w-3.5 h-3.5 text-gold" />
                 <span>Estimated Insured Arrival</span>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -572,34 +576,34 @@ export default function Checkout() {
                 <span className="font-mono">{storeConfig.currency}{tax.toFixed(2)}</span>
               </div>
               
-              <div className="flex justify-between text-sm font-semibold border-t border-border/70 pt-3 text-oxblood-deep">
+              <div className="flex justify-between text-sm font-semibold border-t border-border/70 pt-3 text-dark-brown">
                 <div>
                   <span>Total Investment</span>
                   <span className="block text-[9px] text-muted-foreground font-normal">All duties & crating included</span>
                 </div>
-                <span className="font-mono text-xl font-bold text-oxblood">{storeConfig.currency}{total.toFixed(2)}</span>
+                <span className="font-mono text-xl font-bold text-burgundy">{storeConfig.currency}{total.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Guarantees Box */}
             <div className="pt-3 border-t border-border/60 space-y-2 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-3.5 h-3.5 text-brass shrink-0" />
+                <ShieldCheck className="w-3.5 h-3.5 text-gold shrink-0" />
                 <span>10-Year Weathering & Corrosion Warranty</span>
               </div>
               <div className="flex items-center gap-2">
-                <Award className="w-3.5 h-3.5 text-brass shrink-0" />
+                <Award className="w-3.5 h-3.5 text-gold shrink-0" />
                 <span>Numbered Hallmark & Signed Certificate</span>
               </div>
               <div className="flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-brass shrink-0" />
+                <Lock className="w-3.5 h-3.5 text-gold shrink-0" />
                 <span>Zero-Risk Crated Replacement Guarantee</span>
               </div>
             </div>
 
             <Link 
               to="/cart" 
-              className="block text-center text-[10px] uppercase tracking-widest text-muted-foreground hover:text-oxblood font-bold pt-2 transition"
+              className="block text-center text-[10px] uppercase tracking-widest text-muted-foreground hover:text-burgundy font-bold pt-2 transition"
             >
               ← Edit quantities in cart
             </Link>
@@ -607,13 +611,13 @@ export default function Checkout() {
 
           {/* Concierge Hotline */}
           <div className="bg-card border border-border/70 rounded-lg p-4 flex items-center gap-3 shadow-soft">
-            <div className="p-2 rounded-full bg-oxblood/10 text-oxblood shrink-0">
+            <div className="p-2 rounded-full bg-burgundy/10 text-burgundy shrink-0">
               <Phone className="w-4 h-4" />
             </div>
             <div className="text-xs">
-              <div className="font-semibold text-oxblood-deep">Need Checkout Assistance?</div>
+              <div className="font-semibold text-dark-brown">Need Checkout Assistance?</div>
               <div className="text-muted-foreground text-[11px] mt-0.5">
-                Our Antwerp desk is ready: <a href="tel:+3232314490" className="text-oxblood font-semibold underline">+32 3 231 44 90</a>
+                Our Antwerp desk is ready: <a href="tel:+3232314490" className="text-burgundy font-semibold underline">+32 3 231 44 90</a>
               </div>
             </div>
           </div>

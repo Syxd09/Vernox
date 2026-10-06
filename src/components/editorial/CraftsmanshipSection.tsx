@@ -5,6 +5,7 @@ import { Cpu, Flame, Hammer, CheckCircle2, Truck, ArrowRight } from 'lucide-reac
 interface Stage {
   step: string;
   phase: string;
+  tabLabel: string;
   title: string;
   tagline: string;
   description: string;

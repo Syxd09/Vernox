@@ -42,14 +42,15 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="max-w-3xl mb-14 lg:mb-16">
-          <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] font-sans text-maroon-light font-semibold mb-2">
-            <span className="w-5 h-[1px] bg-gold" />
-            <span>Interactive Custom Craftsmanship</span>
+          <div className="inline-flex items-center gap-2 mb-2">
+            <span className="brand-pill">
+              Interactive Custom Craftsmanship
+            </span>
           </div>
 
           <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl text-dark-brown font-normal leading-tight tracking-tight">
             THE BESPOKE <br />
-            <span className="italic font-light text-maroon-deep">CRAFTING STUDIO</span>
+            <span className="italic font-light text-burgundy">CRAFTING STUDIO</span>
           </h2>
 
           <p className="text-xs sm:text-sm text-dark-brown/75 font-sans mt-3 leading-relaxed max-w-2xl">
@@ -60,7 +61,7 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
         {/* Studio Interactive Showcase Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch">
           {/* Left: Interactive Live Vector Canvas Simulation */}
-          <div className="lg:col-span-7 bg-[#F8F3EA] border border-[#EBE4D6] rounded-[2px] p-6 sm:p-8 flex flex-col justify-between shadow-xs">
+          <div className="lg:col-span-7 bg-cream border border-[#EBE4D6] rounded-[2px] p-6 sm:p-8 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between pb-4 border-b border-[#EBE4D6] text-xs font-mono text-dark-brown/70">
               <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-maroon-deep font-semibold">
                 <Compass className="w-3.5 h-3.5 text-gold" /> Live CAD Simulation
@@ -166,7 +167,7 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
                     step="50"
                     value={widthMm}
                     onChange={(e) => setWidthMm(Number(e.target.value))}
-                    className="w-full accent-[#6B2732]"
+                    className="w-full accent-burgundy"
                   />
                 </div>
                 <div>
@@ -181,7 +182,7 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
                     step="50"
                     value={heightMm}
                     onChange={(e) => setHeightMm(Number(e.target.value))}
-                    className="w-full accent-[#6B2732]"
+                    className="w-full accent-burgundy"
                   />
                 </div>
               </div>
@@ -204,8 +205,8 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
                       onClick={() => setSelectedShape(shape.id)}
                       className={`p-3 text-left rounded-[2px] border text-xs transition-all cursor-pointer ${
                         selectedShape === shape.id
-                          ? 'border-maroon-deep bg-[#F8F3EA] text-maroon-deep font-semibold shadow-xs'
-                          : 'border-[#EBE4D6] hover:border-gold/60 text-dark-brown/80'
+                          ? 'border-burgundy bg-cream text-burgundy font-semibold shadow-xs'
+                          : 'border-[#EBE4D6] hover:border-dusty-pink text-dark-brown/80'
                       }`}
                     >
                       <span className="block font-medium truncate">{shape.name}</span>
@@ -230,8 +231,8 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
                       onClick={() => setSelectedFinish(f.id)}
                       className={`p-3 text-left rounded-[2px] border text-xs transition-all cursor-pointer flex items-start gap-2.5 ${
                         selectedFinish === f.id
-                          ? 'border-maroon-deep bg-[#F8F3EA] text-maroon-deep font-semibold shadow-xs'
-                          : 'border-[#EBE4D6] hover:border-gold/60 text-dark-brown/80'
+                          ? 'border-burgundy bg-cream text-burgundy font-semibold shadow-xs'
+                          : 'border-[#EBE4D6] hover:border-dusty-pink text-dark-brown/80'
                       }`}
                     >
                       <span
@@ -270,27 +271,27 @@ export function CraftingStudioSection({ onOpenStudio }: CraftingStudioSectionPro
                 <button
                   type="button"
                   onClick={onOpenStudio}
-                  className="w-full py-4 rounded-[2px] bg-maroon-deep hover:opacity-90 text-cream text-xs uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-300 shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-transparent hover:border-gold"
+                  className="w-full py-4 rounded-[2px] bg-burgundy hover:bg-burgundy-hover text-cream text-xs uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-300 shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-transparent hover:border-dusty-pink"
                 >
-                  <Compass className="w-4 h-4 text-gold" />
+                  <Compass className="w-4 h-4 text-dusty-pink" />
                   <span>OPEN CRAFTING STUDIO</span>
                 </button>
               ) : (
                 <Link
                   to="/customize"
-                  className="w-full py-4 rounded-[2px] bg-maroon-deep hover:opacity-90 text-cream text-xs uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-300 shadow-sm flex items-center justify-center gap-2 text-center border border-transparent hover:border-gold"
+                  className="w-full py-4 rounded-[2px] bg-burgundy hover:bg-burgundy-hover text-cream text-xs uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-300 shadow-sm flex items-center justify-center gap-2 text-center border border-transparent hover:border-dusty-pink"
                 >
-                  <Compass className="w-4 h-4 text-gold" />
+                  <Compass className="w-4 h-4 text-dusty-pink" />
                   <span>OPEN CRAFTING STUDIO</span>
                 </Link>
               )}
 
               <Link
                 to="/customize"
-                className="w-full py-3 rounded-[2px] bg-white hover:bg-[#F8F3EA] border border-[#EBE4D6] hover:border-gold/60 text-dark-brown text-xs uppercase tracking-[0.2em] font-sans font-medium transition-colors flex items-center justify-center gap-2 text-center"
+                className="w-full py-3 rounded-[2px] bg-white hover:bg-cream border border-[#EBE4D6] hover:border-dusty-pink text-dark-brown text-xs uppercase tracking-[0.2em] font-sans font-medium transition-colors flex items-center justify-center gap-2 text-center"
               >
                 <span>Upload Custom DXF / Blueprint</span>
-                <ArrowRight className="w-3.5 h-3.5 text-gold" />
+                <ArrowRight className="w-3.5 h-3.5 text-burgundy" />
               </Link>
             </div>
           </div>

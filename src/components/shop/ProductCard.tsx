@@ -5,12 +5,14 @@ import { useCart } from '@/lib/cartContext';
 import { ShoppingBag, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCatalog } from '@/lib/catalogContext';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
+  compact?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, compact }: ProductCardProps) {
   const { add } = useCart();
   const { wishlist, toggleWishlist, storeConfig } = useCatalog();
   const [isHovered, setIsHovered] = useState(false);
@@ -50,7 +52,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="group relative flex flex-col bg-white border border-[#EBE4D6] rounded-[2px] transition-all duration-300 hover:border-[#C6A15B]/50 hover:shadow-xs"
+      className="group relative flex flex-col bg-white border border-[#EBE4D6] rounded-[2px] transition-all duration-300 hover:border-gold/50 hover:shadow-xs"
     >
       {/* Product Image Area */}
       <div className="relative aspect-[4/5] bg-[#FAF8F5] overflow-hidden">
@@ -71,21 +73,31 @@ export function ProductCard({ product }: ProductCardProps) {
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
-          className="absolute top-3.5 right-3.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-xs border border-[#EBE4D6] flex items-center justify-center text-[#332522] hover:text-maroon-deep hover:border-maroon-deep/30 transition-all duration-200 cursor-pointer shadow-xs"
+          className={cn(
+            "absolute z-10 rounded-full bg-white/90 backdrop-blur-xs border border-[#EBE4D6] flex items-center justify-center text-dark-brown hover:text-burgundy hover:border-burgundy/30 transition-all duration-200 cursor-pointer shadow-xs",
+            compact
+              ? "top-1.5 right-1.5 w-6 h-6"
+              : "top-2 right-2 sm:top-3.5 sm:right-3.5 w-7 h-7 sm:w-8 sm:h-8"
+          )}
           title={isWishlisted ? "Remove from Wishlist" : "Save to Wishlist"}
           aria-label="Wishlist"
         >
           <Heart
-            className={`w-3.5 h-3.5 transition-colors duration-200 ${
-              isWishlisted ? 'fill-maroon-deep text-maroon-deep' : 'text-[#332522]'
-            }`}
+            className={cn(
+              "transition-colors duration-200",
+              compact ? "w-3 h-3" : "w-3.5 h-3.5",
+              isWishlisted ? 'fill-burgundy text-burgundy' : 'text-dark-brown'
+            )}
           />
         </button>
 
         {/* Subtle Badge (Top-Left) if Bestseller or New */}
         {(product.bestseller || product.isNew) && (
-          <div className="absolute top-3.5 left-3.5 z-10">
-            <span className="text-[8px] uppercase tracking-[0.22em] font-sans font-medium px-2 py-0.5 rounded-[1px] bg-maroon-deep text-cream">
+          <div className={cn("absolute z-10", compact ? "top-1.5 left-1.5" : "top-2 left-2 sm:top-3.5 sm:left-3.5")}>
+            <span className={cn(
+              "uppercase tracking-[0.2em] font-sans font-medium rounded-[1px] bg-burgundy text-cream border border-dusty-pink/40 shadow-xs",
+              compact ? "text-[6.5px] px-1 py-0.2" : "text-[7.5px] sm:text-[8px] px-1.5 py-0.5 sm:px-2"
+            )}>
               {product.isNew ? 'New' : 'Curated'}
             </span>
           </div>
@@ -93,7 +105,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Subtle Slide-Up Add to Cart Button on Hover */}
         <div
-          className={`absolute bottom-0 inset-x-0 p-3 transition-all duration-300 ease-out z-20 ${
+          className={`absolute bottom-0 inset-x-0 p-2 sm:p-3 transition-all duration-300 ease-out z-20 ${
             isHovered
               ? 'opacity-100 translate-y-0'
               : 'opacity-0 translate-y-2 pointer-events-none'
@@ -102,39 +114,57 @@ export function ProductCard({ product }: ProductCardProps) {
           <button
             type="button"
             onClick={handleQuickAdd}
-            className="w-full py-2.5 px-4 rounded-[2px] bg-maroon-deep hover:opacity-90 text-cream text-[10px] uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:border-b-2 hover:border-[#C6A15B]"
+            className="w-full py-2 sm:py-2.5 px-2 sm:px-4 rounded-[2px] bg-burgundy hover:bg-burgundy-hover text-cream text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-sans font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm border border-transparent hover:border-dusty-pink"
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-[#C6A15B]" />
-            <span>Add to Cart</span>
+            <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-dusty-pink" />
+            <span className={compact ? "hidden sm:inline" : ""}>Add to Cart</span>
           </button>
         </div>
       </div>
 
       {/* Product Details Area */}
-      <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between bg-white">
+      <div className={cn(
+        "flex flex-col flex-1 justify-between bg-white",
+        compact ? "p-2 sm:p-2.5" : "p-2.5 sm:p-4 md:p-5"
+      )}>
         <div>
           {/* Category */}
-          <div className="text-[9px] uppercase tracking-[0.24em] text-[#6B2732] font-sans font-medium mb-1.5">
+          <div className={cn(
+            "uppercase tracking-[0.22em] text-burgundy font-sans font-medium mb-1 truncate",
+            compact ? "text-[7.5px]" : "text-[8px] sm:text-[9px]"
+          )}>
             {formattedCategory}
           </div>
 
           {/* Product Name */}
           <Link
             to={`/product/${product.slug}`}
-            className="font-editorial text-base sm:text-lg text-[#332522] hover:text-maroon-deep transition-colors leading-snug line-clamp-1 block font-normal"
+            className={cn(
+              "font-editorial text-dark-brown hover:text-burgundy transition-colors leading-snug line-clamp-1 block font-normal",
+              compact ? "text-xs sm:text-sm" : "text-sm sm:text-base md:text-lg"
+            )}
           >
             {product.name}
           </Link>
         </div>
 
         {/* Price & Quick Link */}
-        <div className="mt-3 pt-3 border-t border-[#F2ECE1] flex items-center justify-between">
-          <span className="text-xs sm:text-sm font-sans font-medium text-[#332522]">
+        <div className={cn(
+          "border-t border-[#F2ECE1] flex items-center justify-between",
+          compact ? "mt-1.5 pt-1.5" : "mt-2 sm:mt-3 pt-2 sm:pt-3"
+        )}>
+          <span className={cn(
+            "font-sans font-medium text-dark-brown",
+            compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"
+          )}>
             ${price.toLocaleString()}
           </span>
           <Link
             to={`/product/${product.slug}`}
-            className="text-[10px] uppercase tracking-[0.2em] text-[#6B2732] hover:text-maroon-deep transition-colors font-sans"
+            className={cn(
+              "uppercase tracking-[0.18em] text-burgundy hover:text-dusty-pink transition-colors font-sans font-medium",
+              compact ? "text-[8px]" : "text-[9px] sm:text-[10px]"
+            )}
           >
             Details
           </Link>

@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MetalSubstrate, MetalFinish } from '@/lib/cadEngineTypes';
@@ -86,12 +85,12 @@ export function ShapePanel() {
   };
 
   return (
-    <div className="w-full md:w-72 md:border-r border-border bg-card flex flex-col h-full flex-shrink-0">
-      <div className="p-4 border-b border-border">
+    <div className="w-full md:w-72 md:border-r border-border bg-card flex flex-col h-full min-h-0 flex-shrink-0">
+      <div className="hidden md:block p-4 border-b border-border shrink-0">
         <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Shape Library</h2>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y">
+        <div className="p-4 space-y-5 pb-24 md:pb-6">
           {/* Basic Shapes */}
           <div>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Basic</h3>
@@ -295,7 +294,8 @@ export function ShapePanel() {
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
+

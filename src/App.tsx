@@ -21,6 +21,7 @@ import Notebook from "./pages/Notebook.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { CartDrawer } from "@/components/shop/CartDrawer";
 import { PageCurtain } from "@/components/experience/PageCurtain";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,8 @@ const App = () => (
         <CatalogProvider>
           <CartProvider>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              {/* Universal Scroll Reset on Every Navigation */}
+              <ScrollToTop />
               {/* Professional Luxury Curtain Transition for First Load, Reload & Navigation */}
               <PageCurtain />
               <CartDrawer />

@@ -10,7 +10,7 @@ import { useVectorDocument } from '@/hooks/useVectorDocument';
 import { useTheme } from 'next-themes';
 import { 
   ZoomIn, ZoomOut, Maximize2, Grid3X3, Eye, Cpu, 
-  Move, RotateCw, CheckCircle2, AlertTriangle, Crosshair
+  Move, RotateCw, CheckCircle2, AlertTriangle, Crosshair, Spline
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -136,7 +136,7 @@ export function DesignCanvas() {
     const { clientWidth, clientHeight } = containerRef.current;
     if (clientWidth === 0 || clientHeight === 0) return;
 
-    const padding = 80;
+    const padding = clientWidth < 640 ? 28 : 80;
     const availableW = clientWidth - padding * 2;
     const availableH = clientHeight - padding * 2;
 
@@ -183,6 +183,104 @@ export function DesignCanvas() {
       el.removeEventListener('wheel', onWheel);
     };
   }, []);
+
+  // Multi-Touch Pinch & Touch Gestures
+  const pinchRef = useRef<{ initialDistance: number; initialZoom: number; initialPan: { x: number; y: number } } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // 2 fingers = pinch zoom
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      pinchRef.current = {
+        initialDistance: Math.max(10, dist),
+        initialZoom: zoom,
+        initialPan: { ...pan },
+      };
+      setDragState(null);
+    } else if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const isBg = e.target === containerRef.current || (e.target as HTMLElement).id === 'canvas-bg';
+      if (isBg) {
+        selectLayer(null);
+        setDragState({
+          mode: 'pan',
+          startX: touch.clientX,
+          startY: touch.clientY,
+        });
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      const factor = dist / pinchRef.current.initialDistance;
+      const newZoom = Math.max(0.15, Math.min(5.0, pinchRef.current.initialZoom * factor));
+      setZoom(newZoom);
+    } else if (e.touches.length === 1 && dragState) {
+      const touch = e.touches[0];
+      if (dragState.mode === 'pan') {
+        const dx = touch.clientX - dragState.startX;
+        const dy = touch.clientY - dragState.startY;
+        setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+        setDragState(prev => prev ? { ...prev, startX: touch.clientX, startY: touch.clientY } : null);
+      } else if (dragState.mode === 'move_layer' && selectedLayer) {
+        const dxMm = (touch.clientX - dragState.startX) / zoom;
+        const dyMm = (touch.clientY - dragState.startY) / zoom;
+        const rawX = (dragState.layerInitialX ?? 0) + dxMm;
+        const rawY = (dragState.layerInitialY ?? 0) + dyMm;
+        const snapX = Math.round(rawX * 2) / 2;
+        const snapY = Math.round(rawY * 2) / 2;
+        updateTransformLive(selectedLayer.id, { xMm: snapX, yMm: snapY });
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (pinchRef.current) pinchRef.current = null;
+    if (dragState?.mode === 'move_layer' || dragState?.mode === 'rotate_layer') {
+      commitTransform();
+    }
+    setDragState(null);
+  };
+
+  // Touch on Layer Feature
+  const handleLayerTouchStart = (e: React.TouchEvent, layer: AnyFeatureLayer) => {
+    if (e.touches.length !== 1) return;
+    e.stopPropagation();
+    selectLayer(layer.id);
+    if (layer.locked) return;
+
+    beginTransformGesture();
+    const touch = e.touches[0];
+    setDragState({
+      mode: 'move_layer',
+      startX: touch.clientX,
+      startY: touch.clientY,
+      layerInitialX: layer.transform.xMm,
+      layerInitialY: layer.transform.yMm,
+    });
+  };
+
+  // Touch on Rotate Handle
+  const handleRotateTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1 || !selectedLayer || selectedLayer.locked) return;
+    e.stopPropagation();
+    beginTransformGesture();
+    const touch = e.touches[0];
+    const layerCenterMm = getLayerCenter(selectedLayer);
+    setDragState({
+      mode: 'rotate_layer',
+      startX: touch.clientX,
+      startY: touch.clientY,
+      layerInitialRot: selectedLayer.transform.rotationDeg || 0,
+      layerCenterMm,
+    });
+  };
 
   // Start Panning or Layer Interaction
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -298,11 +396,15 @@ export function DesignCanvas() {
   return (
     <div 
       ref={containerRef}
-      className="relative flex-1 min-w-0 h-full w-full overflow-hidden select-none bg-slate-950 cursor-default"
+      className="relative flex-1 min-w-0 h-full w-full overflow-hidden select-none bg-slate-950 cursor-default touch-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       {/* Background SVG Canvas */}
       <svg
@@ -424,6 +526,7 @@ export function DesignCanvas() {
                 id={`layer-${layer.id}`}
                 transform={`translate(${layer.transform.xMm}, ${layer.transform.yMm}) rotate(${layer.transform.rotationDeg || 0})`}
                 onMouseDown={(e) => handleLayerMouseDown(e, layer)}
+                onTouchStart={(e) => handleLayerTouchStart(e, layer)}
                 className={cn(
                   "cursor-pointer transition-opacity",
                   layer.locked ? "cursor-not-allowed opacity-80" : "hover:opacity-90"
@@ -547,6 +650,7 @@ export function DesignCanvas() {
                       strokeWidth={1 / zoom}
                       className="cursor-grab active:cursor-grabbing"
                       onMouseDown={handleRotateMouseDown}
+                      onTouchStart={handleRotateTouchStart}
                     />
 
                     {/* 4 Corner Resize / Anchor Points */}
@@ -657,15 +761,15 @@ export function DesignCanvas() {
       </svg>
 
       {/* Floating Canvas HUD Controls */}
-      <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+      <div className="absolute top-2.5 left-2.5 right-2.5 sm:right-auto sm:top-4 sm:left-4 flex items-center gap-1.5 sm:gap-2 z-10 overflow-x-auto no-scrollbar">
         {/* View Mode Toggle Pill */}
-        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-0.5 shadow-xl">
+        <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-0.5 shadow-xl shrink-0">
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setViewMode('realistic')}
             className={cn(
-              "h-7 text-xs px-2.5 gap-1.5 rounded-md",
+              "h-7 text-xs px-2 sm:px-2.5 gap-1 sm:gap-1.5 rounded-md",
               viewMode === 'realistic' ? "bg-primary text-primary-foreground font-semibold" : "text-slate-400 hover:text-white"
             )}
           >
@@ -677,7 +781,7 @@ export function DesignCanvas() {
             variant="ghost"
             onClick={() => setViewMode('cam_toolpath')}
             className={cn(
-              "h-7 text-xs px-2.5 gap-1.5 rounded-md",
+              "h-7 text-xs px-2 sm:px-2.5 gap-1 sm:gap-1.5 rounded-md",
               viewMode === 'cam_toolpath' ? "bg-primary text-primary-foreground font-semibold" : "text-slate-400 hover:text-white"
             )}
           >
@@ -688,7 +792,7 @@ export function DesignCanvas() {
 
         {/* Manufacturing Status Pill */}
         <div className={cn(
-          "flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-mono font-medium border backdrop-blur-md shadow-xl",
+          "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 h-7 sm:h-8 rounded-lg text-xs font-mono font-medium border backdrop-blur-md shadow-xl shrink-0",
           analytics.isValidated
             ? "bg-emerald-950/80 border-emerald-500/40 text-emerald-400"
             : "bg-amber-950/80 border-amber-500/40 text-amber-400"
@@ -697,18 +801,32 @@ export function DesignCanvas() {
             <>
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Laser Cut Ready</span>
+              <span className="sm:hidden text-[11px]">Ready</span>
             </>
           ) : (
             <>
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>{analytics.validationIssues?.length || 0} Warning(s)</span>
+              <span className="text-[11px] sm:text-xs">{analytics.validationIssues?.length || 0} Warning(s)</span>
             </>
           )}
         </div>
+
+        {/* Instant Trace Vector Action */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => window.dispatchEvent(new CustomEvent('vernox:open-tracer'))}
+          className="h-7 sm:h-8 text-xs font-semibold gap-1 sm:gap-1.5 bg-slate-900/90 backdrop-blur-md border-slate-800 text-slate-200 hover:text-cream hover:bg-burgundy/80 hover:border-burgundy/60 shadow-xl transition-all cursor-pointer shrink-0"
+          title="Open Image to Laser Vector Tracer Tool"
+        >
+          <Spline className="w-3.5 h-3.5 text-dusty-pink" />
+          <span className="hidden sm:inline">Trace Vector</span>
+          <span className="sm:hidden text-[11px]">Trace</span>
+        </Button>
       </div>
 
-      {/* Bottom Floating Viewport Controls */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-1.5 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-1 shadow-xl">
+      {/* Bottom Floating Viewport Controls - Positioned above mobile dock on mobile screens */}
+      <div className="absolute bottom-20 right-2.5 sm:bottom-4 sm:right-4 flex items-center gap-1 sm:gap-1.5 z-10 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-1 shadow-xl">
         <Button
           size="icon"
           variant="ghost"
@@ -731,7 +849,7 @@ export function DesignCanvas() {
           <ZoomOut className="w-3.5 h-3.5" />
         </Button>
 
-        <span className="text-xs font-mono text-slate-300 w-12 text-center">
+        <span className="text-xs font-mono text-slate-300 w-10 sm:w-12 text-center">
           {Math.round(zoom * 100)}%
         </span>
 

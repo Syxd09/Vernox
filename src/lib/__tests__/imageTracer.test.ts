@@ -86,17 +86,26 @@ describe('Image-to-Vector Pipeline', () => {
     expect(simplified[simplified.length - 1]).toEqual({ x: 10, y: 10 });
   });
 
-  it('fits smooth cubic beziers into valid SVG path', () => {
+  it('preserves crisp straight lines for sharp corners and fits Beziers for curves', () => {
     const square = [
       { x: 0, y: 0 },
       { x: 50, y: 0 },
       { x: 50, y: 50 },
       { x: 0, y: 50 }
     ];
-    const path = fitCurveToBeziers(square);
-    expect(path).toMatch(/^M \d+ \d+/);
-    expect(path).toContain('C ');
-    expect(path).toMatch(/Z$/);
+    const squarePath = fitCurveToBeziers(square);
+    expect(squarePath).toMatch(/^M \d+ \d+/);
+    expect(squarePath).toContain('L ');
+    expect(squarePath).toMatch(/Z$/);
+
+    // Smooth arc should use Beziers
+    const circlePts = [];
+    for (let i = 0; i < 16; i++) {
+      const angle = (i * Math.PI * 2) / 16;
+      circlePts.push({ x: 50 + Math.cos(angle) * 30, y: 50 + Math.sin(angle) * 30 });
+    }
+    const arcPath = fitCurveToBeziers(circlePts);
+    expect(arcPath).toContain('C ');
   });
 
   it('end-to-end traces a synthetic logo image to vector path', () => {

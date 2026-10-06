@@ -143,42 +143,42 @@ export function TopBar({ onClose }: TopBarProps = {}) {
   }, [doc]);
 
   return (
-    <div className="h-12 bg-card border-b border-border flex items-center px-3 gap-2 flex-shrink-0">
+    <div className="h-12 bg-card border-b border-border flex items-center px-2 sm:px-3 gap-1 sm:gap-2 flex-shrink-0 min-w-0 max-w-full overflow-hidden">
       {/* Return to Store / Atelier */}
       {onClose ? (
         <Button
           variant="outline"
           size="sm"
           onClick={onClose}
-          className="h-8 px-2.5 text-xs font-semibold gap-1.5 border-oxblood/40 hover:bg-oxblood/10 text-oxblood hover:text-oxblood-deep shadow-sm"
+          className="h-8 px-2 sm:px-2.5 text-xs font-semibold gap-1 sm:gap-1.5 border-oxblood/40 hover:bg-oxblood/10 text-oxblood hover:text-oxblood-deep shadow-sm shrink-0"
           title="Return to the store"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Store</span>
+          <span className="hidden sm:inline">Back to Store</span>
         </Button>
       ) : (
         <Link
           to="/shop"
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold border border-oxblood/40 hover:bg-oxblood/10 text-oxblood hover:text-oxblood-deep transition-colors shadow-sm"
+          className="inline-flex items-center gap-1 sm:gap-1.5 h-8 px-2 sm:px-2.5 rounded-md text-xs font-semibold border border-oxblood/40 hover:bg-oxblood/10 text-oxblood hover:text-oxblood-deep transition-colors shadow-sm shrink-0"
           title="Return to Atelier Catalog"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Store</span>
+          <span className="hidden sm:inline">Back to Store</span>
         </Link>
       )}
 
       {/* Brand Logo (clickable home link) */}
-      <Link to="/" className="flex items-center gap-2 mr-2 hover:opacity-85 transition group" title="Vernox Home">
-        <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center overflow-hidden">
+      <Link to="/" className="flex items-center gap-1.5 sm:gap-2 hover:opacity-85 transition group shrink-0" title="Vernox Home">
+        <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center overflow-hidden shrink-0">
           <img src="/favicon.png" alt="Vernox" className="w-full h-full object-cover" />
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground hidden md:block leading-none">Vernox</span>
-          <span className="text-[9px] font-mono text-muted-foreground hidden md:block">CAD/CAM Studio</span>
+        <div className="flex flex-col hidden sm:flex">
+          <span className="text-sm font-semibold text-foreground leading-none">Vernox</span>
+          <span className="text-[9px] font-mono text-muted-foreground">CAD/CAM Studio</span>
         </div>
       </Link>
 
-      <div className="h-6 w-px bg-border" />
+      <div className="hidden sm:block h-6 w-px bg-border" />
 
       {/* Undo/Redo */}
       <Button
@@ -186,7 +186,7 @@ export function TopBar({ onClose }: TopBarProps = {}) {
         variant="ghost"
         onClick={undo}
         disabled={!canUndo}
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         title="Undo (Ctrl+Z)"
       >
         <Undo2 className="w-3.5 h-3.5" />
@@ -196,19 +196,19 @@ export function TopBar({ onClose }: TopBarProps = {}) {
         variant="ghost"
         onClick={redo}
         disabled={!canRedo}
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         title="Redo (Ctrl+Y)"
       >
         <Redo2 className="w-3.5 h-3.5" />
       </Button>
 
-      <div className="h-6 w-px bg-border" />
+      <div className="hidden sm:block h-6 w-px bg-border" />
 
       {/* Theme Toggle */}
       <Button
         size="icon"
         variant="ghost"
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         title="Toggle Theme"
       >
@@ -216,7 +216,7 @@ export function TopBar({ onClose }: TopBarProps = {}) {
         <Moon className="absolute h-3.5 w-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
       </Button>
 
-      <div className="h-6 w-px bg-border" />
+      <div className="hidden sm:block h-6 w-px bg-border" />
 
       {/* Save Project */}
       <Button 
@@ -315,8 +315,10 @@ export function TopBar({ onClose }: TopBarProps = {}) {
       {/* CAM Export Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" variant="outline" className="text-xs gap-1.5 h-8">
-            <Download className="w-3.5 h-3.5" /> Export CAM
+          <Button size="sm" variant="outline" className="text-xs gap-1 sm:gap-1.5 h-8 px-2 sm:px-2.5 shrink-0">
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export CAM</span>
+            <span className="sm:hidden">CAM</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
@@ -351,7 +353,7 @@ export function TopBar({ onClose }: TopBarProps = {}) {
       {/* Quick Link to Shop Catalog */}
       <Link
         to="/shop"
-        className="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-md hover:bg-muted/60 transition"
+        className="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-md hover:bg-muted/60 transition shrink-0"
       >
         <Store className="w-3.5 h-3.5" /> Atelier Catalog
       </Link>
@@ -359,12 +361,12 @@ export function TopBar({ onClose }: TopBarProps = {}) {
       {/* Cart Button */}
       <Link
         to="/cart"
-        className="relative inline-flex items-center justify-center h-8 px-2.5 rounded-md text-xs font-medium border border-border hover:bg-muted/60 text-foreground transition-colors ml-1"
+        className="relative inline-flex items-center justify-center h-8 px-2 sm:px-2.5 rounded-md text-xs font-medium border border-border hover:bg-muted/60 text-foreground transition-colors ml-0.5 sm:ml-1 shrink-0"
         title="View Shopping Cart"
       >
         <ShoppingBag className="w-3.5 h-3.5" />
         {count > 0 && (
-          <span className="ml-1.5 bg-primary text-primary-foreground text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+          <span className="ml-1 sm:ml-1.5 bg-primary text-primary-foreground text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
             {count}
           </span>
         )}
@@ -374,9 +376,11 @@ export function TopBar({ onClose }: TopBarProps = {}) {
       <Button 
         size="sm" 
         onClick={handleAddToCart}
-        className="text-xs gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition ml-1 h-8 font-medium shadow-sm"
+        className="text-xs gap-1 sm:gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition ml-0.5 sm:ml-1 h-8 font-medium shadow-sm px-2.5 sm:px-3 shrink-0"
       >
-        <ShoppingBag className="w-3.5 h-3.5" /> Add to Cart
+        <ShoppingBag className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Add to Cart</span>
+        <span className="sm:hidden font-semibold">Add</span>
       </Button>
 
       {/* Explicit Close Studio Button when inside dialog */}

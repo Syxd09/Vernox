@@ -28,7 +28,9 @@ import {
   Sparkles,
   Layers,
   Eye,
-  Maximize2
+  Maximize2,
+  CheckCircle2,
+  ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -40,10 +42,61 @@ export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const product = slug ? getProductBySlug(slug) : undefined;
   
-  const productReviews = product ? reviews.filter(r => r.productId === product.id) : [];
-  const avgRating = productReviews.length 
-    ? (productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length).toFixed(1)
-    : '5.0';
+  const productReviews = useMemo(() => {
+    if (!product) return [];
+    return reviews.filter(r => r.productId === product.id);
+  }, [product, reviews]);
+
+  const [reviewFilter, setReviewFilter] = useState<'featured' | 'all' | 'fiveStar'>('featured');
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  const featuredReviews = useMemo(() => {
+    const list = productReviews.filter(r => r.featured);
+    if (list.length > 0) return list;
+    return productReviews.filter(r => r.rating === 5).slice(0, 3);
+  }, [productReviews]);
+
+  const fiveStarReviews = useMemo(() => {
+    return productReviews.filter(r => r.rating >= 5);
+  }, [productReviews]);
+
+  const displayedReviews = useMemo(() => {
+    if (reviewFilter === 'featured' && !showAllReviews) {
+      return featuredReviews;
+    }
+    if (reviewFilter === 'fiveStar') {
+      return fiveStarReviews;
+    }
+    return productReviews;
+  }, [productReviews, reviewFilter, showAllReviews, featuredReviews, fiveStarReviews]);
+
+  const avgRating = useMemo(() => {
+    if (!productReviews.length) return '5.0';
+    const sum = productReviews.reduce((acc, r) => acc + r.rating, 0);
+    return (sum / productReviews.length).toFixed(1);
+  }, [productReviews]);
+
+  const ratingCounts = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    productReviews.forEach(r => {
+      const star = Math.min(Math.max(Math.round(r.rating), 1), 5) as 1 | 2 | 3 | 4 | 5;
+      counts[star] = (counts[star] || 0) + 1;
+    });
+    return counts;
+  }, [productReviews]);
+
+  const ratingBars = useMemo(() => {
+    const total = productReviews.length || 1;
+    return ([5, 4, 3, 2, 1] as const).map(star => {
+      const count = ratingCounts[star];
+      return {
+        star,
+        count,
+        pct: Math.round((count / total) * 100)
+      };
+    });
+  }, [productReviews, ratingCounts]);
+
   const isWishlisted = product ? wishlist.includes(product.id) : false;
 
   const navigate = useNavigate();
@@ -66,6 +119,7 @@ export default function ProductDetail() {
 
   // Review form state
   const [reviewName, setReviewName] = useState('');
+  const [reviewRole, setReviewRole] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -87,12 +141,17 @@ export default function ProductDetail() {
     await addReview({
       productId: product.id,
       customerName: reviewName,
+      customerRole: reviewRole.trim() || 'Verified Private Patron',
       rating: reviewRating,
       comment: reviewComment,
-      placedAt: Date.now()
+      placedAt: Date.now(),
+      verified: true,
+      featured: reviewRating === 5,
+      helpfulCount: 0
     });
     setIsSubmittingReview(false);
     setReviewComment('');
+    setReviewRole('');
     setReviewRating(5);
     toast.success("Thank you for your feedback! Review published.");
   };
@@ -107,12 +166,12 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#F8F3EA]">
+      <div className="min-h-screen flex flex-col bg-cream">
         <SiteHeader />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20 px-6 text-center">
-          <p className="font-editorial text-3xl text-[#332522]">Artwork Not Found</p>
-          <p className="text-xs text-[#332522]/70 font-sans max-w-sm">The requested atelier edition may have moved or been decommissioned.</p>
-          <Link to="/shop" className="mt-2 inline-flex items-center gap-2 bg-maroon-deep text-cream text-xs uppercase tracking-[0.2em] font-sans font-semibold px-6 py-3 rounded-[2px]">
+          <p className="font-editorial text-3xl text-dark-brown">Artwork Not Found</p>
+          <p className="text-xs text-dark-brown/70 font-sans max-w-sm">The requested atelier edition may have moved or been decommissioned.</p>
+          <Link to="/shop" className="mt-2 inline-flex items-center gap-2 bg-burgundy text-cream text-xs uppercase tracking-[0.2em] font-sans font-semibold px-6 py-3 rounded-[2px] hover:bg-burgundy-hover transition-colors">
             Return to Collection
           </Link>
         </div>
@@ -149,22 +208,22 @@ export default function ProductDetail() {
     .join(' ');
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F3EA]">
+    <div className="min-h-screen flex flex-col bg-cream">
       <SiteHeader />
       
       {/* Editorial Breadcrumbs */}
       <div className="border-b border-[#EBE4D6] bg-[#FAF8F5]">
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-[11px] font-sans text-[#332522]/70">
-            <Link to="/shop" className="hover:text-maroon-deep transition-colors">
+          <div className="flex items-center gap-2 text-[11px] font-sans text-dark-brown/70">
+            <Link to="/shop" className="hover:text-burgundy transition-colors">
               Collection
             </Link>
-            <span className="text-[#332522]/30">/</span>
-            <Link to={`/shop/${product.category}`} className="hover:text-maroon-deep transition-colors">
+            <span className="text-dark-brown/30">/</span>
+            <Link to={`/shop/${product.category}`} className="hover:text-burgundy transition-colors">
               {formattedCategory}
             </Link>
-            <span className="text-[#332522]/30">/</span>
-            <span className="text-[#332522] font-medium truncate max-w-[200px] sm:max-w-none">
+            <span className="text-dark-brown/30">/</span>
+            <span className="text-dark-brown font-medium truncate max-w-[200px] sm:max-w-none">
               {product.name}
             </span>
           </div>
@@ -172,7 +231,7 @@ export default function ProductDetail() {
           <button 
             type="button"
             onClick={() => navigate(-1)} 
-            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-sans font-semibold text-[#6B2732] hover:text-maroon-deep transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-sans font-semibold text-burgundy hover:text-burgundy-hover transition cursor-pointer"
           >
             <ArrowLeft className="w-3 h-3" />
             <span>Back</span>
@@ -203,11 +262,11 @@ export default function ProductDetail() {
                     className={cn(
                       'inline-flex items-center justify-center gap-1.5 px-2 py-2 text-[10px] sm:text-[11px] uppercase tracking-[0.14em] font-sans font-semibold rounded-[2px] transition cursor-pointer text-center truncate',
                       tab === t.id
-                        ? 'bg-maroon-deep text-cream shadow-xs'
-                        : 'text-[#332522]/70 hover:text-[#332522] hover:bg-[#F8F3EA]'
+                        ? 'bg-burgundy text-cream shadow-xs'
+                        : 'text-dark-brown/70 hover:text-dark-brown hover:bg-cream'
                     )}
                   >
-                    <t.icon className={cn('w-3.5 h-3.5 shrink-0', tab === t.id ? 'text-[#C6A15B]' : 'text-[#332522]/50')} />
+                    <t.icon className={cn('w-3.5 h-3.5 shrink-0', tab === t.id ? 'text-gold' : 'text-dark-brown/50')} />
                     <span className="truncate">{t.label}</span>
                   </button>
                 ))}
@@ -235,14 +294,14 @@ export default function ProductDetail() {
                       {/* Floating In-Situ Label */}
                       <div className="absolute bottom-4 left-4 right-4 p-3.5 rounded-[2px] bg-white/95 backdrop-blur-md border border-[#EBE4D6] flex items-center justify-between shadow-xs">
                         <div>
-                          <div className="text-[9px] uppercase tracking-[0.26em] text-[#6B2732] font-sans font-semibold">
+                          <div className="text-[9px] uppercase tracking-[0.26em] text-burgundy font-sans font-semibold">
                             Atelier Installation
                           </div>
-                          <div className="font-editorial text-sm sm:text-base font-normal text-[#332522] mt-0.5">
+                          <div className="font-editorial text-sm sm:text-base font-normal text-dark-brown mt-0.5">
                             {product.name} · {product.alloySpec || 'Belgian Solid Plate'}
                           </div>
                         </div>
-                        <div className="text-[10px] text-[#332522]/60 font-mono tracking-wider">
+                        <div className="text-[10px] text-dark-brown/60 font-mono tracking-wider">
                           Antwerp Atelier
                         </div>
                       </div>
@@ -256,8 +315,9 @@ export default function ProductDetail() {
                   )}
 
                   {tab === 'wall' && (
-                    <div className="p-4 sm:p-6 bg-[#FAF8F5] min-h-[420px] flex items-center justify-center">
+                    <div className="p-3 sm:p-6 bg-[#FAF8F5] min-h-[420px] w-full block">
                       <WallPreview
+                        product={product}
                         shapeId={product.shapeId || 'circle'}
                         finish={finish}
                         widthMm={size.widthMm}
@@ -282,13 +342,13 @@ export default function ProductDetail() {
                 onClick={() => setTab('photo')}
                 className={cn(
                   'relative aspect-[4/3] rounded-[2px] overflow-hidden border transition-all cursor-pointer bg-white',
-                  tab === 'photo' ? 'border-[#6B2732] ring-1 ring-[#6B2732]' : 'border-[#EBE4D6] hover:border-[#6B2732]/40 opacity-80 hover:opacity-100'
+                  tab === 'photo' ? 'border-burgundy ring-1 ring-burgundy' : 'border-[#EBE4D6] hover:border-burgundy/40 opacity-80 hover:opacity-100'
                 )}
               >
                 {product.imageUrl ? (
                   <img src={product.imageUrl} alt="Architectural Angle" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[10px] uppercase font-sans text-[#332522]">Photo</div>
+                  <div className="w-full h-full flex items-center justify-center text-[10px] uppercase font-sans text-dark-brown">Photo</div>
                 )}
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] uppercase tracking-wider py-0.5 text-center font-sans">
                   Gallery
@@ -300,11 +360,11 @@ export default function ProductDetail() {
                 onClick={() => setTab('preview')}
                 className={cn(
                   'relative aspect-[4/3] rounded-[2px] overflow-hidden border transition-all cursor-pointer bg-white flex flex-col items-center justify-center p-2',
-                  tab === 'preview' ? 'border-[#6B2732] ring-1 ring-[#6B2732]' : 'border-[#EBE4D6] hover:border-[#6B2732]/40 opacity-80 hover:opacity-100'
+                  tab === 'preview' ? 'border-burgundy ring-1 ring-burgundy' : 'border-[#EBE4D6] hover:border-burgundy/40 opacity-80 hover:opacity-100'
                 )}
               >
-                <Sparkles className="w-4 h-4 text-[#C6A15B] mb-1" />
-                <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-[#332522]">3D Vector</span>
+                <Sparkles className="w-4 h-4 text-gold mb-1" />
+                <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-dark-brown">3D Vector</span>
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] uppercase tracking-wider py-0.5 text-center font-sans">
                   Interactive
                 </div>
@@ -315,11 +375,11 @@ export default function ProductDetail() {
                 onClick={() => setTab('wall')}
                 className={cn(
                   'relative aspect-[4/3] rounded-[2px] overflow-hidden border transition-all cursor-pointer bg-white flex flex-col items-center justify-center p-2',
-                  tab === 'wall' ? 'border-[#6B2732] ring-1 ring-[#6B2732]' : 'border-[#EBE4D6] hover:border-[#6B2732]/40 opacity-80 hover:opacity-100'
+                  tab === 'wall' ? 'border-burgundy ring-1 ring-burgundy' : 'border-[#EBE4D6] hover:border-burgundy/40 opacity-80 hover:opacity-100'
                 )}
               >
-                <Maximize2 className="w-4 h-4 text-[#6B2732] mb-1" />
-                <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-[#332522]">Room Scale</span>
+                <Maximize2 className="w-4 h-4 text-burgundy mb-1" />
+                <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-dark-brown">Room Scale</span>
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] uppercase tracking-wider py-0.5 text-center font-sans">
                   Scale
                 </div>
@@ -330,11 +390,11 @@ export default function ProductDetail() {
                 onClick={() => setTab('story')}
                 className={cn(
                   'relative aspect-[4/3] rounded-[2px] overflow-hidden border transition-all cursor-pointer bg-white flex flex-col items-center justify-center p-2',
-                  tab === 'story' ? 'border-[#6B2732] ring-1 ring-[#6B2732]' : 'border-[#EBE4D6] hover:border-[#6B2732]/40 opacity-80 hover:opacity-100'
+                  tab === 'story' ? 'border-burgundy ring-1 ring-burgundy' : 'border-[#EBE4D6] hover:border-burgundy/40 opacity-80 hover:opacity-100'
                 )}
               >
-                <Layers className="w-4 h-4 text-[#6B2732] mb-1" />
-                <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-[#332522]">Crafting</span>
+                <Layers className="w-4 h-4 text-burgundy mb-1" />
+                <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-dark-brown">Crafting</span>
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] uppercase tracking-wider py-0.5 text-center font-sans">
                   Atelier
                 </div>
@@ -344,20 +404,20 @@ export default function ProductDetail() {
             {/* Atelier Craftsmanship Highlights Bar below Left Column */}
             <div className="p-4 bg-white border border-[#EBE4D6] rounded-[2px] grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
               <div>
-                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-[#6B2732] font-semibold">Gauge</div>
-                <div className="text-xs font-sans font-medium text-[#332522] mt-0.5">3.0mm Solid</div>
+                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-burgundy font-semibold">Gauge</div>
+                <div className="text-xs font-sans font-medium text-dark-brown mt-0.5">3.0mm Solid</div>
               </div>
               <div>
-                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-[#6B2732] font-semibold">Mounting</div>
-                <div className="text-xs font-sans font-medium text-[#332522] mt-0.5">Floating Standoff</div>
+                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-burgundy font-semibold">Mounting</div>
+                <div className="text-xs font-sans font-medium text-dark-brown mt-0.5">Floating Standoff</div>
               </div>
               <div>
-                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-[#6B2732] font-semibold">Provenance</div>
-                <div className="text-xs font-sans font-medium text-[#332522] mt-0.5">Signed Hallmark</div>
+                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-burgundy font-semibold">Provenance</div>
+                <div className="text-xs font-sans font-medium text-dark-brown mt-0.5">Signed Hallmark</div>
               </div>
               <div>
-                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-[#6B2732] font-semibold">Freight</div>
-                <div className="text-xs font-sans font-medium text-[#332522] mt-0.5">Insured Crated</div>
+                <div className="text-[9px] uppercase tracking-[0.2em] font-sans text-burgundy font-semibold">Freight</div>
+                <div className="text-xs font-sans font-medium text-dark-brown mt-0.5">Insured Crated</div>
               </div>
             </div>
 
@@ -368,28 +428,27 @@ export default function ProductDetail() {
             
             {/* Product Title & Brand Identity */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-[1px] bg-[#C6A15B]" />
-                <span className="text-[10px] uppercase tracking-[0.28em] font-sans text-[#6B2732] font-semibold">
+              <div className="inline-flex items-center gap-2 mb-2">
+                <span className="brand-pill">
                   {product.tagline || formattedCategory}
                 </span>
               </div>
 
-              <h1 className="font-editorial text-4xl sm:text-5xl text-[#332522] font-normal tracking-tight leading-[1.05] mb-3">
+              <h1 className="font-editorial text-4xl sm:text-5xl text-dark-brown font-normal tracking-tight leading-[1.05] mb-3">
                 {product.name}
               </h1>
 
               {/* Star Rating Badge */}
               <div className="flex items-center gap-2 text-xs">
-                <div className="flex text-[#C6A15B]">
+                <div className="flex text-gold">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-[#C6A15B] text-[#C6A15B]" />
+                    <Star key={i} className="w-3.5 h-3.5 fill-gold text-gold" />
                   ))}
                 </div>
-                <span className="font-sans font-medium text-[#332522] text-xs">
+                <span className="font-sans font-medium text-dark-brown text-xs">
                   {avgRating}
                 </span>
-                <span className="text-[#332522]/50 text-xs">
+                <span className="text-dark-brown/50 text-xs">
                   ({Math.max(productReviews.length, 12)} verified commissions)
                 </span>
               </div>
@@ -399,14 +458,14 @@ export default function ProductDetail() {
             <div className="p-4 bg-white border border-[#EBE4D6] rounded-[2px] space-y-3">
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-editorial text-3xl sm:text-4xl text-[#332522] font-normal">
+                  <span className="font-editorial text-3xl sm:text-4xl text-dark-brown font-normal">
                     {currencySymbol}{unitPrice.toLocaleString()}
                   </span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#332522]/60 font-sans">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-dark-brown/60 font-sans">
                     USD · Bespoke Atelier Edition
                   </span>
                 </div>
-                <span className="text-[9px] uppercase tracking-[0.22em] font-sans text-[#6B2732] bg-[#6B2732]/10 px-2.5 py-1 rounded-[1px] font-semibold">
+                <span className="text-[9px] uppercase tracking-[0.22em] font-sans text-burgundy bg-dusty-pink/20 border border-dusty-pink/40 px-2.5 py-1 rounded-[1px] font-semibold">
                   Tax Included
                 </span>
               </div>
@@ -414,12 +473,12 @@ export default function ProductDetail() {
               {product.alloySpec && (
                 <div className="pt-3 border-t border-[#EBE4D6] flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] shrink-0" />
-                    <span className="font-sans text-[11px] text-[#332522]/85 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
+                    <span className="font-sans text-[11px] text-dark-brown/85 font-medium">
                       {product.alloySpec}
                     </span>
                   </div>
-                  <span className="text-[9px] uppercase tracking-wider text-[#C6A15B] font-mono font-semibold shrink-0">
+                  <span className="text-[9px] uppercase tracking-wider text-gold font-mono font-semibold shrink-0">
                     Certified Alloy
                   </span>
                 </div>
@@ -427,17 +486,17 @@ export default function ProductDetail() {
             </div>
 
             {/* Description Paragraph */}
-            <p className="text-xs sm:text-sm text-[#332522]/80 font-sans leading-relaxed">
+            <p className="text-xs sm:text-sm text-dark-brown/80 font-sans leading-relaxed">
               {product.description}
             </p>
 
             {/* Finish Selection */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.24em] font-sans text-[#332522]">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.24em] font-sans text-dark-brown">
                   Select Finish & Patina
                 </label>
-                <span className="text-xs font-sans text-[#6B2732] font-medium">
+                <span className="text-xs font-sans text-burgundy font-medium">
                   {finishLabels[finish]?.name || finish}
                 </span>
               </div>
@@ -457,8 +516,8 @@ export default function ProductDetail() {
                       className={cn(
                         'group/swatch relative p-1 rounded-[2px] transition-all cursor-pointer flex items-center gap-2 border text-xs font-sans',
                         isSelected
-                          ? 'border-[#6B2732] bg-white ring-1 ring-[#6B2732] text-[#332522] font-semibold shadow-xs'
-                          : 'border-[#EBE4D6] bg-white/70 hover:bg-white text-[#332522]/70 hover:text-[#332522]'
+                          ? 'border-burgundy bg-white ring-1 ring-burgundy text-dark-brown font-semibold shadow-xs'
+                          : 'border-[#EBE4D6] bg-white/70 hover:bg-white text-dark-brown/70 hover:text-dark-brown'
                       )}
                     >
                       <span
@@ -466,7 +525,7 @@ export default function ProductDetail() {
                         style={{ background: swatch }}
                       />
                       <span className="pr-1 text-[11px]">{label}</span>
-                      {isSelected && <Check className="w-3 h-3 text-[#6B2732]" />}
+                      {isSelected && <Check className="w-3 h-3 text-burgundy" />}
                     </button>
                   );
                 })}
@@ -476,10 +535,10 @@ export default function ProductDetail() {
             {/* Dimensions & Scale Selection */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.24em] font-sans text-[#332522]">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.24em] font-sans text-dark-brown">
                   Scale & Dimensions
                 </label>
-                <span className="text-[10px] uppercase tracking-wider text-[#332522]/50 font-sans">
+                <span className="text-[10px] uppercase tracking-wider text-dark-brown/50 font-sans">
                   ±0.05mm laser tolerance
                 </span>
               </div>
@@ -495,17 +554,17 @@ export default function ProductDetail() {
                       className={cn(
                         'flex justify-between items-center px-4 py-3 rounded-[2px] border text-xs text-left transition-all cursor-pointer',
                         isSelected
-                          ? 'border-[#6B2732] bg-white ring-1 ring-[#6B2732] shadow-xs'
-                          : 'border-[#EBE4D6] bg-white/70 hover:bg-white text-[#332522]/80 hover:text-[#332522]'
+                          ? 'border-burgundy bg-white ring-1 ring-burgundy shadow-xs'
+                          : 'border-[#EBE4D6] bg-white/70 hover:bg-white text-dark-brown/80 hover:text-dark-brown'
                       )}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Ruler className={cn('w-3.5 h-3.5', isSelected ? 'text-[#6B2732]' : 'text-[#C6A15B]')} />
-                        <span className={cn('font-sans', isSelected ? 'font-semibold text-[#332522]' : 'text-[#332522]/80')}>
+                        <Ruler className={cn('w-3.5 h-3.5', isSelected ? 'text-burgundy' : 'text-gold')} />
+                        <span className={cn('font-sans', isSelected ? 'font-semibold text-dark-brown' : 'text-dark-brown/80')}>
                           {s.label}
                         </span>
                       </div>
-                      <span className={cn('font-mono text-xs', isSelected ? 'font-semibold text-[#6B2732]' : 'text-[#332522]/60')}>
+                      <span className={cn('font-mono text-xs', isSelected ? 'font-semibold text-burgundy' : 'text-dark-brown/60')}>
                         {s.priceDelta > 0 ? `+${currencySymbol}${s.priceDelta}` : 'Standard Edition'}
                       </span>
                     </button>
@@ -517,24 +576,24 @@ export default function ProductDetail() {
             {/* Commission Quantity & Actions */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center gap-4">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.24em] font-sans text-[#332522]">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.24em] font-sans text-dark-brown">
                   Quantity
                 </label>
                 <div className="inline-flex items-center border border-[#EBE4D6] rounded-[2px] bg-white shadow-2xs">
                   <button
                     type="button"
                     onClick={() => setQty(q => Math.max(1, q - 1))}
-                    className="px-3.5 py-1.5 hover:bg-[#F8F3EA] transition font-semibold text-xs text-[#332522] cursor-pointer"
+                    className="px-3.5 py-1.5 hover:bg-cream transition font-semibold text-xs text-dark-brown cursor-pointer"
                   >
                     −
                   </button>
-                  <span className="px-4 py-1.5 min-w-10 text-center font-mono text-xs font-semibold text-[#332522]">
+                  <span className="px-4 py-1.5 min-w-10 text-center font-mono text-xs font-semibold text-dark-brown">
                     {qty}
                   </span>
                   <button
                     type="button"
                     onClick={() => setQty(q => q + 1)}
-                    className="px-3.5 py-1.5 hover:bg-[#F8F3EA] transition font-semibold text-xs text-[#332522] cursor-pointer"
+                    className="px-3.5 py-1.5 hover:bg-cream transition font-semibold text-xs text-dark-brown cursor-pointer"
                   >
                     +
                   </button>
@@ -546,9 +605,9 @@ export default function ProductDetail() {
                 <button
                   type="button"
                   onClick={handleAdd}
-                  className="flex-1 inline-flex items-center justify-center gap-2.5 bg-maroon-deep hover:opacity-90 text-cream font-semibold text-xs uppercase tracking-[0.2em] font-sans px-7 py-4 rounded-[2px] transition shadow-xs cursor-pointer hover:border-b-2 hover:border-[#C6A15B]"
+                  className="flex-1 inline-flex items-center justify-center gap-2.5 bg-burgundy hover:bg-burgundy-hover text-cream font-semibold text-xs uppercase tracking-[0.2em] font-sans px-7 py-4 rounded-[2px] transition shadow-xs cursor-pointer border border-transparent hover:border-dusty-pink"
                 >
-                  <ShoppingBag className="w-4 h-4 text-[#C6A15B]" />
+                  <ShoppingBag className="w-4 h-4 text-dusty-pink" />
                   <span>Add to Order · {currencySymbol}{(unitPrice * qty).toLocaleString()}</span>
                 </button>
 
@@ -556,9 +615,9 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     onClick={() => setStudioOpen(true)}
-                    className="inline-flex items-center justify-center gap-2 border border-[#6B2732]/40 hover:border-[#6B2732] bg-white text-[#6B2732] font-semibold text-xs uppercase tracking-[0.18em] font-sans px-5 py-4 rounded-[2px] hover:bg-[#6B2732]/5 transition cursor-pointer"
+                    className="inline-flex items-center justify-center gap-2 border border-burgundy/40 hover:border-burgundy bg-white text-burgundy font-semibold text-xs uppercase tracking-[0.18em] font-sans px-5 py-4 rounded-[2px] hover:bg-burgundy/5 transition cursor-pointer"
                   >
-                    <Compass className="w-3.5 h-3.5 text-[#C6A15B]" />
+                    <Compass className="w-3.5 h-3.5 text-burgundy" />
                     <span>Custom CAD</span>
                   </button>
                 )}
@@ -572,24 +631,24 @@ export default function ProductDetail() {
                   className={cn(
                     'inline-flex items-center justify-center p-4 rounded-[2px] border transition-all cursor-pointer',
                     isWishlisted 
-                      ? 'border-[#6B2732] bg-[#6B2732]/10 text-[#6B2732]' 
-                      : 'border-[#EBE4D6] bg-white text-[#332522]/70 hover:border-[#6B2732]/50 hover:text-[#332522]'
+                      ? 'border-burgundy bg-burgundy/10 text-burgundy' 
+                      : 'border-[#EBE4D6] bg-white text-dark-brown/70 hover:border-burgundy/50 hover:text-dark-brown'
                   )}
                   title={isWishlisted ? "Remove from Saved" : "Save to Private Catalog"}
                 >
-                  <Heart className={cn('w-4 h-4', isWishlisted && 'fill-[#6B2732] text-[#6B2732]')} />
+                  <Heart className={cn('w-4 h-4', isWishlisted && 'fill-burgundy text-burgundy')} />
                 </button>
               </div>
             </div>
 
             {/* Real-Time Atelier Dispatch & Crating Promise */}
             <div className="p-4 rounded-[2px] bg-white border border-[#EBE4D6] space-y-2.5 shadow-2xs">
-              <div className="flex items-center gap-2.5 text-xs font-semibold text-[#332522] font-sans">
-                <Clock className="w-4 h-4 text-[#C6A15B] shrink-0" />
+              <div className="flex items-center gap-2.5 text-xs font-semibold text-dark-brown font-sans">
+                <Clock className="w-4 h-4 text-gold shrink-0" />
                 <span>Priority Dispatch: Order within 3h 48m for Tuesday Dispatch</span>
               </div>
-              <div className="flex items-center gap-2.5 text-xs text-[#332522]/75 font-sans">
-                <Truck className="w-4 h-4 text-[#6B2732] shrink-0" />
+              <div className="flex items-center gap-2.5 text-xs text-dark-brown/75 font-sans">
+                <Truck className="w-4 h-4 text-burgundy shrink-0" />
                 <span>Complimentary Insured White-Glove Crated Shipping worldwide</span>
               </div>
               <div className="flex items-center gap-2.5 text-[11px] text-emerald-800 font-sans font-medium">
@@ -607,12 +666,12 @@ export default function ProductDetail() {
                 { icon: ShieldCheck, label: 'Warranty', v: '10-Year Anti-Corrosion Guarantee' },
               ].map(f => (
                 <div key={f.label} className="flex items-start gap-2.5">
-                  <f.icon className="w-4 h-4 text-[#C6A15B] mt-0.5 shrink-0" />
+                  <f.icon className="w-4 h-4 text-gold mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-[9px] uppercase tracking-widest text-[#6B2732] font-sans font-semibold">
+                    <div className="text-[9px] uppercase tracking-widest text-burgundy font-sans font-semibold">
                       {f.label}
                     </div>
-                    <div className="text-[#332522] font-medium font-sans mt-0.5">
+                    <div className="text-dark-brown font-medium font-sans mt-0.5">
                       {f.v}
                     </div>
                   </div>
@@ -623,11 +682,11 @@ export default function ProductDetail() {
             {/* Architectural Specifications Accordions */}
             <div className="border-t border-[#EBE4D6] pt-6 space-y-3">
               <details className="group border border-[#EBE4D6] rounded-[2px] p-3.5 bg-white transition open:shadow-xs">
-                <summary className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-[#332522] cursor-pointer flex items-center justify-between list-none">
+                <summary className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-dark-brown cursor-pointer flex items-center justify-between list-none">
                   <span>Metallurgy & Precision Tolerance</span>
-                  <ChevronDown className="w-4 h-4 text-[#C6A15B] group-open:rotate-180 transition-transform" />
+                  <ChevronDown className="w-4 h-4 text-gold group-open:rotate-180 transition-transform" />
                 </summary>
-                <div className="pt-3 text-xs text-[#332522]/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
+                <div className="pt-3 text-xs text-dark-brown/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
                   <p>
                     Cold-rolled Belgian metallurgical plate with an uncompromising 3.0mm thickness (gauge weight approx. 24kg/m²). Cut with fiber-optic nitrogen assist laser to ±0.05mm precision.
                   </p>
@@ -638,11 +697,11 @@ export default function ProductDetail() {
               </details>
 
               <details className="group border border-[#EBE4D6] rounded-[2px] p-3.5 bg-white transition open:shadow-xs">
-                <summary className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-[#332522] cursor-pointer flex items-center justify-between list-none">
+                <summary className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-dark-brown cursor-pointer flex items-center justify-between list-none">
                   <span>Concealed Float Mounting & Installation</span>
-                  <ChevronDown className="w-4 h-4 text-[#C6A15B] group-open:rotate-180 transition-transform" />
+                  <ChevronDown className="w-4 h-4 text-gold group-open:rotate-180 transition-transform" />
                 </summary>
-                <div className="pt-3 text-xs text-[#332522]/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
+                <div className="pt-3 text-xs text-dark-brown/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
                   <p>
                     Each piece includes our signature rear standoff system: 4× machined 20mm brass cylinders that mount invisibly to drywall, masonry, or timber cladding.
                   </p>
@@ -653,11 +712,11 @@ export default function ProductDetail() {
               </details>
 
               <details className="group border border-[#EBE4D6] rounded-[2px] p-3.5 bg-white transition open:shadow-xs">
-                <summary className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-[#332522] cursor-pointer flex items-center justify-between list-none">
+                <summary className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-dark-brown cursor-pointer flex items-center justify-between list-none">
                   <span>Insured Freight, Zero-Deflection Crating & Returns</span>
-                  <ChevronDown className="w-4 h-4 text-[#C6A15B] group-open:rotate-180 transition-transform" />
+                  <ChevronDown className="w-4 h-4 text-gold group-open:rotate-180 transition-transform" />
                 </summary>
-                <div className="pt-3 text-xs text-[#332522]/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
+                <div className="pt-3 text-xs text-dark-brown/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
                   <p>
                     Shipped in archival plywood crates reinforced with shock-absorbing foam. Fully insured door-to-door with DHL Express / FedEx Priority.
                   </p>
@@ -671,16 +730,16 @@ export default function ProductDetail() {
             {/* Trade & Architecture Project Concierge Banner */}
             <div className="p-4 bg-white border border-[#EBE4D6] rounded-[2px] flex items-center justify-between gap-4 shadow-2xs">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#332522] font-sans">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-dark-brown font-sans">
                   Specifying for an Interior Project?
                 </div>
-                <div className="text-[11px] text-[#332522]/70 font-sans mt-0.5">
+                <div className="text-[11px] text-dark-brown/70 font-sans mt-0.5">
                   Custom dimensions, 3D CAD DXF files & trade tier discounts available.
                 </div>
               </div>
               <a 
                 href="mailto:concierge@vernoxatelier.com?subject=Trade Specification Request"
-                className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-maroon-deep border border-[#6B2732]/40 px-3.5 py-1.5 rounded-[2px] hover:bg-[#6B2732] hover:text-cream transition shrink-0"
+                className="text-xs font-semibold uppercase tracking-[0.18em] font-sans text-burgundy border border-burgundy/40 px-3.5 py-1.5 rounded-[2px] hover:bg-burgundy hover:text-cream transition shrink-0"
               >
                 Inquire
               </a>
@@ -694,20 +753,20 @@ export default function ProductDetail() {
       <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-white/95 backdrop-blur-md border-t border-[#EBE4D6] px-4 py-3 shadow-lg">
         <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-wider font-semibold text-[#6B2732] truncate font-sans">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-burgundy truncate font-sans">
               {product.name}
             </div>
-            <div className="text-xs font-mono font-bold text-[#332522]">
+            <div className="text-xs font-mono font-bold text-dark-brown">
               {currencySymbol}{(unitPrice * qty).toLocaleString()}
-              <span className="text-[9px] font-sans text-[#332522]/60 font-normal ml-1">· {size.label}</span>
+              <span className="text-[9px] font-sans text-dark-brown/60 font-normal ml-1">· {size.label}</span>
             </div>
           </div>
           <button
             type="button"
             onClick={handleAdd}
-            className="inline-flex items-center gap-1.5 bg-maroon-deep text-cream text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-[2px] shadow-sm active:scale-95 transition"
+            className="inline-flex items-center gap-1.5 bg-burgundy hover:bg-burgundy-hover text-cream text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-[2px] shadow-sm active:scale-95 transition"
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-[#C6A15B]" />
+            <ShoppingBag className="w-3.5 h-3.5 text-gold" />
             <span>Add to Order</span>
           </button>
         </div>
@@ -729,19 +788,19 @@ export default function ProductDetail() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
             <div>
-              <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-sans text-[#6B2732] font-semibold mb-2">
-                <span className="w-4 h-[1px] bg-[#C6A15B]" />
+              <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold mb-2">
+                <span className="w-4 h-[1px] bg-gold" />
                 <span>Verified Client Feedback</span>
               </div>
-              <h2 className="font-editorial text-3xl sm:text-4xl text-[#332522] font-normal tracking-tight">
+              <h2 className="font-editorial text-3xl sm:text-4xl text-dark-brown font-normal tracking-tight">
                 CLIENT REVIEWS & TRADE COMMISSIONS
               </h2>
-              <p className="text-xs text-[#332522]/70 font-sans mt-1">
+              <p className="text-xs text-dark-brown/70 font-sans mt-1">
                 Authenticated feedback from architects, interior designers, and private collectors.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[#332522]/80 font-sans">
-              <ShieldCheck className="w-4 h-4 text-[#C6A15B]" />
+            <div className="flex items-center gap-2 text-xs text-dark-brown/80 font-sans">
+              <ShieldCheck className="w-4 h-4 text-gold" />
               <span>100% Authenticated Commissions</span>
             </div>
           </div>
@@ -750,34 +809,28 @@ export default function ProductDetail() {
             {/* Left: Rating Breakdown & Write Review */}
             <div className="space-y-6">
               <div className="bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] p-6 space-y-4">
-                <h3 className="text-xs uppercase tracking-[0.2em] font-sans text-[#6B2732] font-semibold">
+                <h3 className="text-xs uppercase tracking-[0.2em] font-sans text-burgundy font-semibold">
                   Rating Breakdown
                 </h3>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-editorial text-5xl font-normal text-[#332522]">{avgRating}</span>
-                  <span className="text-[#332522]/60 text-sm font-sans">out of 5.0</span>
+                  <span className="font-editorial text-5xl font-normal text-dark-brown">{avgRating}</span>
+                  <span className="text-dark-brown/60 text-sm font-sans">out of 5.0</span>
                 </div>
-                <div className="flex text-[#C6A15B]">
+                <div className="flex text-gold">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-[#C6A15B] text-[#C6A15B]" />
+                    <Star key={i} className="w-4 h-4 fill-gold text-gold" />
                   ))}
                 </div>
 
                 {/* Rating Percentage Bars */}
                 <div className="space-y-2 pt-2 border-t border-[#EBE4D6]">
-                  {[
-                    { star: 5, pct: 92 },
-                    { star: 4, pct: 8 },
-                    { star: 3, pct: 0 },
-                    { star: 2, pct: 0 },
-                    { star: 1, pct: 0 },
-                  ].map(b => (
-                    <div key={b.star} className="flex items-center gap-2 text-[11px] text-[#332522]/70 font-mono">
-                      <span className="w-4 inline-flex items-center gap-0.5">
-                        {b.star}<Star className="w-2 h-2 fill-[#C6A15B] text-[#C6A15B] inline" />
+                  {ratingBars.map(b => (
+                    <div key={b.star} className="flex items-center gap-2 text-[11px] text-dark-brown/70 font-mono">
+                      <span className="w-5 inline-flex items-center gap-0.5">
+                        {b.star}<Star className="w-2.5 h-2.5 fill-gold text-gold inline" />
                       </span>
                       <div className="flex-1 bg-[#EBE4D6] h-1.5 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#C6A15B] rounded-full" style={{ width: `${b.pct}%` }} />
+                        <div className="h-full bg-gold rounded-full" style={{ width: `${b.pct}%` }} />
                       </div>
                       <span className="w-7 text-right">{b.pct}%</span>
                     </div>
@@ -787,29 +840,43 @@ export default function ProductDetail() {
 
               {/* Review Submission Form */}
               <form onSubmit={handleReviewSubmit} className="space-y-4 bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] p-6">
-                <h3 className="text-xs uppercase tracking-[0.2em] font-sans text-[#332522] font-semibold">
+                <h3 className="text-xs uppercase tracking-[0.2em] font-sans text-dark-brown font-semibold">
                   Write an Atelier Review
                 </h3>
                 
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-[#332522]/70 font-sans font-semibold">
-                    Your Name & Title
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Jean Dupont (Architect, Paris)"
-                    value={reviewName}
-                    onChange={e => setReviewName(e.target.value)}
-                    className="w-full bg-white border border-[#EBE4D6] rounded-[2px] px-3 py-2 text-xs text-[#332522] outline-none focus:border-[#6B2732]"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-dark-brown/70 font-sans font-semibold">
+                      Your Name
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Jean Dupont"
+                      value={reviewName}
+                      onChange={e => setReviewName(e.target.value)}
+                      className="w-full bg-white border border-[#EBE4D6] rounded-[2px] px-3 py-2 text-xs text-dark-brown outline-none focus:border-burgundy"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-dark-brown/70 font-sans font-semibold">
+                      Designation / City
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Architect, Paris"
+                      value={reviewRole}
+                      onChange={e => setReviewRole(e.target.value)}
+                      className="w-full bg-white border border-[#EBE4D6] rounded-[2px] px-3 py-2 text-xs text-dark-brown outline-none focus:border-burgundy"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-[#332522]/70 font-sans font-semibold block">
+                  <label className="text-[10px] uppercase tracking-wider text-dark-brown/70 font-sans font-semibold block">
                     Rating
                   </label>
-                  <div className="flex gap-1.5 text-[#C6A15B]">
+                  <div className="flex gap-1.5 text-gold">
                     {[1, 2, 3, 4, 5].map(stars => (
                       <button
                         key={stars}
@@ -817,14 +884,14 @@ export default function ProductDetail() {
                         onClick={() => setReviewRating(stars)}
                         className="hover:scale-110 transition cursor-pointer p-0.5"
                       >
-                        <Star className={cn('w-4 h-4', stars <= reviewRating ? 'fill-[#C6A15B] text-[#C6A15B]' : 'text-[#EBE4D6]')} />
+                        <Star className={cn('w-4 h-4', stars <= reviewRating ? 'fill-gold text-gold' : 'text-[#EBE4D6]')} />
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-[#332522]/70 font-sans font-semibold">
+                  <label className="text-[10px] uppercase tracking-wider text-dark-brown/70 font-sans font-semibold">
                     Comments & Experience
                   </label>
                   <textarea
@@ -833,90 +900,173 @@ export default function ProductDetail() {
                     placeholder="Share feedback regarding metallurgical finish, edge accuracy, and packaging..."
                     value={reviewComment}
                     onChange={e => setReviewComment(e.target.value)}
-                    className="w-full bg-white border border-[#EBE4D6] rounded-[2px] px-3 py-2 text-xs text-[#332522] outline-none focus:border-[#6B2732] resize-none"
+                    className="w-full bg-white border border-[#EBE4D6] rounded-[2px] px-3 py-2 text-xs text-dark-brown outline-none focus:border-burgundy resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmittingReview}
-                  className="w-full bg-maroon-deep text-cream text-[10px] uppercase tracking-[0.2em] font-sans font-semibold py-3 rounded-[2px] hover:opacity-90 transition disabled:opacity-60 cursor-pointer shadow-xs"
+                  className="w-full bg-burgundy hover:bg-burgundy-hover text-cream text-[10px] uppercase tracking-[0.2em] font-sans font-semibold py-3 rounded-[2px] transition disabled:opacity-60 cursor-pointer shadow-xs"
                 >
                   {isSubmittingReview ? 'Publishing...' : 'Submit Authenticated Review'}
                 </button>
               </form>
             </div>
 
-            {/* Right: Reviews List */}
-            <div className="space-y-4">
-              {productReviews.length > 0 ? (
-                <div className="divide-y divide-[#EBE4D6] space-y-4">
-                  {productReviews.map((r, idx) => (
-                    <div key={r.id} className={cn('space-y-2', idx > 0 && 'pt-4')}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-[#332522] text-xs font-sans">{r.customerName}</span>
-                          <span className="text-[8px] uppercase tracking-wider bg-[#6B2732]/10 text-[#6B2732] px-2 py-0.5 rounded-[1px] font-semibold font-sans">
-                            Verified Commission
+            {/* Right: Reviews List with Curated Visibility Filters */}
+            <div className="space-y-5">
+              {/* Filter Pills & Visibility Status */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#EBE4D6]">
+                <div className="flex items-center flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setReviewFilter('featured'); setShowAllReviews(false); }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-[2px] text-xs font-sans transition-all cursor-pointer flex items-center gap-1.5',
+                      reviewFilter === 'featured' && !showAllReviews
+                        ? 'bg-burgundy text-cream font-semibold shadow-2xs'
+                        : 'bg-[#FAF8F5] text-dark-brown/70 hover:text-dark-brown border border-[#EBE4D6] hover:bg-white'
+                    )}
+                  >
+                    <Sparkles className="w-3 h-3 text-gold" />
+                    <span>Featured Curations ({featuredReviews.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setReviewFilter('all'); setShowAllReviews(true); }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-[2px] text-xs font-sans transition-all cursor-pointer flex items-center gap-1.5',
+                      (reviewFilter === 'all' || showAllReviews)
+                        ? 'bg-burgundy text-cream font-semibold shadow-2xs'
+                        : 'bg-[#FAF8F5] text-dark-brown/70 hover:text-dark-brown border border-[#EBE4D6] hover:bg-white'
+                    )}
+                  >
+                    <span>All Verified ({productReviews.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setReviewFilter('fiveStar'); setShowAllReviews(true); }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-[2px] text-xs font-sans transition-all cursor-pointer flex items-center gap-1.5',
+                      reviewFilter === 'fiveStar'
+                        ? 'bg-burgundy text-cream font-semibold shadow-2xs'
+                        : 'bg-[#FAF8F5] text-dark-brown/70 hover:text-dark-brown border border-[#EBE4D6] hover:bg-white'
+                    )}
+                  >
+                    <Star className="w-3 h-3 fill-gold text-gold" />
+                    <span>5-Star Only ({fiveStarReviews.length})</span>
+                  </button>
+                </div>
+
+                <span className="text-[11px] text-dark-brown/60 font-sans">
+                  Showing <strong className="text-dark-brown font-semibold">{displayedReviews.length}</strong> of {productReviews.length} reviews
+                </span>
+              </div>
+
+              {/* Cards List */}
+              <div className="space-y-4">
+                {displayedReviews.map((r) => (
+                  <div
+                    key={r.id}
+                    className="bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] p-5 sm:p-6 space-y-3.5 transition-all hover:border-[#D6CAB4]"
+                  >
+                    {/* Header: Responsive, no collision */}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 pb-3 border-b border-[#F0EAE0]">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-editorial text-base sm:text-lg font-medium text-dark-brown">
+                            {r.customerName}
                           </span>
+                          {r.featured && (
+                            <span className="inline-flex items-center gap-1 text-[8px] uppercase tracking-[0.2em] font-sans font-semibold bg-burgundy text-cream px-2 py-0.5 rounded-[1px]">
+                              <Sparkles className="w-2.5 h-2.5 text-dusty-pink" />
+                              Curator Highlight
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[10px] text-[#332522]/50 font-mono">
+                        {r.customerRole && (
+                          <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.15em] text-burgundy font-sans font-medium mt-0.5">
+                            {r.customerRole}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center sm:items-end justify-between sm:justify-start sm:flex-col gap-1.5 shrink-0 pt-1 sm:pt-0">
+                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-emerald-800 bg-emerald-700/10 border border-emerald-700/20 px-2 py-0.5 rounded-[1px] font-semibold font-sans">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
+                          Verified Collector
+                        </span>
+                        <span className="text-[10px] text-dark-brown/50 font-mono">
                           {new Date(r.placedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       </div>
-                      <div className="flex text-[#C6A15B]">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={cn('w-3.5 h-3.5', i < r.rating ? 'fill-[#C6A15B] text-[#C6A15B]' : 'text-[#EBE4D6]')} />
-                        ))}
-                      </div>
-                      <p className="text-xs text-[#332522]/80 leading-relaxed font-sans">{r.comment}</p>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Default exemplary architect testimonials */}
-                  <div className="bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] p-6 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#332522] text-sm font-sans">Marcus Van Houten</span>
-                        <span className="text-[9px] uppercase tracking-wider bg-emerald-700/10 text-emerald-800 px-2 py-0.5 rounded-[1px] font-semibold font-sans">
-                          Principal Architect, Studio Antwerp
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-[#332522]/50 font-mono">Verified Project</span>
-                    </div>
-                    <div className="flex text-[#C6A15B]">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-[#C6A15B] text-[#C6A15B]" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-[#332522]/85 leading-relaxed font-sans">
-                      "The laser edge tolerance is impeccable. At 3.0mm, the plate has real architectural mass and gravity. The 20mm float standoffs cast exactly the delicate shadow line we specified for the gallery reception."
-                    </p>
-                  </div>
 
-                  <div className="bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] p-6 space-y-3">
+                    {/* Rating & Location / Provenance */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#332522] text-sm font-sans">Elena Rostova</span>
-                        <span className="text-[9px] uppercase tracking-wider bg-[#6B2732]/10 text-[#6B2732] px-2 py-0.5 rounded-[1px] font-semibold font-sans">
-                          Private Collector, Zurich
+                      <div className="flex items-center gap-1.5 text-gold">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={cn(
+                                'w-3.5 h-3.5',
+                                i < r.rating ? 'fill-gold text-gold' : 'text-[#EBE4D6]'
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-mono font-semibold text-dark-brown ml-1">
+                          {r.rating}.0
                         </span>
                       </div>
-                      <span className="text-[10px] text-[#332522]/50 font-mono">Verified Commission</span>
+
+                      {r.location && (
+                        <span className="text-[10px] text-dark-brown/60 font-sans italic">
+                          {r.location}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex text-[#C6A15B]">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-[#C6A15B] text-[#C6A15B]" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-[#332522]/85 leading-relaxed font-sans">
-                      "The wood crate packaging was museum-grade. Accompanied by the signed certificate of authenticity and numbered hallmark seal. A centerpiece in our dining hall."
+
+                    {/* Review text */}
+                    <p className="text-xs sm:text-[13px] text-dark-brown/85 leading-relaxed font-sans">
+                      "{r.comment}"
                     </p>
+
+                    {/* Helpful footer */}
+                    {r.helpfulCount ? (
+                      <div className="pt-2 border-t border-[#F0EAE0]/60 flex items-center justify-between text-[10px] text-dark-brown/50 font-sans">
+                        <span>Antwerp Atelier Authenticated Commission</span>
+                        <span>{r.helpfulCount} collectors found this insightful</span>
+                      </div>
+                    ) : null}
                   </div>
-                </div>
-              )}
+                ))}
+              </div>
+
+              {/* Show All / Show Featured Toggle Button */}
+              {productReviews.length > displayedReviews.length ? (
+                <button
+                  type="button"
+                  onClick={() => { setShowAllReviews(true); setReviewFilter('all'); }}
+                  className="w-full py-3 rounded-[2px] border border-[#EBE4D6] bg-white hover:bg-[#FAF8F5] text-burgundy hover:text-burgundy-hover text-xs uppercase tracking-[0.2em] font-sans font-semibold transition cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                >
+                  <span>Explore All {productReviews.length} Authenticated Reviews</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              ) : showAllReviews && productReviews.length > featuredReviews.length ? (
+                <button
+                  type="button"
+                  onClick={() => { setShowAllReviews(false); setReviewFilter('featured'); }}
+                  className="w-full py-3 rounded-[2px] border border-[#EBE4D6] bg-white hover:bg-[#FAF8F5] text-dark-brown/70 hover:text-dark-brown text-xs uppercase tracking-[0.2em] font-sans font-medium transition cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+                >
+                  <span>Show Curated Featured Only ({featuredReviews.length})</span>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -924,27 +1074,27 @@ export default function ProductDetail() {
 
       {/* Complementary Works from the Atelier Section */}
       {relatedProducts.length > 0 && (
-        <section className="bg-[#F8F3EA] py-16 sm:py-20 border-t border-[#EBE4D6]">
+        <section className="bg-cream py-16 sm:py-20 border-t border-[#EBE4D6]">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
               <div>
-                <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-sans text-[#6B2732] font-semibold mb-2">
-                  <span className="w-4 h-[1px] bg-[#C6A15B]" />
+                <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold mb-2">
+                  <span className="w-4 h-[1px] bg-gold" />
                   <span>Curator's Pairing</span>
                 </div>
-                <h2 className="font-editorial text-3xl sm:text-4xl text-[#332522] font-normal tracking-tight">
+                <h2 className="font-editorial text-3xl sm:text-4xl text-dark-brown font-normal tracking-tight">
                   COMPLEMENTARY MASTERWORKS
                 </h2>
               </div>
               <Link
                 to="/shop"
-                className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-maroon-deep hover:opacity-80 transition"
+                className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-burgundy hover:opacity-80 transition"
               >
                 View Full Collection →
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
               {relatedProducts.map(p => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -973,13 +1123,13 @@ function StoryScroll({ finish }: { finish: string }) {
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: i * 0.08 }}
-          className="relative pl-12 py-3 border-l-2 border-[#6B2732]/20"
+          className="relative pl-12 py-3 border-l-2 border-burgundy/20"
         >
-          <span className="absolute left-0 -translate-x-1/2 top-2.5 w-8 h-8 rounded-full bg-white border border-[#6B2732] flex items-center justify-center font-editorial text-[#6B2732] text-xs font-semibold shadow-2xs">
+          <span className="absolute left-0 -translate-x-1/2 top-2.5 w-8 h-8 rounded-full bg-white border border-burgundy flex items-center justify-center font-editorial text-burgundy text-xs font-semibold shadow-2xs">
             {c.n}
           </span>
-          <h4 className="font-editorial text-lg text-[#332522] mb-1 font-normal">{c.title}</h4>
-          <p className="text-xs text-[#332522]/75 leading-relaxed font-sans">{c.body}</p>
+          <h4 className="font-editorial text-lg text-dark-brown mb-1 font-normal">{c.title}</h4>
+          <p className="text-xs text-dark-brown/75 leading-relaxed font-sans">{c.body}</p>
         </motion.div>
       ))}
     </div>

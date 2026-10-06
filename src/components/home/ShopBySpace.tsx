@@ -46,15 +46,15 @@ export function ShopBySpace() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-14 lg:mb-20">
-          <div className="inline-flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.3em] font-sans text-[#6B2732] font-semibold mb-2">
-            <span className="w-5 h-[1px] bg-[#C6A15B]" />
-            <span>Architectural Context</span>
-            <span className="w-5 h-[1px] bg-[#C6A15B]" />
+          <div className="inline-flex items-center justify-center gap-2 mb-2">
+            <span className="brand-pill">
+              Architectural Context
+            </span>
           </div>
-          <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl text-[#332522] font-normal tracking-tight">
+          <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl text-dark-brown font-normal tracking-tight">
             FIND ART FOR YOUR SPACE
           </h2>
-          <p className="text-xs sm:text-sm text-[#332522]/70 font-sans mt-3 leading-relaxed">
+          <p className="text-xs sm:text-sm text-dark-brown/70 font-sans mt-3 leading-relaxed">
             Artwork comes alive when harmonized with natural light, organic materials, and intentional spatial proportions.
           </p>
         </div>
@@ -65,7 +65,7 @@ export function ShopBySpace() {
             <Link
               key={space.name}
               to={space.link}
-              className="group relative flex flex-col bg-[#F8F3EA] border border-[#EBE4D6] rounded-[2px] overflow-hidden transition-all duration-500 hover:border-[#C6A15B] hover:shadow-lg cursor-pointer"
+              className="group relative flex flex-col bg-cream border border-[#EBE4D6] rounded-[2px] overflow-hidden transition-all duration-500 hover:border-gold hover:shadow-lg cursor-pointer"
             >
               {/* Full Editorial Lifestyle Image */}
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#EBE4D6]">
@@ -82,7 +82,7 @@ export function ShopBySpace() {
                 {/* Space Title Overlay on Image */}
                 <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between text-white">
                   <div>
-                    <span className="text-[9px] uppercase tracking-[0.25em] text-[#C6A15B] font-mono block mb-1">
+                    <span className="text-[9px] uppercase tracking-[0.25em] text-gold font-mono block mb-1">
                       Space Inspiration
                     </span>
                     <h3 className="font-editorial text-2xl sm:text-3xl text-white font-normal tracking-wide">
@@ -90,23 +90,23 @@ export function ShopBySpace() {
                     </h3>
                   </div>
 
-                  <span className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white group-hover:bg-maroon-deep group-hover:text-cream transition-all duration-300">
+                  <span className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white group-hover:bg-burgundy group-hover:text-cream transition-all duration-300">
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
               </div>
 
               {/* Editorial Description & Highlight */}
-              <div className="p-6 bg-[#F8F3EA] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <p className="text-xs text-[#332522]/80 font-sans leading-relaxed max-w-md">
+              <div className="p-6 bg-cream flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <p className="text-xs text-dark-brown/80 font-sans leading-relaxed max-w-md">
                   {space.subtitle}
                 </p>
 
                 <div className="text-right sm:border-l sm:border-[#EBE4D6] sm:pl-5 shrink-0">
-                  <span className="text-[8px] uppercase tracking-[0.2em] text-[#6B2732] block font-mono">
+                  <span className="text-[8px] uppercase tracking-[0.2em] text-burgundy block font-mono font-semibold">
                     Featured
                   </span>
-                  <span className="text-xs font-editorial text-[#332522] block mt-0.5">
+                  <span className="text-xs font-editorial text-dark-brown block mt-0.5">
                     {space.artHighlighted}
                   </span>
                 </div>

@@ -99,7 +99,7 @@ export function HeroSlider() {
 
   return (
     <section 
-      className="relative bg-[#F8F3EA] border-b border-[#EBE4D6] overflow-hidden"
+      className="relative bg-cream border-b border-[#EBE4D6] overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => {
         setIsPaused(false);
@@ -112,21 +112,20 @@ export function HeroSlider() {
         <div className="lg:col-span-6 flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-20 py-12 lg:py-20 z-10">
           <div className="max-w-xl">
             
-            {/* Gold Accent Hairline & Eyebrow */}
-            <div className="inline-flex items-center gap-2.5 text-[10px] sm:text-[11px] uppercase tracking-[0.3em] font-sans text-[#6B2732] font-semibold mb-4 sm:mb-6">
-              <span className="w-8 h-[1.5px] bg-[#C6A15B]" />
-              <span>CURATED CONTEMPORARY ART</span>
+            {/* Eyebrow with Dusty Pink Accent Pill */}
+            <div className="inline-flex items-center gap-2 mb-4 sm:mb-6">
+              <span className="brand-pill">CURATED CONTEMPORARY ART</span>
             </div>
 
             {/* Main Headline - Exact Reference Typography */}
-            <h1 className="font-editorial text-5xl sm:text-6xl lg:text-7xl xl:text-[80px] text-[#332522] font-normal leading-[1.04] tracking-tight mb-5 sm:mb-6">
+            <h1 className="font-editorial text-5xl sm:text-6xl lg:text-7xl xl:text-[80px] text-dark-brown font-normal leading-[1.04] tracking-tight mb-5 sm:mb-6">
               Art that<br />
               defines<br />
               your space
             </h1>
 
             {/* Editorial Subtitle */}
-            <p className="text-xs sm:text-sm lg:text-[15px] text-[#332522]/80 leading-relaxed font-sans max-w-lg mb-8 sm:mb-10">
+            <p className="text-xs sm:text-sm lg:text-[15px] text-dark-brown/80 leading-relaxed font-sans max-w-lg mb-8 sm:mb-10">
               Curated wall art and statement pieces designed to bring character, warmth and sophistication to modern interiors.
             </p>
 
@@ -134,18 +133,18 @@ export function HeroSlider() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6 mb-10 sm:mb-14">
               <Link
                 to="/shop/wall-art"
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-[2px] bg-maroon-deep hover:bg-[#531e26] text-cream text-xs uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-300 shadow-xs hover:border-b-2 hover:border-[#C6A15B] text-center"
+                className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-[2px] bg-burgundy hover:bg-burgundy-hover text-cream text-xs uppercase tracking-[0.22em] font-sans font-semibold transition-all duration-300 shadow-xs border border-transparent hover:border-dusty-pink text-center"
               >
                 <span>SHOP WALL ART</span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#C6A15B]" />
+                <ArrowRight className="w-3.5 h-3.5 text-dusty-pink" />
               </Link>
 
               <Link
                 to="/shop"
-                className="group inline-flex items-center justify-center sm:justify-start gap-2 text-xs uppercase tracking-[0.22em] font-sans font-semibold text-[#332522] hover:text-maroon-deep transition-colors py-2"
+                className="group inline-flex items-center justify-center sm:justify-start gap-2 text-xs uppercase tracking-[0.22em] font-sans font-semibold text-dark-brown hover:text-burgundy transition-colors py-2"
               >
                 <span>EXPLORE COLLECTIONS</span>
-                <ArrowRight className="w-3.5 h-3.5 text-[#C6A15B] transition-transform duration-300 group-hover:translate-x-1" />
+                <ArrowRight className="w-3.5 h-3.5 text-gold transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </div>
 
@@ -154,11 +153,11 @@ export function HeroSlider() {
               
               {/* Numerical Index (e.g. 01 · 04) */}
               <div className="flex items-center gap-1.5 font-mono text-xs tracking-wider">
-                <span className="font-semibold text-[#332522]">
+                <span className="font-semibold text-dark-brown">
                   {String(currentIdx + 1).padStart(2, '0')}
                 </span>
-                <span className="text-[#332522]/40">·</span>
-                <span className="text-[#332522]/50">
+                <span className="text-dark-brown/40">·</span>
+                <span className="text-dark-brown/50">
                   {String(SLIDES.length).padStart(2, '0')}
                 </span>
               </div>
@@ -169,7 +168,7 @@ export function HeroSlider() {
                 title={`${Math.round(progress)}% to next slide`}
               >
                 <div 
-                  className="h-full bg-[#C6A15B] transition-all duration-75 ease-linear rounded-full"
+                  className="h-full bg-gold transition-all duration-75 ease-linear rounded-full"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -180,7 +179,7 @@ export function HeroSlider() {
                   type="button"
                   onClick={prevSlide}
                   aria-label="Previous slide"
-                  className="w-8 h-8 rounded-full border border-[#EBE4D6] bg-white/80 hover:bg-white text-[#332522] hover:text-maroon-deep flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105"
+                  className="w-8 h-8 rounded-full border border-[#EBE4D6] bg-white/80 hover:bg-white text-dark-brown hover:text-burgundy flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -189,7 +188,7 @@ export function HeroSlider() {
                   type="button"
                   onClick={nextSlide}
                   aria-label="Next slide"
-                  className="w-8 h-8 rounded-full border border-[#EBE4D6] bg-white/80 hover:bg-white text-[#332522] hover:text-maroon-deep flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105"
+                  className="w-8 h-8 rounded-full border border-[#EBE4D6] bg-white/80 hover:bg-white text-dark-brown hover:text-burgundy flex items-center justify-center transition-all cursor-pointer shadow-2xs hover:scale-105"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -230,11 +229,11 @@ export function HeroSlider() {
               to={activeSlide.artworkLink}
               className="group/badge inline-flex items-center gap-2.5 px-4 py-2.5 rounded-[2px] bg-white/92 hover:bg-white backdrop-blur-md border border-[#EBE4D6] shadow-xs transition-all duration-300 cursor-pointer"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] group-hover/badge:scale-125 transition-transform" />
-              <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.24em] font-sans text-[#332522] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-gold group-hover/badge:scale-125 transition-transform" />
+              <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.24em] font-sans text-dark-brown font-medium">
                 {activeSlide.series}
               </span>
-              <ArrowRight className="w-3 h-3 text-[#6B2732] opacity-0 -translate-x-1 group-hover/badge:opacity-100 group-hover/badge:translate-x-0 transition-all duration-200" />
+              <ArrowRight className="w-3 h-3 text-burgundy opacity-0 -translate-x-1 group-hover/badge:opacity-100 group-hover/badge:translate-x-0 transition-all duration-200" />
             </Link>
           </div>
 
@@ -251,7 +250,7 @@ export function HeroSlider() {
                 }}
                 className={`transition-all duration-300 cursor-pointer rounded-full ${
                   currentIdx === idx
-                    ? 'w-6 h-1.5 bg-[#C6A15B]'
+                    ? 'w-6 h-1.5 bg-gold'
                     : 'w-1.5 h-1.5 bg-white/60 hover:bg-white'
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}
