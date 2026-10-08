@@ -18,8 +18,15 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 
-// Connect to local Firestore emulator when enabled
-if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-  const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || 'localhost';
+// Connect to local Firestore emulator when enabled (safe across browser and Node build contexts)
+const useEmulator = 
+  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_USE_FIREBASE_EMULATOR === 'true') ||
+  (typeof process !== 'undefined' && process.env && (process.env.VITE_USE_FIREBASE_EMULATOR === 'true' || !!process.env.FIRESTORE_EMULATOR_HOST));
+
+if (useEmulator) {
+  const host = 
+    (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_FIREBASE_EMULATOR_HOST) ||
+    (typeof process !== 'undefined' && process.env?.VITE_FIREBASE_EMULATOR_HOST) ||
+    'localhost';
   connectFirestoreEmulator(db, host, 8085);
 }
