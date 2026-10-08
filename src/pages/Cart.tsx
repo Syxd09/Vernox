@@ -122,9 +122,9 @@ export default function Cart() {
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-burgundy/5 border border-burgundy/20 flex items-center justify-center text-burgundy shadow-soft">
               <ShoppingBag className="w-9 h-9 stroke-[1.5]" />
             </div>
-            <h2 className="font-display text-3xl text-burgundy mb-3 font-semibold">Your Cart is Currently Empty</h2>
+            <h2 className="font-display text-3xl text-burgundy mb-3 font-semibold">Your Bag is Currently Empty</h2>
             <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-serif-italic">
-              No bespoke metal pieces have been reserved. Each Vernox piece is precision-cut from solid 3.0mm Belgian metallurgical plate, hand-finished in Antwerp, and backed by a 10-year structural warranty.
+              No artworks are currently selected. Every Vernox piece is individually crafted to architectural precision and sealed with our studio hallmark.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link 
@@ -300,52 +300,34 @@ export default function Cart() {
                 ))}
               </div>
 
-              {/* 4 E-Commerce Trust Pillars Grid */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-burgundy/10 text-burgundy shrink-0">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">10-Year Weathering Warranty</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Industrial anti-corrosion guarantee. Guaranteed against warping, delamination, and metallurgical rust.
+              {/* Archival Provenance & Inclusions */}
+              <div className="bg-card/60 border border-border/70 rounded-sm p-6 space-y-4">
+                <div className="text-[10px] uppercase tracking-[0.24em] font-sans text-burgundy font-semibold">
+                  Studio Craftsmanship & Inclusions
+                </div>
+                <div className="grid sm:grid-cols-3 gap-6 text-xs text-muted-foreground font-sans">
+                  <div className="space-y-1">
+                    <div className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                      Archival Crate Transit
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      Custom reinforced timber crating with full transit insurance and interior foam damping.
                     </p>
                   </div>
-                </div>
-
-                <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-gold/10 text-gold shrink-0">
-                    <Truck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">Zero-Risk Crated Transit</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Reinforced archival timber crating with 100% full-value insurance. Immediate zero-cost replacement for any transit damage.
+                  <div className="space-y-1">
+                    <div className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                      Studio Hallmark
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      Each piece bears a physical stamped hallmark and includes a signed Certificate of Authenticity.
                     </p>
                   </div>
-                </div>
-
-                <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-burgundy/10 text-burgundy shrink-0">
-                    <Award className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">Numbered Hallmark & Certificate</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Each piece bears an embossed Antwerp serial stamp and is accompanied by a signed artisan certificate.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-card border border-border/70 rounded-lg p-4 flex items-start gap-3 shadow-soft">
-                  <div className="p-2.5 rounded-sm bg-gold/10 text-gold shrink-0">
-                    <RotateCcw className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs uppercase tracking-wider font-bold text-burgundy">30-Day Interior Evaluation</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Examine the piece in your natural interior light with complete peace of mind. Hassle-free return policy.
+                  <div className="space-y-1">
+                    <div className="font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                      Concealed Mounting
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      20mm machined float standoffs and a full-scale 1:1 installation template are included.
                     </p>
                   </div>
                 </div>
@@ -441,8 +423,8 @@ export default function Cart() {
 
                   <div className="border-t border-border/80 pt-4 flex justify-between items-baseline">
                     <div>
-                      <span className="font-display text-lg text-burgundy font-semibold block">Total Investment</span>
-                      <span className="text-[10px] text-muted-foreground">Includes insurance, customs & packaging</span>
+                      <span className="font-display text-lg text-burgundy font-semibold block">Total</span>
+                      <span className="text-[10px] text-muted-foreground">Includes insurance, taxes & crating</span>
                     </div>
                     <span className="font-mono text-2xl font-bold text-burgundy">
                       {storeConfig.currency}{total.toFixed(2)}
@@ -456,7 +438,7 @@ export default function Cart() {
                   onClick={() => navigate('/checkout')}
                   className="w-full bg-burgundy hover:bg-burgundy-hover text-cream font-semibold py-4 rounded-[2px] hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.22em] font-sans flex items-center justify-center gap-2 shadow-sm cursor-pointer border border-transparent hover:border-dusty-pink"
                 >
-                  <span>PROCEED TO SECURE CHECKOUT</span>
+                  <span>PROCEED TO CHECKOUT</span>
                   <ArrowRight className="w-4 h-4 text-dusty-pink" />
                 </button>
 
@@ -467,21 +449,11 @@ export default function Cart() {
                   ← Return to Atelier Collections
                 </Link>
 
-                {/* Bank-Grade Security Seals */}
-                <div className="border-t border-border/60 pt-4 space-y-3">
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <Lock className="w-3.5 h-3.5 text-gold" />
-                    <span>256-Bit Bank-Grade SSL Encryption</span>
-                  </div>
-
-                  {/* Payment Icons */}
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-[9px] uppercase tracking-wider text-muted-foreground/80 font-mono">
-                    <span className="px-2 py-1 bg-background border border-border/80 rounded">Visa</span>
-                    <span className="px-2 py-1 bg-background border border-border/80 rounded">MasterCard</span>
-                    <span className="px-2 py-1 bg-background border border-border/80 rounded">American Express</span>
-                    <span className="px-2 py-1 bg-background border border-border/80 rounded">UPI / QR</span>
-                    <span className="px-2 py-1 bg-background border border-border/80 rounded">Razorpay</span>
-                  </div>
+                {/* Studio Assurances Note */}
+                <div className="border-t border-border/60 pt-4 text-center">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-sans">
+                    Complimentary White-Glove Crated Delivery Worldwide
+                  </p>
                 </div>
               </div>
 
@@ -491,11 +463,11 @@ export default function Cart() {
                   <PhoneCall className="w-4 h-4" />
                 </div>
                 <div className="text-xs">
-                  <div className="font-semibold text-burgundy">Direct Atelier Concierge</div>
+                  <div className="font-semibold text-burgundy">Atelier Concierge Inquiries</div>
                   <div className="text-muted-foreground text-[11px] mt-0.5">
-                    Need custom sizing or project consultation?{' '}
-                    <a href="tel:+3232314490" className="text-burgundy font-semibold hover:underline">
-                      +32 3 231 44 90
+                    Need custom dimensions or corporate trade advice?{' '}
+                    <a href="mailto:concierge@vernox.com" className="text-burgundy font-semibold hover:underline">
+                      concierge@vernox.com
                     </a>
                   </div>
                 </div>

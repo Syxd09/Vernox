@@ -23,7 +23,7 @@ import {
   Type, CircleDot, Spline, Layers, Settings2, Activity,
   Upload, Eye, EyeOff, Lock, Unlock, Trash2, Copy,
   ArrowUp, ArrowDown, CheckCircle2, AlertTriangle, Wand2, ShieldAlert,
-  Maximize2, Sparkles, Scissors, Crop, Grid, X
+  Maximize2, Scissors, Crop, Grid, X
 } from 'lucide-react';
 
 interface ToolsPanelProps {
@@ -703,7 +703,6 @@ export function ToolsPanel({ initialTab = 'tools', onClose, className }: ToolsPa
                   <div className="pt-0.5">
                     <div className="flex items-center justify-between text-[10px] uppercase font-mono tracking-wider text-muted-foreground mb-1.5">
                       <span>Or Try Studio Silhouette Motifs</span>
-                      <Sparkles className="w-3 h-3 text-gold" />
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">
                       <button

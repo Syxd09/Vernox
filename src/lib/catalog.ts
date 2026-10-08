@@ -83,7 +83,7 @@ export const products: Product[] = [
     tagline: 'Architectural quadrant harmony with gold line', category: 'wall-art', price: 195,
     shapeId: pickShape('square'), finishes: ['gold', 'steel', 'copper'],
     imageUrl: '/images/prod-maroon-geometry.jpg',
-    alloySpec: 'Deep Burgundy #722F37 & Terracotta Acrylics on Linen Canvas',
+    alloySpec: 'Deep Burgundy #5B262C & Terracotta Acrylics on Linen Canvas',
     stock: 19, trackInventory: true, featured: true, bestseller: true, isNew: true,
     sizes: [
       { label: 'Gallery · 60 × 60 cm', widthMm: 600, heightMm: 600, priceDelta: 0 },

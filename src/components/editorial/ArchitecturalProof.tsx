@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Quote, ArrowLeft, ArrowRight, ShieldCheck, MapPin } from 'lucide-react';
-import { useCatalog } from '@/lib/catalogContext';
+import { Star, Quote, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface CuratedTestimonial {
   id: string;
@@ -48,10 +47,7 @@ const ARCHITECTURAL_TESTIMONIALS: CuratedTestimonial[] = [
 ];
 
 export function ArchitecturalProof() {
-  const { reviews, products } = useCatalog();
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  // If there are user reviews in the catalogContext, we can include them seamlessly
   const current = ARCHITECTURAL_TESTIMONIALS[currentIndex];
 
   const handleNext = () => {
@@ -65,57 +61,58 @@ export function ArchitecturalProof() {
   return (
     <section 
       id="testimonials" 
-      className="relative py-24 md:py-36 bg-[#141518] text-[#F4F2EE] border-b border-white/10 overflow-hidden"
+      className="relative py-20 lg:py-28 bg-[#FAF8F5] text-dark-brown border-b border-[#EBE4D6] overflow-hidden"
     >
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/2 left-1/3 w-96 h-96 bg-[#C5A880]/[0.03] rounded-full blur-[140px] pointer-events-none" />
-
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Section Pill */}
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[2px] bg-white/5 border border-white/15 text-[#C5A880] text-[9px] uppercase tracking-[0.3em] font-semibold mb-3.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
-            <span>Architectural Provenance & Client Feedback</span>
+      <div className="max-w-5xl mx-auto px-6">
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2.5 text-burgundy text-[10px] uppercase tracking-[0.28em] font-mono font-medium mb-3">
+            <span className="w-5 h-px bg-burgundy/40" />
+            <span>Architectural Provenance & Feedback</span>
+            <span className="w-5 h-px bg-burgundy/40" />
           </div>
-          <h2 className="font-editorial text-3xl sm:text-4xl md:text-5xl text-white font-normal">
-            Voices from living spaces.
+          <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl text-dark-brown font-normal tracking-tight">
+            Voices from Living Spaces
           </h2>
         </div>
 
         {/* Large Editorial Quote Stage */}
-        <div className="relative rounded-[4px] border border-white/15 bg-black/60 backdrop-blur-xl p-8 sm:p-14 md:p-20 shadow-2xl">
-          <Quote className="w-12 h-12 text-[#C5A880]/30 mb-8" />
+        <div className="relative rounded-[2px] border border-[#EBE4D6] bg-white p-8 sm:p-12 md:p-16 shadow-xs">
+          <Quote className="w-10 h-10 text-gold/40 mb-6" />
 
           <AnimatePresence mode="wait">
             <motion.div
               key={current.id}
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-8"
             >
-              <blockquote className="font-editorial text-2xl sm:text-3xl md:text-4xl text-white font-normal leading-[1.3] tracking-wide">
+              <blockquote className="font-editorial text-xl sm:text-2xl md:text-3xl text-dark-brown font-normal leading-[1.35] tracking-tight">
                 "{current.quote}"
               </blockquote>
 
               {/* Attribution */}
-              <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+              <div className="pt-6 border-t border-[#F0EAE0] flex flex-col sm:flex-row sm:items-end justify-between gap-6">
                 <div>
-                  <div className="flex items-center gap-1.5 mb-2">
+                  <div className="flex items-center gap-1.5 mb-2.5">
                     {Array.from({ length: current.rating }).map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-[#C5A880] text-[#C5A880]" />
+                      <Star key={i} className="w-3.5 h-3.5 fill-gold text-gold" />
                     ))}
-                    <span className="text-[10px] font-mono text-[#C5A880] ml-1.5">5.0 Verified Installation</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-emerald-800 bg-emerald-700/10 border border-emerald-700/20 px-2 py-0.5 rounded-[1px] font-semibold font-sans ml-2">
+                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700" />
+                      Verified Installation
+                    </span>
                   </div>
 
-                  <div className="font-editorial text-xl text-white font-normal">
+                  <div className="font-editorial text-xl text-dark-brown font-medium">
                     {current.client}
                   </div>
-                  <div className="text-xs text-white/60 font-mono mt-0.5">
-                    {current.role} · <span className="text-[#C5A880]">{current.location}</span>
+                  <div className="text-xs text-dark-brown/70 font-sans mt-0.5">
+                    {current.role} · <span className="text-burgundy font-medium">{current.location}</span>
                   </div>
-                  <div className="text-[11px] text-white/40 font-mono mt-1">
+                  <div className="text-[11px] text-dark-brown/50 font-mono mt-1">
                     Commission: {current.product}
                   </div>
                 </div>
@@ -125,18 +122,18 @@ export function ArchitecturalProof() {
                   <button
                     type="button"
                     onClick={handlePrev}
-                    className="p-3 rounded-[2px] border border-white/20 hover:border-white text-white/70 hover:text-white transition"
+                    className="p-3 rounded-[2px] border border-[#EBE4D6] hover:border-burgundy hover:text-burgundy text-dark-brown transition bg-white shadow-2xs cursor-pointer"
                     aria-label="Previous quote"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-xs font-mono text-white/50 px-1">
+                  <span className="text-xs font-mono text-dark-brown/60 px-1 select-none">
                     0{currentIndex + 1} / 0{ARCHITECTURAL_TESTIMONIALS.length}
                   </span>
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="p-3 rounded-[2px] border border-white/20 hover:border-white text-white/70 hover:text-white transition"
+                    className="p-3 rounded-[2px] border border-[#EBE4D6] hover:border-burgundy hover:text-burgundy text-dark-brown transition bg-white shadow-2xs cursor-pointer"
                     aria-label="Next quote"
                   >
                     <ArrowRight className="w-4 h-4" />

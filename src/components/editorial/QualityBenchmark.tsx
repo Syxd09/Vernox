@@ -1,4 +1,4 @@
-import { ShieldCheck, X, Check, Award, Flame, Box, Sparkles, Layers } from 'lucide-react';
+import { ShieldCheck, X, Check, Award, Flame, Box, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function QualityBenchmark() {

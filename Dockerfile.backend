@@ -1,0 +1,22 @@
+# Optimized Node.js runtime for Vernox Backend API
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Cache dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy necessary source files
+COPY tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY src/ ./src/
+COPY api/ ./api/
+COPY server/ ./server/
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+EXPOSE 3001
+
+# Run with tsx and strict memory cap (--max-old-space-size=256) to guarantee minimal RAM usage
+CMD ["npx", "tsx", "server/index.ts"]

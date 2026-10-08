@@ -9,6 +9,9 @@ import { MaroonCollection } from '@/components/home/MaroonCollection';
 import { BrandStory } from '@/components/home/BrandStory';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { CraftingStudioSection } from '@/components/home/CraftingStudioSection';
+import { AtelierTrustBar } from '@/components/editorial/AtelierTrustBar';
+import { ArchitecturalProof } from '@/components/editorial/ArchitecturalProof';
+import { InteriorInspiration } from '@/components/editorial/InteriorInspiration';
 import { InlineStudio } from '@/components/experience/InlineStudio';
 import { B2BTradeModal } from '@/components/shop/B2BTradeModal';
 
@@ -26,25 +29,34 @@ export default function Home() {
         {/* 02. Split Editorial Hero Slider */}
         <HeroSlider />
 
-        {/* 03. Explore Our Collections Category Grid */}
+        {/* 03. Atelier Quality & Trust Bar */}
+        <AtelierTrustBar />
+
+        {/* 04. Explore Our Collections Category Grid */}
         <CategorySection />
 
-        {/* 04. Curated for Your Space - 4-Column Product Grid */}
+        {/* 05. Curated for Your Space - Product Grid */}
         <FeaturedProducts />
 
-        {/* 05. The Bespoke Crafting Studio - Design Your Own */}
+        {/* 06. Real Architectural Installations & Spaces Showcase */}
+        <InteriorInspiration />
+
+        {/* 07. The Bespoke Crafting Studio - Design Your Own */}
         <CraftingStudioSection onOpenStudio={() => setStudioOpen(true)} />
 
-        {/* 06. Find Art for Your Space - Architectural Environments */}
+        {/* 08. Find Art for Your Space - Architectural Environments */}
         <ShopBySpace />
 
-        {/* 07. The Maroon Collection - Deep Maroon Editorial Feature */}
+        {/* 09. The Maroon Collection - Deep Maroon Editorial Feature */}
         <MaroonCollection />
 
-        {/* 08. Art for the Way You Live - Asymmetric Brand Story */}
+        {/* 10. Architectural Provenance & Collector Voices */}
+        <ArchitecturalProof />
+
+        {/* 11. Art for the Way You Live - Asymmetric Brand Story */}
         <BrandStory />
 
-        {/* 09. Stay Inspired - Luxury Minimalist Newsletter */}
+        {/* 12. Stay Inspired - Luxury Minimalist Newsletter */}
         <NewsletterSection />
       </main>
 

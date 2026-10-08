@@ -1,0 +1,63 @@
+# Vernox Containerized Architecture & Deployment
+
+This project includes a multi-service Docker Compose configuration that runs the entire Vernox platform with isolated memory limits, saving gigabytes of host RAM.
+
+---
+
+## 🏗️ Architecture Overview
+
+| Service | Container Name | Port Mapping | Image / Runtime | Memory Limit |
+| :--- | :--- | :--- | :--- | :--- |
+| **Frontend** | `vernox-frontend` | `http://localhost:8080` | `nginx:alpine` (Production SPA + Reverse Proxy) | **128 MB** |
+| **Backend** | `vernox-backend` | `http://localhost:3001` | `node:20-alpine` (Vernox API Server) | **384 MB** |
+| **Database** | `vernox-database` | `http://localhost:8085` | `mtlynch/firestore-emulator` (ACID Firestore) | **384 MB** |
+
+> **Total Memory Footprint**: Less than **~600 MB - 800 MB** combined (compared to ~5,000 MB when running multiple local Node/Vite watchers and browser instances on host Windows).
+
+---
+
+## 🚀 Quick Start Commands
+
+### 1. Start all containers in the background
+```bash
+docker compose up -d
+```
+
+### 2. View live service logs
+```bash
+docker compose logs -f
+```
+
+To view logs for a specific service:
+```bash
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f database
+```
+
+### 3. Check container health & resource usage
+```bash
+docker compose ps
+docker stats vernox-frontend vernox-backend vernox-database
+```
+
+### 4. Stop all services
+```bash
+docker compose down
+```
+
+### 5. Stop and wipe persistent database volume (Clean Reset)
+```bash
+docker compose down -v
+```
+
+---
+
+## 🌐 Endpoints & Routing
+
+- **Web Application**: [`http://localhost:8080`](http://localhost:8080)
+- **API Health Check**: [`http://localhost:8080/api/health`](http://localhost:8080/api/health) or [`http://localhost:3001/api/health`](http://localhost:3001/api/health)
+- **Order Creation**: `POST /api/create-order`
+- **Checkout Intent**: `POST /api/checkout-intent`
+- **Payment Verification**: `POST /api/verify-payment`
+- **Firestore Emulator**: [`http://localhost:8085`](http://localhost:8085)

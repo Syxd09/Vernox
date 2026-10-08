@@ -14,23 +14,17 @@ import {
   Check, 
   Compass, 
   ChevronDown, 
+  ChevronUp,
   ShoppingBag, 
   ArrowLeft, 
   Ruler, 
-  Hammer, 
-  Wind, 
   Star, 
   Heart, 
-  Award, 
-  ShieldCheck, 
-  Clock, 
-  Truck, 
-  Sparkles,
-  Layers,
-  Eye,
+  Eye, 
   Maximize2,
-  CheckCircle2,
-  ChevronUp
+  Layers,
+  Award,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -251,7 +245,7 @@ export default function ProductDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 w-full">
                 {([
                   ...(product.imageUrl ? [{ id: 'photo', label: 'Architectural Photo', icon: Eye }] : []),
-                  { id: 'preview', label: '3D Vector', icon: Sparkles },
+                  { id: 'preview', label: '3D Vector', icon: Compass },
                   { id: 'wall', label: 'Room Scale', icon: Maximize2 },
                   { id: 'story', label: 'Atelier Making', icon: Layers },
                 ] as { id: Tab; label: string; icon: any }[]).map(t => (
@@ -363,7 +357,7 @@ export default function ProductDetail() {
                   tab === 'preview' ? 'border-burgundy ring-1 ring-burgundy' : 'border-[#EBE4D6] hover:border-burgundy/40 opacity-80 hover:opacity-100'
                 )}
               >
-                <Sparkles className="w-4 h-4 text-gold mb-1" />
+                <Compass className="w-4 h-4 text-gold mb-1" />
                 <span className="text-[9px] uppercase tracking-wider font-sans font-semibold text-dark-brown">3D Vector</span>
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] uppercase tracking-wider py-0.5 text-center font-sans">
                   Interactive
@@ -428,8 +422,8 @@ export default function ProductDetail() {
             
             {/* Product Title & Brand Identity */}
             <div>
-              <div className="inline-flex items-center gap-2 mb-2">
-                <span className="brand-pill">
+              <div className="mb-2.5">
+                <span className="text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold">
                   {product.tagline || formattedCategory}
                 </span>
               </div>
@@ -642,38 +636,40 @@ export default function ProductDetail() {
             </div>
 
             {/* Real-Time Atelier Dispatch & Crating Promise */}
+            {/* Atelier Dispatch & Transit Notes */}
             <div className="p-4 rounded-[2px] bg-white border border-[#EBE4D6] space-y-2.5 shadow-2xs">
-              <div className="flex items-center gap-2.5 text-xs font-semibold text-dark-brown font-sans">
-                <Clock className="w-4 h-4 text-gold shrink-0" />
-                <span>Priority Dispatch: Order within 3h 48m for Tuesday Dispatch</span>
+              <div className="flex items-baseline gap-2 text-xs font-sans">
+                <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Production</span>
+                <span className="text-dark-brown/40">·</span>
+                <span className="text-dark-brown font-medium">Hand-finished & crated within 5–7 business days</span>
               </div>
-              <div className="flex items-center gap-2.5 text-xs text-dark-brown/75 font-sans">
-                <Truck className="w-4 h-4 text-burgundy shrink-0" />
-                <span>Complimentary Insured White-Glove Crated Shipping worldwide</span>
+              <div className="flex items-baseline gap-2 text-xs text-dark-brown/75 font-sans">
+                <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Logistics</span>
+                <span className="text-dark-brown/40">·</span>
+                <span>Complimentary insured white-glove transit worldwide</span>
               </div>
-              <div className="flex items-center gap-2.5 text-[11px] text-emerald-800 font-sans font-medium">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>In Stock in Antwerp Atelier · Ready for Laser Final Inspection</span>
+              <div className="flex items-baseline gap-2 text-[11px] text-dark-brown/70 font-sans">
+                <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Edition</span>
+                <span className="text-dark-brown/40">·</span>
+                <span>Numbered hallmark stamp & signed studio certificate included</span>
               </div>
             </div>
 
-            {/* 4 Core Trust Attributes */}
-            <div className="pt-6 border-t border-[#EBE4D6] grid grid-cols-2 gap-y-5 gap-x-6 text-xs">
+            {/* Architectural Specifications Ledger */}
+            <div className="pt-6 border-t border-[#EBE4D6] grid grid-cols-2 gap-y-4 gap-x-6 text-xs">
               {[
-                { icon: Hammer, label: 'Alloy Gauge', v: 'Solid 3.0mm Belgian Plate' },
-                { icon: Award, label: 'Provenance', v: 'Numbered Hallmark & Signed Certificate' },
-                { icon: Wind, label: 'Mounting', v: 'Concealed 20mm Rear Float Standoffs' },
-                { icon: ShieldCheck, label: 'Warranty', v: '10-Year Anti-Corrosion Guarantee' },
+                { code: '01', label: 'Material Standard', v: 'Solid 3.0mm Architectural Plate' },
+                { code: '02', label: 'Authentication', v: 'Numbered Hallmark & Certificate' },
+                { code: '03', label: 'Mounting System', v: 'Concealed 20mm Float Standoffs' },
+                { code: '04', label: 'Conservation', v: 'Archival Metallurgy Guarantee' },
               ].map(f => (
-                <div key={f.label} className="flex items-start gap-2.5">
-                  <f.icon className="w-4 h-4 text-gold mt-0.5 shrink-0" />
-                  <div>
-                    <div className="text-[9px] uppercase tracking-widest text-burgundy font-sans font-semibold">
-                      {f.label}
-                    </div>
-                    <div className="text-dark-brown font-medium font-sans mt-0.5">
-                      {f.v}
-                    </div>
+                <div key={f.label} className="border-l border-gold/50 pl-3 py-0.5">
+                  <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest text-burgundy font-sans font-semibold">
+                    <span className="font-mono text-dark-brown/40">{f.code}</span>
+                    <span>{f.label}</span>
+                  </div>
+                  <div className="text-dark-brown font-medium font-sans mt-0.5 leading-snug">
+                    {f.v}
                   </div>
                 </div>
               ))}
@@ -799,9 +795,9 @@ export default function ProductDetail() {
                 Authenticated feedback from architects, interior designers, and private collectors.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-dark-brown/80 font-sans">
-              <ShieldCheck className="w-4 h-4 text-gold" />
-              <span>100% Authenticated Commissions</span>
+            <div className="flex items-center gap-2 text-xs text-dark-brown/70 font-sans">
+              <span className="font-mono text-gold text-xs">ARCHIVE ·</span>
+              <span>Authenticated Collector Feedback</span>
             </div>
           </div>
           
@@ -929,7 +925,7 @@ export default function ProductDetail() {
                         : 'bg-[#FAF8F5] text-dark-brown/70 hover:text-dark-brown border border-[#EBE4D6] hover:bg-white'
                     )}
                   >
-                    <Sparkles className="w-3 h-3 text-gold" />
+                    <Award className="w-3 h-3 text-gold" />
                     <span>Featured Curations ({featuredReviews.length})</span>
                   </button>
 
@@ -982,7 +978,7 @@ export default function ProductDetail() {
                           </span>
                           {r.featured && (
                             <span className="inline-flex items-center gap-1 text-[8px] uppercase tracking-[0.2em] font-sans font-semibold bg-burgundy text-cream px-2 py-0.5 rounded-[1px]">
-                              <Sparkles className="w-2.5 h-2.5 text-dusty-pink" />
+                              <Award className="w-2.5 h-2.5 text-dusty-pink" />
                               Curator Highlight
                             </span>
                           )}

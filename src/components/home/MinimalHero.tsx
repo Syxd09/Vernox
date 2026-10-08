@@ -8,8 +8,8 @@ export function MinimalHero() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Text Column */}
           <div className="lg:col-span-6 space-y-6 lg:space-y-8">
-            <div className="inline-flex items-center gap-2">
-              <span className="brand-pill">
+            <div>
+              <span className="text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold">
                 Vernox Atelier · 2026 Collection
               </span>
             </div>

@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
 import { Product } from '@/lib/catalog';
 import { useCart } from '@/lib/cartContext';
 import { ShoppingBag, Heart } from 'lucide-react';
@@ -14,8 +13,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, compact }: ProductCardProps) {
   const { add } = useCart();
-  const { wishlist, toggleWishlist, storeConfig } = useCatalog();
-  const [isHovered, setIsHovered] = useState(false);
+  const { wishlist, toggleWishlist } = useCatalog();
 
   const isWishlisted = wishlist.includes(product.id);
   const defaultSize = product.sizes?.[0] || { label: 'Standard', widthMm: 800, heightMm: 800, priceDelta: 0 };
@@ -49,11 +47,7 @@ export function ProductCard({ product, compact }: ProductCardProps) {
     .join(' ');
 
   return (
-    <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group relative flex flex-col bg-white border border-[#EBE4D6] rounded-[2px] transition-all duration-300 hover:border-gold/50 hover:shadow-xs"
-    >
+    <div className="group relative flex flex-col bg-white border border-[#EBE4D6] rounded-[2px] transition-all duration-300 hover:border-gold/50 hover:shadow-xs min-w-0 w-full overflow-hidden">
       {/* Product Image Area */}
       <div className="relative aspect-[4/5] bg-[#FAF8F5] overflow-hidden">
         <Link to={`/product/${product.slug}`} className="block w-full h-full">
@@ -103,21 +97,15 @@ export function ProductCard({ product, compact }: ProductCardProps) {
           </div>
         )}
 
-        {/* Subtle Slide-Up Add to Cart Button on Hover */}
-        <div
-          className={`absolute bottom-0 inset-x-0 p-2 sm:p-3 transition-all duration-300 ease-out z-20 ${
-            isHovered
-              ? 'opacity-100 translate-y-0'
-              : 'opacity-0 translate-y-2 pointer-events-none'
-          }`}
-        >
+        {/* Desktop Only: Slide-Up Add to Cart Button on Mouse Hover (Pure CSS, never sticks on mobile) */}
+        <div className="hidden md:block absolute bottom-0 inset-x-0 p-2 sm:p-3 transition-all duration-300 ease-out z-20 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto">
           <button
             type="button"
             onClick={handleQuickAdd}
             className="w-full py-2 sm:py-2.5 px-2 sm:px-4 rounded-[2px] bg-burgundy hover:bg-burgundy-hover text-cream text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-sans font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm border border-transparent hover:border-dusty-pink"
           >
             <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-dusty-pink" />
-            <span className={compact ? "hidden sm:inline" : ""}>Add to Cart</span>
+            <span>Add to Cart</span>
           </button>
         </div>
       </div>
@@ -148,7 +136,7 @@ export function ProductCard({ product, compact }: ProductCardProps) {
           </Link>
         </div>
 
-        {/* Price & Quick Link */}
+        {/* Price & Quick Actions */}
         <div className={cn(
           "border-t border-[#F2ECE1] flex items-center justify-between",
           compact ? "mt-1.5 pt-1.5" : "mt-2 sm:mt-3 pt-2 sm:pt-3"
@@ -159,15 +147,29 @@ export function ProductCard({ product, compact }: ProductCardProps) {
           )}>
             ${price.toLocaleString()}
           </span>
-          <Link
-            to={`/product/${product.slug}`}
-            className={cn(
-              "uppercase tracking-[0.18em] text-burgundy hover:text-dusty-pink transition-colors font-sans font-medium",
-              compact ? "text-[8px]" : "text-[9px] sm:text-[10px]"
-            )}
-          >
-            Details
-          </Link>
+
+          <div className="flex items-center gap-2">
+            {/* Mobile quick-add button (Clean footer placement, never blocks artwork) */}
+            <button
+              type="button"
+              onClick={handleQuickAdd}
+              className="md:hidden flex items-center justify-center w-6 h-6 rounded-[2px] bg-[#FAF8F5] text-burgundy hover:bg-burgundy hover:text-white border border-[#EBE4D6] transition-colors cursor-pointer"
+              title="Add to Cart"
+              aria-label="Add to Cart"
+            >
+              <ShoppingBag className="w-3 h-3" />
+            </button>
+
+            <Link
+              to={`/product/${product.slug}`}
+              className={cn(
+                "uppercase tracking-[0.18em] text-burgundy hover:text-dusty-pink transition-colors font-sans font-medium",
+                compact ? "text-[8px]" : "text-[9px] sm:text-[10px]"
+              )}
+            >
+              Details
+            </Link>
+          </div>
         </div>
       </div>
     </div>

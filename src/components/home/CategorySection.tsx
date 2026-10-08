@@ -47,8 +47,8 @@ export function CategorySection() {
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12 sm:mb-16">
           <div>
-            <div className="inline-flex items-center gap-2 mb-2">
-              <span className="brand-pill">
+            <div className="mb-2">
+              <span className="text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold">
                 Curated Disciplines
               </span>
             </div>

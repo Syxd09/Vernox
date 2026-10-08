@@ -3,9 +3,9 @@ import { Instagram, Facebook, ArrowUpRight } from 'lucide-react';
 
 export function SiteFooter() {
   return (
-    <footer className="bg-burgundy text-cream border-t border-dusty-pink/30">
+    <footer className="bg-burgundy text-cream border-t border-dusty-pink/30 w-full max-w-full overflow-hidden">
       {/* Main Luxury Minimalist Footer Content */}
-      <div className="max-w-7xl mx-auto px-6 py-16 lg:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 lg:py-20 w-full min-w-0">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8">
           {/* Brand Info & Statement */}
           <div className="lg:col-span-1 space-y-4">
@@ -57,9 +57,8 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/customize" className="text-dusty-pink font-medium hover:underline transition-colors flex items-center gap-1.5">
-                  <span>Crafting Studio</span>
-                  <span className="text-[8px] bg-dusty-pink/20 text-dusty-pink border border-dusty-pink/40 px-1.5 py-0.5 rounded font-mono">CUSTOM</span>
+                <Link to="/customize" className="hover:text-dusty-pink transition-colors">
+                  Crafting Studio (Custom CAD)
                 </Link>
               </li>
             </ul>
@@ -171,13 +170,13 @@ export function SiteFooter() {
       </div>
 
       {/* Bottom Legal & Craftsmanship Bar */}
-      <div className="border-t border-dusty-pink/20 py-8 bg-burgundy-hover text-xs text-cream/70">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="text-[10px] uppercase tracking-[0.22em] text-cream/80 font-sans">
+      <div className="border-t border-dusty-pink/20 py-8 bg-burgundy-hover text-xs text-cream/70 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left w-full min-w-0">
+          <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.14em] sm:tracking-[0.22em] text-cream/80 font-sans max-w-full break-words">
             © {new Date().getFullYear()} VERNOX · ALL RIGHTS RESERVED · MINIMAL ART & STATEMENT OBJECTS
           </div>
 
-          <div className="flex items-center gap-6 text-[10px] uppercase tracking-[0.2em] font-sans">
+          <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-[9px] sm:text-[10px] uppercase tracking-[0.16em] sm:tracking-[0.2em] font-sans">
             <Link to="/about" className="hover:text-dusty-pink transition-colors">
               Privacy Policy
             </Link>

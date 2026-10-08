@@ -6,7 +6,7 @@ import { ProductCard } from '@/components/shop/ProductCard';
 import { useCatalog } from '@/lib/catalogContext';
 import { ProductCategory } from '@/lib/catalog';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Check, Search, SlidersHorizontal, X, Sparkles, Shield, Hammer, Award, Grid2x2, Grid3x3 } from 'lucide-react';
+import { ChevronDown, Check, Search, SlidersHorizontal, X } from 'lucide-react';
 
 export default function Shop() {
   const { products, categories, storeConfig } = useCatalog();
@@ -19,7 +19,6 @@ export default function Shop() {
 
   // Filtering, Sorting & View States
   const [sort, setSort] = useState<'featured' | 'price-asc' | 'price-desc' | 'bestsellers' | 'new'>('featured');
-  const [columns, setColumns] = useState<2 | 3>(2);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [maxPrice, setMaxPrice] = useState(maxCatalogPrice);
@@ -109,20 +108,18 @@ export default function Shop() {
   }, [products]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream">
+    <div className="min-h-screen flex flex-col bg-cream overflow-x-clip w-full max-w-full relative">
       <SiteHeader />
       
       {/* Editorial Hero Header */}
-      <section className="border-b border-[#EBE4D6] bg-gradient-to-b from-[#F5EFE4] to-cream pt-14 pb-12 sm:pt-20 sm:pb-16">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="border-b border-[#EBE4D6] bg-gradient-to-b from-[#F5EFE4] to-cream pt-12 pb-10 sm:pt-20 sm:pb-16 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full min-w-0">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 mb-3">
-              <span className="brand-pill">
-                {activeCategory ? 'Curated Collection' : 'Permanent Atelier Catalog'}
-              </span>
-            </div>
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold mb-3">
+              {activeCategory ? 'Curated Collection' : 'Permanent Atelier Catalog'}
+            </p>
             
-            <h1 className="font-editorial text-4xl sm:text-5xl md:text-6xl text-dark-brown tracking-tight leading-[1.05] font-normal mb-4">
+            <h1 className="font-editorial text-3xl sm:text-5xl md:text-6xl text-dark-brown tracking-tight leading-[1.05] font-normal mb-3 sm:mb-4 break-words">
               {activeCategory ? activeCategory.name.toUpperCase() : 'WORKS OF ART & SCULPTURES'}
             </h1>
             
@@ -134,19 +131,19 @@ export default function Shop() {
           </div>
 
           {/* Clean Category Tabs / Horizontal Filter Navigation */}
-          <div className="mt-10 sm:mt-12 pt-6 border-t border-[#EBE4D6] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="mt-8 sm:mt-12 pt-5 sm:pt-6 border-t border-[#EBE4D6] flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 w-full max-w-full overscroll-x-contain touch-pan-x">
             <Link
               to="/shop"
               className={cn(
-                'px-4 py-2 rounded-[2px] text-[11px] uppercase tracking-[0.2em] font-sans transition-all duration-200 shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-2',
+                'px-3.5 sm:px-4 py-2 rounded-[2px] text-[10px] sm:text-[11px] uppercase tracking-[0.18em] sm:tracking-[0.2em] font-sans transition-all duration-200 shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1.5 sm:gap-2',
                 !category
                   ? 'bg-burgundy text-cream font-semibold shadow-xs'
                   : 'bg-white/80 hover:bg-white text-dark-brown/80 hover:text-dark-brown border border-[#EBE4D6]'
               )}
             >
               <span>All Works</span>
-              <span className={cn('text-[9px] font-mono px-1.5 py-0.2 rounded-full', !category ? 'bg-white/20 text-cream' : 'bg-[#EBE4D6]/60 text-dark-brown/60')}>
-                {categoryCounts.all || products.length}
+              <span className="text-[10px] font-mono opacity-60 ml-0.5 sm:ml-1">
+                ({categoryCounts.all || products.length})
               </span>
             </Link>
 
@@ -158,15 +155,15 @@ export default function Shop() {
                   key={c.id}
                   to={`/shop/${c.id}`}
                   className={cn(
-                    'px-4 py-2 rounded-[2px] text-[11px] uppercase tracking-[0.2em] font-sans transition-all duration-200 shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-2',
+                    'px-3.5 sm:px-4 py-2 rounded-[2px] text-[10px] sm:text-[11px] uppercase tracking-[0.18em] sm:tracking-[0.2em] font-sans transition-all duration-200 shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1.5 sm:gap-2',
                     isActive
                       ? 'bg-burgundy text-cream font-semibold shadow-xs'
                       : 'bg-white/80 hover:bg-white text-dark-brown/80 hover:text-dark-brown border border-[#EBE4D6]'
                   )}
                 >
                   <span>{c.name}</span>
-                  <span className={cn('text-[9px] font-mono px-1.5 py-0.2 rounded-full', isActive ? 'bg-white/20 text-cream' : 'bg-[#EBE4D6]/60 text-dark-brown/60')}>
-                    {count}
+                  <span className="text-[10px] font-mono opacity-60 ml-0.5 sm:ml-1">
+                    ({count})
                   </span>
                 </Link>
               );
@@ -176,28 +173,28 @@ export default function Shop() {
       </section>
 
       {/* Main Catalog Section */}
-      <section className="max-w-7xl mx-auto w-full px-6 py-8 flex-1">
+      <section className="max-w-7xl mx-auto w-full max-w-full px-4 sm:px-6 py-6 sm:py-8 flex-1 overflow-x-clip min-w-0">
         
         {/* Top Control Bar: Search, Filters Toggle, Items Count, and Sort Dropdown */}
-        <div className="bg-white border border-[#EBE4D6] rounded-[2px] p-3 sm:p-4 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+        <div className="bg-white border border-[#EBE4D6] rounded-[2px] p-3 sm:p-4 mb-6 sm:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shadow-xs w-full max-w-full min-w-0">
           
-          {/* Left: Search & Filter Toggle */}
-          <div className="flex items-center flex-wrap gap-3 flex-1">
+          {/* Top row / Left: Search & Filter Toggle */}
+          <div className="flex items-center gap-2 sm:gap-3 w-full md:flex-1 min-w-0">
             {/* Search Input */}
-            <div className="relative min-w-[200px] sm:min-w-[260px] flex-1 max-w-md">
+            <div className="relative flex-1 min-w-0">
               <input
                 type="text"
-                placeholder="Search artwork, medium, motif..."
+                placeholder="Search artwork, medium..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] pl-9 pr-8 py-2 text-xs text-dark-brown placeholder:text-dark-brown/40 outline-none focus:border-burgundy focus:bg-white transition-colors"
+                className="w-full bg-[#FAF8F5] border border-[#EBE4D6] rounded-[2px] pl-8 sm:pl-9 pr-7 sm:pr-8 py-2 text-xs text-dark-brown placeholder:text-dark-brown/40 outline-none focus:border-burgundy focus:bg-white transition-colors truncate min-w-0"
               />
-              <Search className="w-3.5 h-3.5 text-dark-brown/50 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-dark-brown/50 absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dark-brown/40 hover:text-dark-brown p-0.5"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-brown/40 hover:text-dark-brown p-0.5"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -209,13 +206,13 @@ export default function Shop() {
               type="button"
               onClick={() => setFilterPanelOpen(prev => !prev)}
               className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2 rounded-[2px] text-xs uppercase tracking-[0.16em] font-sans font-medium transition-colors border cursor-pointer',
+                'inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-[2px] text-xs uppercase tracking-[0.14em] font-sans font-medium transition-colors border cursor-pointer shrink-0 whitespace-nowrap',
                 filterPanelOpen || activeFiltersCount > 0
                   ? 'border-burgundy bg-burgundy/5 text-burgundy'
                   : 'border-[#EBE4D6] bg-[#FAF8F5] text-dark-brown hover:bg-white'
               )}
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-gold" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-gold shrink-0" />
               <span>Refine</span>
               {activeFiltersCount > 0 && (
                 <span className="w-4 h-4 rounded-full bg-burgundy text-white text-[9px] font-mono flex items-center justify-center font-bold">
@@ -229,65 +226,31 @@ export default function Shop() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-[10px] uppercase tracking-[0.2em] font-sans font-semibold text-burgundy hover:text-burgundy-hover underline cursor-pointer ml-1"
+                className="text-[10px] uppercase tracking-[0.16em] font-sans font-semibold text-burgundy hover:text-burgundy-hover underline cursor-pointer shrink-0 whitespace-nowrap"
               >
-                Reset All
+                Reset
               </button>
             )}
           </div>
 
-          {/* Right: Works count, Column density toggle & Sort Dropdown */}
-          <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[#EBE4D6]">
-            <span className="text-xs text-dark-brown/60 font-sans hidden sm:inline">
+          {/* Bottom row / Right: Works count & Sort Dropdown */}
+          <div className="flex items-center justify-between md:justify-end gap-2 sm:gap-4 w-full md:w-auto pt-2.5 md:pt-0 border-t md:border-t-0 border-[#EBE4D6] min-w-0">
+            <span className="text-[11px] sm:text-xs text-dark-brown/60 font-sans shrink-0 whitespace-nowrap">
               Showing <strong className="text-dark-brown font-semibold">{filteredList.length}</strong> works
             </span>
 
-            {/* Density switcher for 2 or 3 products per row */}
-            <div className="flex items-center border border-[#EBE4D6] rounded-[2px] bg-[#FAF8F5] p-0.5">
-              <button
-                type="button"
-                onClick={() => setColumns(2)}
-                title="Display 2 items per row"
-                aria-label="2 columns"
-                className={cn(
-                  'px-2 py-1.5 rounded-[1px] text-[10px] font-sans font-medium transition-all cursor-pointer flex items-center gap-1',
-                  columns === 2
-                    ? 'bg-burgundy text-white shadow-xs font-semibold'
-                    : 'text-dark-brown/70 hover:text-dark-brown hover:bg-white'
-                )}
-              >
-                <Grid2x2 className="w-3.5 h-3.5" />
-                <span className="font-mono text-[9px] hidden sm:inline">2 col</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setColumns(3)}
-                title="Display 3 items per row"
-                aria-label="3 columns"
-                className={cn(
-                  'px-2 py-1.5 rounded-[1px] text-[10px] font-sans font-medium transition-all cursor-pointer flex items-center gap-1',
-                  columns === 3
-                    ? 'bg-burgundy text-white shadow-xs font-semibold'
-                    : 'text-dark-brown/70 hover:text-dark-brown hover:bg-white'
-                )}
-              >
-                <Grid3x3 className="w-3.5 h-3.5" />
-                <span className="font-mono text-[9px] hidden sm:inline">3 col</span>
-              </button>
-            </div>
-
             {/* Sort Dropdown */}
-            <div className="relative">
+            <div className="relative shrink-0 min-w-0 max-w-[62%] sm:max-w-none">
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(prev => !prev)}
-                className="bg-[#FAF8F5] hover:bg-white border border-[#EBE4D6] rounded-[2px] px-3.5 py-2 flex items-center gap-2 text-xs uppercase tracking-[0.15em] font-sans font-medium text-dark-brown cursor-pointer transition-colors"
+                className="bg-[#FAF8F5] hover:bg-white border border-[#EBE4D6] rounded-[2px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs uppercase tracking-[0.12em] font-sans font-medium text-dark-brown cursor-pointer transition-colors max-w-full min-w-0"
               >
-                <span className="text-dark-brown/60 text-[10px]">Sort:</span>
-                <span>{getSortLabel(sort)}</span>
+                <span className="text-dark-brown/60 text-[9px] sm:text-[10px] shrink-0">Sort:</span>
+                <span className="truncate min-w-0">{getSortLabel(sort)}</span>
                 <ChevronDown
                   className={cn(
-                    'w-3.5 h-3.5 text-gold transition-transform duration-200',
+                    'w-3.5 h-3.5 text-gold transition-transform duration-200 shrink-0',
                     isDropdownOpen && 'rotate-180'
                   )}
                 />
@@ -426,7 +389,7 @@ export default function Shop() {
         {/* Product Grid */}
         {filteredList.length === 0 ? (
           <div className="text-center py-20 px-6 bg-white border border-[#EBE4D6] rounded-[2px] max-w-lg mx-auto">
-            <Sparkles className="w-8 h-8 text-gold mx-auto mb-3 opacity-80" />
+            <Search className="w-8 h-8 text-gold/60 mx-auto mb-3" />
             <h3 className="font-editorial text-2xl text-dark-brown font-normal mb-2">
               No Pieces Match Your Current Selection
             </h3>
@@ -442,57 +405,44 @@ export default function Shop() {
             </button>
           </div>
         ) : (
-          <div
-            className={cn(
-              "grid transition-all duration-300",
-              columns === 2
-                ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8"
-                : "grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-6"
-            )}
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 transition-all duration-300 w-full max-w-full min-w-0">
             {filteredList.map(p => (
-              <ProductCard key={p.id} product={p} compact={columns === 3} />
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         )}
 
         {/* Bottom Editorial Atelier Callout */}
-        <div className="mt-20 pt-12 border-t border-[#EBE4D6]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center sm:text-left">
-            <div className="flex items-start gap-3.5">
-              <Hammer className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown mb-1">
-                  Solid Metallurgical Precision
-                </h4>
-                <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
-                  Every work is crafted in 3.0mm Belgian alloy plate or cast noble bronze, hand-patinated in our Antwerp workshop.
-                </p>
-              </div>
+        <div className="mt-20 pt-12 border-t border-[#EBE4D6] w-full max-w-full overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+            <div className="border-t md:border-t-0 md:border-l border-[#EBE4D6] pt-4 md:pt-0 md:pl-5 space-y-1.5">
+              <span className="font-mono text-xs text-gold font-medium block">01</span>
+              <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown">
+                Solid Metallurgical Precision
+              </h4>
+              <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
+                Every work is crafted in 3.0mm Belgian alloy plate or cast noble bronze, hand-patinated in our Antwerp workshop.
+              </p>
             </div>
 
-            <div className="flex items-start gap-3.5">
-              <Award className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown mb-1">
-                  Signed & Authenticated
-                </h4>
-                <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
-                  Numbered hallmark seal, signed certificate of authenticity, and museum-grade concealed hanging standoffs included.
-                </p>
-              </div>
+            <div className="border-t md:border-t-0 md:border-l border-[#EBE4D6] pt-4 md:pt-0 md:pl-5 space-y-1.5">
+              <span className="font-mono text-xs text-gold font-medium block">02</span>
+              <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown">
+                Signed & Authenticated
+              </h4>
+              <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
+                Numbered hallmark seal, signed certificate of authenticity, and museum-grade concealed hanging standoffs included.
+              </p>
             </div>
 
-            <div className="flex items-start gap-3.5">
-              <Shield className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown mb-1">
-                  Architect & Trade Inquiries
-                </h4>
-                <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
-                  Custom scale commissions, 3D CAD models, DXF vector files, and trade trade tier terms available upon request.
-                </p>
-              </div>
+            <div className="border-t md:border-t-0 md:border-l border-[#EBE4D6] pt-4 md:pt-0 md:pl-5 space-y-1.5">
+              <span className="font-mono text-xs text-gold font-medium block">03</span>
+              <h4 className="text-xs uppercase tracking-[0.2em] font-sans font-semibold text-dark-brown">
+                Architect & Trade Inquiries
+              </h4>
+              <p className="text-xs text-dark-brown/70 font-sans leading-relaxed">
+                Custom scale commissions, 3D CAD models, DXF vector files, and trade partner terms available upon request.
+              </p>
             </div>
           </div>
         </div>

@@ -5,16 +5,9 @@ import { useCatalog } from '@/lib/catalogContext';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { 
   CheckCircle2, 
-  Award, 
   Printer, 
-  Truck, 
-  ShieldCheck, 
   ArrowRight, 
-  Clock, 
-  FileText, 
-  Hammer, 
-  Flame,
-  PackageCheck
+  Clock 
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -39,8 +32,8 @@ export default function OrderConfirmation() {
           transition={{ duration: 0.6 }}
           className="text-center space-y-4"
         >
-          <div className="w-16 h-16 rounded-full bg-oxblood/10 border border-oxblood/20 text-oxblood mx-auto flex items-center justify-center shadow-soft">
-            <CheckCircle2 className="w-8 h-8 text-brass" />
+          <div className="w-14 h-14 rounded-[2px] bg-oxblood/10 border border-oxblood/20 text-oxblood mx-auto flex items-center justify-center shadow-2xs">
+            <CheckCircle2 className="w-7 h-7 text-brass" />
           </div>
 
           <div className="space-y-1">
@@ -55,18 +48,18 @@ export default function OrderConfirmation() {
             </p>
           </div>
 
-          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-card border border-border/80 text-xs font-mono">
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-[2px] bg-card border border-border/80 text-xs font-mono">
             <span className="text-muted-foreground">Order Reference:</span>
             <span className="font-bold text-oxblood">{orderId || `VNX-${Date.now().toString().slice(-6)}`}</span>
           </div>
         </motion.div>
 
         {/* 4-STAGE ATELIER CRAFTING PIPELINE */}
-        <div className="bg-card border border-border/80 rounded-lg p-6 sm:p-8 noise-overlay shadow-soft space-y-6">
+        <div className="bg-card border border-border/80 rounded-[2px] p-6 sm:p-8 noise-overlay shadow-soft space-y-6">
           <div className="border-b border-border/60 pb-3 flex items-center justify-between">
             <h2 className="font-display text-lg text-oxblood-deep font-semibold">4-Stage Atelier Crafting Pipeline</h2>
-            <span className="text-[10px] text-brass uppercase font-semibold flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" /> Est. Dispatch: 5-7 Business Days
+            <span className="text-[10px] text-brass uppercase font-semibold flex items-center gap-1 font-mono">
+              Est. Dispatch: 5-7 Business Days
             </span>
           </div>
 
@@ -77,7 +70,6 @@ export default function OrderConfirmation() {
                 title: 'CAM Nesting',
                 desc: 'Digital toolpath optimization & sheet allocation',
                 status: 'Complete',
-                icon: FileText,
                 done: true
               },
               {
@@ -85,7 +77,6 @@ export default function OrderConfirmation() {
                 title: 'Laser Slicing',
                 desc: 'Nitrogen-assist fiber laser cut to ±0.05mm',
                 status: 'In Progress',
-                icon: Flame,
                 current: true
               },
               {
@@ -93,7 +84,6 @@ export default function OrderConfirmation() {
                 title: 'Hand Patina',
                 desc: 'Deburring, hand brushing & surface passivation',
                 status: 'Scheduled',
-                icon: Hammer,
                 done: false
               },
               {
@@ -101,15 +91,13 @@ export default function OrderConfirmation() {
                 title: 'Archival Crate',
                 desc: 'Zero-deflection timber box & DHL dispatch',
                 status: 'Upcoming',
-                icon: PackageCheck,
                 done: false
               },
             ].map(stage => {
-              const StageIcon = stage.icon;
               return (
                 <div 
                   key={stage.step}
-                  className={`p-4 rounded border flex flex-col justify-between space-y-3 ${
+                  className={`p-4 rounded-[2px] border flex flex-col justify-between space-y-3 ${
                     stage.done 
                       ? 'border-emerald-500/30 bg-emerald-500/5' 
                       : stage.current 
@@ -119,7 +107,7 @@ export default function OrderConfirmation() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-bold text-brass">{stage.step}</span>
-                    <span className={`text-[8px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${
+                    <span className={`text-[8px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-[2px] ${
                       stage.done 
                         ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' 
                         : stage.current 
@@ -131,8 +119,7 @@ export default function OrderConfirmation() {
                   </div>
 
                   <div>
-                    <div className="font-display text-sm font-semibold text-oxblood-deep flex items-center gap-1.5">
-                      <StageIcon className="w-3.5 h-3.5 text-brass" />
+                    <div className="font-display text-sm font-semibold text-oxblood-deep">
                       {stage.title}
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{stage.desc}</p>
@@ -219,13 +206,13 @@ export default function OrderConfirmation() {
               </div>
             </div>
 
-            {/* Hallmark Assurance */}
+            {/* Studio Provenance */}
             <div className="pt-4 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-brass" />
-                <span>Backed by 10-Year Weathering & Anti-Corrosion Warranty</span>
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-brass text-[10px]">VERNOX ·</span>
+                <span>Signed Certificate of Authenticity & Archival Crated Transit Included</span>
               </span>
-              <span className="font-mono uppercase text-[10px] text-brass">Antwerp Guild Hallmark #4419</span>
+              <span className="font-mono uppercase text-[10px] text-brass">Studio Authenticated</span>
             </div>
           </div>
         )}
@@ -234,13 +221,13 @@ export default function OrderConfirmation() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 print:hidden">
           <Link 
             to="/shop" 
-            className="w-full sm:w-auto border border-oxblood/40 hover:border-oxblood text-oxblood text-xs uppercase tracking-widest font-semibold px-8 py-3.5 rounded-full hover:bg-oxblood/5 transition text-center"
+            className="w-full sm:w-auto border border-oxblood/40 hover:border-oxblood text-oxblood text-xs uppercase tracking-widest font-semibold px-8 py-3.5 rounded-[2px] hover:bg-oxblood/5 transition text-center"
           >
             Explore Other Collections
           </Link>
           <Link 
             to="/account" 
-            className="w-full sm:w-auto bg-gradient-oxblood hover:bg-oxblood-deep text-primary-foreground text-xs uppercase tracking-widest font-semibold px-8 py-3.5 rounded-full hover:shadow-luxe transition text-center flex items-center justify-center gap-2"
+            className="w-full sm:w-auto bg-gradient-oxblood hover:bg-oxblood-deep text-primary-foreground text-xs uppercase tracking-widest font-semibold px-8 py-3.5 rounded-[2px] hover:shadow-luxe transition text-center flex items-center justify-center gap-2"
           >
             View Commission in Atelier Account <ArrowRight className="w-4 h-4" />
           </Link>

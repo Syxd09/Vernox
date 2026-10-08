@@ -4,25 +4,25 @@ import { SiteFooter } from '@/components/shop/SiteFooter';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Flame,
-  Hammer,
-  ShieldCheck,
   ArrowRight,
-  Layers,
-  Cpu,
-  Building2,
   Percent,
-  Truck,
-  FileCheck,
-  Award,
   CheckCircle2,
   Mail,
   Phone,
-  Compass,
   MapPin,
   Clock,
   Download,
+  Truck,
+  ShieldCheck,
+  HelpCircle,
+  ChevronDown,
+  Send,
+  Box,
+  RefreshCw,
+  MessageSquare
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { B2BTradeModal } from '@/components/shop/B2BTradeModal';
 
@@ -32,7 +32,6 @@ const PROCESS_STEPS = [
     title: 'The Digital Canvas & Dynamic Kerf',
     subtitle: 'Where vector line meets engineering CAD',
     desc: 'Every commission begins with parametric vector calculation. Design geometries are fed directly into high-precision nesting software, translating architectural sketches into micro-meter laser paths with automated kerf offset compensation.',
-    icon: Compass,
     color: 'bg-brass/10 text-brass border-brass/30',
     detail: 'Kerf compensation is calculated dynamically down to ±0.08mm, ensuring perfect clearance for interlocking elements and standoff fixings.'
   },
@@ -41,7 +40,6 @@ const PROCESS_STEPS = [
     title: 'Nitrogen-Shielded Fibre Laser',
     subtitle: 'Slicing 3.0mm structural steel with pure light',
     desc: 'Certified raw plate is loaded onto our dual-pallet bed. A 3000W nitrogen-assist fibre laser beam slices through raw alloy at speeds exceeding 25 m/min, achieving flawless edge perpendicularity without thermal warping.',
-    icon: Flame,
     color: 'bg-oxblood/10 text-oxblood border-oxblood/30',
     detail: 'High-pressure 20-bar nitrogen shielding eliminates cut edge oxidation, leaving virgin metallurgical surfaces ready for chemical bonding.'
   },
@@ -50,7 +48,6 @@ const PROCESS_STEPS = [
     title: 'Hand Dressing & Directional Graining',
     subtitle: 'Artisanal texture crafted by human hands',
     desc: 'Every piece is hand-deburred using diamond-honed abrasive blocks. Artisans guide the plate across custom Scotch-Brite linishing belts to build a rich, uniform satin brush that catches and breaks ambient light.',
-    icon: Hammer,
     color: 'bg-brass/10 text-brass border-brass/30',
     detail: 'Graining is applied unidirectionally parallel to the structural silhouette, accentuating clean lines and natural architectural reflectivity.'
   },
@@ -59,7 +56,6 @@ const PROCESS_STEPS = [
     title: 'Atelier Chemical Patination',
     subtitle: 'Historic multi-stage oxidation recipes',
     desc: 'We immerse the prepared metal into proprietary chemical oxidation baths. From smoked charcoal bronze to velvety Corten rust and radiant brushed brass, our patinas are naturally matured and sealed with museum-grade microcrystalline wax.',
-    icon: Layers,
     color: 'bg-oxblood/10 text-oxblood border-oxblood/30',
     detail: 'Patinas are halted with organic neutralizing agents and sealed with archival French wax, safeguarding against indoor discoloration for generations.'
   },
@@ -68,7 +64,6 @@ const PROCESS_STEPS = [
     title: 'Numbered Seal & White-Glove Crate',
     subtitle: 'Physical hallmark & signed Certificate of Authenticity',
     desc: 'On the reverse, each piece is stamped with the Vernox seal, edition sequence, and alloy purity hallmark. Pieces are protected in Belgian tissue paper and sealed inside shock-damped timber crates.',
-    icon: ShieldCheck,
     color: 'bg-brass/10 text-brass border-brass/30',
     detail: 'Accompanied by a letterpress-printed Certificate of Authenticity signed by the master laser technician and patinator.'
   }
@@ -78,28 +73,24 @@ const B2B_SECTORS = [
   {
     title: 'Luxury Hospitality & Resorts',
     desc: 'Custom guest suite door monograms, elevator bank wayfinding, private dining lattice screens, and dramatic reception lobby sculptural reliefs.',
-    icon: Building2,
     badge: 'Hotels & Clubs',
     examples: '50 – 300 Units'
   },
   {
     title: 'Corporate Headquarters & Tech Campuses',
     desc: 'Precision laser-cut corporate brand crests, acoustic baffle metal overlays, executive boardroom accents, and anniversary recognition plaques.',
-    icon: Award,
     badge: 'Enterprise',
     examples: '10 – 150 Units'
   },
   {
     title: 'Residential & Commercial Real Estate',
     desc: 'Bespoke apartment entryway signage, laser-cut balcony privacy grilles, exterior weathering Corten address monuments, and concierge backdrops.',
-    icon: Compass,
     badge: 'Developments',
     examples: '25 – 500 Units'
   },
   {
     title: 'Architecture & Interior Design Practices',
     desc: 'Turnkey fabrication partner for bespoke project specs. Direct DWG/DXF/STEP translation with volume discounts and material sample binders.',
-    icon: FileCheck,
     badge: 'Trade Studios',
     examples: 'Bespoke Batches'
   }
@@ -111,14 +102,40 @@ export default function About() {
   const [selectedProjectType, setSelectedProjectType] = useState('hospitality');
   const location = useLocation();
 
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    subject: 'Collector Consultation',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
-    if (location.hash === '#b2b') {
-      const el = document.getElementById('b2b');
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const el = document.getElementById(id);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
       }
     }
   }, [location]);
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactForm.email || !contactForm.name) {
+      toast.error('Please provide your name and email address.');
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      toast.success('Your message has been transmitted to our Antwerp Atelier desk.');
+      setContactForm({ name: '', email: '', subject: 'Collector Consultation', message: '' });
+    }, 500);
+  };
 
   const handleOpenB2BWithSector = (sectorType: string) => {
     setSelectedProjectType(sectorType);
@@ -177,7 +194,7 @@ export default function About() {
               onClick={() => setB2bOpen(true)}
               className="inline-flex items-center gap-2 border border-oxblood/40 hover:border-oxblood bg-background text-oxblood text-xs uppercase tracking-widest px-6 py-3.5 rounded-sm hover:bg-oxblood/5 transition font-semibold"
             >
-              <Building2 className="w-3.5 h-3.5 text-brass" /> B2B Bulk & Corporate Supply
+              <span>B2B Bulk & Corporate Supply</span>
             </button>
           </motion.div>
         </div>
@@ -246,7 +263,6 @@ export default function About() {
           <div className="space-y-3">
             <div className="text-xs uppercase tracking-widest text-muted-foreground/60 font-bold mb-4">Workshop Workflow Steps</div>
             {PROCESS_STEPS.map((step, idx) => {
-              const StepIcon = step.icon;
               const isActive = activeStep === idx;
               
               return (
@@ -259,8 +275,8 @@ export default function About() {
                       : 'border-border/60 hover:border-oxblood/20 bg-card/40'
                   }`}
                 >
-                  <div className={`p-2 rounded border ${step.color} shrink-0`}>
-                    <StepIcon className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-[2px] border border-border/80 bg-background flex items-center justify-center font-mono text-xs font-bold text-brass shrink-0">
+                    0{idx + 1}
                   </div>
                   <div>
                     <div className="text-[10px] font-mono font-bold tracking-wider text-brass uppercase">{step.phase}</div>
@@ -307,8 +323,8 @@ export default function About() {
                 </div>
 
                 <div className="bg-background border border-border/80 p-4 rounded space-y-2 mt-8">
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-bold flex items-center gap-1.5">
-                    <Cpu className="w-3.5 h-3.5 text-brass" /> Workshop Specs
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-bold flex items-center gap-1.5 font-mono">
+                    <span className="text-brass">SPECS ·</span> Workshop Specs
                   </div>
                   <p className="text-xs text-foreground/80 leading-relaxed font-sans">
                     {PROCESS_STEPS[activeStep].detail}
@@ -327,7 +343,6 @@ export default function About() {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div className="max-w-2xl space-y-3">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-brass/10 border border-brass/30 text-brass text-[9px] uppercase tracking-[0.3em] font-semibold">
-                <Building2 className="w-3.5 h-3.5" />
                 <span>Commercial & Architectural Trade Program</span>
               </div>
               <h2 className="font-display text-3xl sm:text-4xl md:text-5xl text-oxblood-deep font-semibold leading-tight">
@@ -343,8 +358,7 @@ export default function About() {
                 onClick={() => setB2bOpen(true)}
                 className="inline-flex items-center justify-center gap-2.5 bg-oxblood hover:bg-oxblood-deep text-ivory text-xs uppercase tracking-widest font-semibold px-8 py-4 rounded-sm transition shadow-sm"
               >
-                <Building2 className="w-4 h-4 text-brass" />
-                Request B2B Trade Quote
+                <span>Request B2B Trade Quote</span>
               </button>
               <a
                 href="mailto:concierge@vernoxatelier.com?subject=B2B%20Trade%20Inquiry%20Vernox&body=Hello%20Vernox%20Trade%20Team,%0D%0A%0D%0AWe%20would%20like%20to%20inquire%20about%20a%20bulk%20architectural%20order..."
@@ -513,6 +527,338 @@ export default function About() {
         </div>
       </section>
 
+      {/* 01. SHIPPING & WHITE-GLOVE CRATING */}
+      <section id="shipping" className="border-t border-border/70 py-16 md:py-24 max-w-6xl mx-auto px-6 scroll-mt-24">
+        <div className="text-center space-y-3 mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[1px] bg-burgundy/10 border border-burgundy/25 text-burgundy text-[9px] uppercase tracking-[0.28em] font-mono font-medium">
+            <Truck className="w-3.5 h-3.5 text-gold" />
+            <span>White-Glove Timber Crating & Transit</span>
+          </div>
+          <h2 className="font-editorial text-3xl sm:text-5xl text-dark-brown font-normal tracking-tight">
+            Engineered to Arrive in Flawless Condition
+          </h2>
+          <p className="text-xs sm:text-sm text-dark-brown/70 max-w-xl mx-auto font-sans leading-relaxed">
+            Every Vernox commission leaves our Antwerp atelier encased in reinforced Baltic birch timber framing. We never ship in single-wall cardboard or flimsy bubble wrap.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-card border border-border/80 p-6 rounded-[2px] space-y-3">
+            <div className="w-10 h-10 rounded-[2px] bg-burgundy/10 text-burgundy flex items-center justify-center">
+              <Box className="w-5 h-5 text-burgundy" />
+            </div>
+            <h4 className="font-editorial text-lg text-dark-brown font-medium">
+              Reinforced Timber Crates
+            </h4>
+            <p className="text-xs text-dark-brown/70 leading-relaxed font-sans">
+              Baltic birch and pine framework cushioned with 30mm high-density polyethylene foam routed to the exact architectural perimeter of the piece.
+            </p>
+          </div>
+
+          <div className="bg-card border border-border/80 p-6 rounded-[2px] space-y-3">
+            <div className="w-10 h-10 rounded-[2px] bg-burgundy/10 text-burgundy flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-burgundy" />
+            </div>
+            <h4 className="font-editorial text-lg text-dark-brown font-medium">
+              100% Insured Worldwide
+            </h4>
+            <p className="text-xs text-dark-brown/70 leading-relaxed font-sans">
+              Every commission travels via DHL Express or FedEx Freight with full replacement value insurance and real-time GPS tracking dispatched within 24 hours of dispatch.
+            </p>
+          </div>
+
+          <div className="bg-card border border-border/80 p-6 rounded-[2px] space-y-3">
+            <div className="w-10 h-10 rounded-[2px] bg-burgundy/10 text-burgundy flex items-center justify-center">
+              <Clock className="w-5 h-5 text-burgundy" />
+            </div>
+            <h4 className="font-editorial text-lg text-dark-brown font-medium">
+              Estimated Transit Times
+            </h4>
+            <div className="text-xs text-dark-brown/70 leading-relaxed font-sans space-y-1">
+              <div><strong className="text-dark-brown font-semibold">Europe & UK:</strong> 3 – 5 Business Days</div>
+              <div><strong className="text-dark-brown font-semibold">North America:</strong> 4 – 7 Business Days</div>
+              <div><strong className="text-dark-brown font-semibold">Worldwide:</strong> 6 – 9 Business Days</div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border/80 p-6 rounded-[2px] space-y-3">
+            <div className="w-10 h-10 rounded-[2px] bg-burgundy/10 text-burgundy flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-burgundy" />
+            </div>
+            <h4 className="font-editorial text-lg text-dark-brown font-medium">
+              Mounting Kit Included
+            </h4>
+            <p className="text-xs text-dark-brown/70 leading-relaxed font-sans">
+              Each crate contains solid brass/stainless 20–25mm standoff hardware, Fischer DuoPower wall anchors, architectural screws, and a 1:1 scale paper template.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 02. RETURNS & GUARANTEE */}
+      <section id="returns" className="border-t border-border/70 py-16 md:py-24 bg-[#FAF8F5] scroll-mt-24">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center space-y-3 mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[1px] bg-burgundy/10 border border-burgundy/25 text-burgundy text-[9px] uppercase tracking-[0.28em] font-mono font-medium">
+              <RefreshCw className="w-3.5 h-3.5 text-gold" />
+              <span>Collector Peace of Mind</span>
+            </div>
+            <h2 className="font-editorial text-3xl sm:text-5xl text-dark-brown font-normal tracking-tight">
+              The 30-Day Atelier Return Guarantee
+            </h2>
+            <p className="text-xs sm:text-sm text-dark-brown/70 max-w-xl mx-auto font-sans leading-relaxed">
+              We stand behind every cut, grain, and patina. If a piece does not achieve perfect harmony in your interior, we provide seamless return and replacement protocols.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white border border-border/80 p-6 sm:p-7 rounded-[2px] space-y-3">
+              <div className="text-[11px] uppercase tracking-[0.2em] font-mono text-burgundy font-semibold">
+                Protocol 01
+              </div>
+              <h4 className="font-editorial text-xl text-dark-brown font-medium">
+                30-Day Gallery Return Window
+              </h4>
+              <p className="text-xs text-dark-brown/75 leading-relaxed font-sans">
+                Notify our concierge desk within 30 days of receiving your crate. Artwork must be in original condition with its signed Certificate of Authenticity.
+              </p>
+            </div>
+
+            <div className="bg-white border border-border/80 p-6 sm:p-7 rounded-[2px] space-y-3">
+              <div className="text-[11px] uppercase tracking-[0.2em] font-mono text-burgundy font-semibold">
+                Protocol 02
+              </div>
+              <h4 className="font-editorial text-xl text-dark-brown font-medium">
+                Zero-Friction Damage Replacement
+              </h4>
+              <p className="text-xs text-dark-brown/75 leading-relaxed font-sans">
+                Should external transit impact compromise your crate, photograph the damage upon arrival. We dispatch an immediate priority remake at zero additional cost.
+              </p>
+            </div>
+
+            <div className="bg-white border border-border/80 p-6 sm:p-7 rounded-[2px] space-y-3">
+              <div className="text-[11px] uppercase tracking-[0.2em] font-mono text-burgundy font-semibold">
+                Protocol 03
+              </div>
+              <h4 className="font-editorial text-xl text-dark-brown font-medium">
+                Prepaid Return Freight
+              </h4>
+              <p className="text-xs text-dark-brown/75 leading-relaxed font-sans">
+                Our concierge desk generates insured return bills of lading and arranges courier collection directly from your residence or design studio.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 03. FAQS ACCORDION */}
+      <section id="faqs" className="border-t border-border/70 py-16 md:py-24 max-w-4xl mx-auto px-6 scroll-mt-24">
+        <div className="text-center space-y-3 mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[1px] bg-burgundy/10 border border-burgundy/25 text-burgundy text-[9px] uppercase tracking-[0.28em] font-mono font-medium">
+            <HelpCircle className="w-3.5 h-3.5 text-gold" />
+            <span>Collector & Architectural Care</span>
+          </div>
+          <h2 className="font-editorial text-3xl sm:text-5xl text-dark-brown font-normal tracking-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-xs sm:text-sm text-dark-brown/70 max-w-lg mx-auto font-sans leading-relaxed">
+            Essential specifications regarding installation, wall load capacities, metallurgy maintenance, and bespoke commissions.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {[
+            {
+              q: 'How are Vernox artworks mounted to the wall? Are wall anchors included?',
+              a: 'Every piece arrives with concealed standoff mounts or flush keyhole brackets in solid brass/stainless steel that project the piece 20–25mm from the wall. This projection creates architectural relief shadow lines under ambient light. Every crate includes Fischer DuoPower universal anchors (drywall, masonry, concrete) and a full 1:1 scale paper template for pinpoint drill placement.'
+            },
+            {
+              q: 'What is the weight of a typical 3.0mm solid plate piece? Will my drywall support it?',
+              a: 'Our solid Belgian plates weigh approximately 24 kg/m² (a 60×60 cm piece is ~8.5 kg; 90×90 cm is ~19 kg). Fischer DuoPower anchors safely support up to 35 kg per anchor point in standard 12.5mm drywall. For large statement formats exceeding 100 cm, anchoring into studs or masonry provides monumental stability.'
+            },
+            {
+              q: 'Can Vernox artworks be hung outdoors or in humid spa/bathroom environments?',
+              a: 'Yes, particularly our 316L Marine Stainless Steel and Cor-Ten Weathering Steel collections. 316L contains 2.5% molybdenum, preventing saltwater and chloride corrosion. Cor-Ten develops a dense, protective oxide skin that shields the core. Architectural Brass and patinated steel are sealed with museum-grade French microcrystalline wax and are best suited for interior environments.'
+            },
+            {
+              q: 'How do I clean and maintain the metal patina over time?',
+              a: 'Dust gently with a clean, dry microfiber cloth. Never use household ammonia, abrasive bleach, or acidic solvent sprays. An application of museum-grade microcrystalline wax every 3–5 years will maintain the rich satin luster and tactile depth for generations.'
+            },
+            {
+              q: 'Can you fabricate custom dimensions, corporate logos, or bespoke CAD geometries?',
+              a: 'Yes. Our Antwerp atelier translates CAD, DXF, DWG, STEP, and vector artwork into physical plate. You can design in our interactive online Crafting Studio or submit project files directly to our Architectural Trade Desk for an estimate within 24 hours.'
+            }
+          ].map((faq, idx) => {
+            const isOpen = openFaq === idx;
+            return (
+              <div 
+                key={faq.q}
+                className="border border-border/80 bg-card rounded-[2px] overflow-hidden transition-all duration-200"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(isOpen ? null : idx)}
+                  className="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4 cursor-pointer hover:bg-muted/20 transition-colors"
+                >
+                  <span className="font-editorial text-lg sm:text-xl text-dark-brown font-medium leading-snug">
+                    {faq.q}
+                  </span>
+                  <ChevronDown className={cn(
+                    "w-4 h-4 text-burgundy shrink-0 transition-transform duration-300",
+                    isOpen && "rotate-180"
+                  )} />
+                </button>
+                {isOpen && (
+                  <div className="px-5 pb-6 sm:px-6 text-xs sm:text-[13px] text-dark-brown/80 font-sans leading-relaxed border-t border-border/50 pt-4">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 04. CONTACT STUDIO CONCIERGE */}
+      <section id="contact" className="border-t border-border/70 py-16 md:py-24 bg-[#FAF8F5] scroll-mt-24">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center space-y-3 mb-14">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[1px] bg-burgundy/10 border border-burgundy/25 text-burgundy text-[9px] uppercase tracking-[0.28em] font-mono font-medium">
+              <MessageSquare className="w-3.5 h-3.5 text-gold" />
+              <span>Direct Studio Access</span>
+            </div>
+            <h2 className="font-editorial text-3xl sm:text-5xl text-dark-brown font-normal tracking-tight">
+              Connect with Our Antwerp Atelier
+            </h2>
+            <p className="text-xs sm:text-sm text-dark-brown/70 max-w-lg mx-auto font-sans leading-relaxed">
+              Whether curating a residence, verifying mounting requirements, or commissioning a bespoke piece, our studio concierges are at your service.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            {/* Left: Studio Coordinates */}
+            <div className="lg:col-span-5 space-y-8 bg-white border border-border/80 p-8 sm:p-10 rounded-[2px] shadow-xs">
+              <div className="space-y-2">
+                <div className="text-[10px] uppercase tracking-[0.26em] font-mono text-burgundy font-semibold">
+                  Atelier Address
+                </div>
+                <div className="font-editorial text-xl text-dark-brown font-normal">
+                  Vernox Métallique Atelier
+                </div>
+                <p className="text-xs text-dark-brown/75 font-sans leading-relaxed">
+                  Kloosterstraat 44<br />
+                  2000 Antwerp, Belgium
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-6 border-t border-border/60 text-xs font-sans">
+                <div className="flex items-center gap-3 text-dark-brown/80">
+                  <Phone className="w-4 h-4 text-burgundy shrink-0" />
+                  <span>+32 (0)3 289 44 10</span>
+                </div>
+                <div className="flex items-center gap-3 text-dark-brown/80">
+                  <Mail className="w-4 h-4 text-burgundy shrink-0" />
+                  <span>concierge@vernoxatelier.com</span>
+                </div>
+                <div className="flex items-center gap-3 text-dark-brown/80">
+                  <Clock className="w-4 h-4 text-burgundy shrink-0" />
+                  <span>Mon – Fri: 09:00 – 18:00 CET · Private Sat Viewings</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-[2px] bg-cream/70 border border-[#EBE4D6] space-y-1 text-xs font-sans">
+                <div className="font-semibold text-dark-brown text-[11px] uppercase tracking-wider">
+                  Private Gallery Consultations
+                </div>
+                <p className="text-[11px] text-dark-brown/70 leading-relaxed">
+                  Collectors and interior architects visiting Antwerp are invited to schedule an appointment for tactile metal alloy sampling and studio visits.
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Message Form */}
+            <div className="lg:col-span-7 bg-white border border-border/80 p-8 sm:p-10 rounded-[2px] shadow-xs">
+              <h3 className="font-editorial text-2xl text-dark-brown font-normal mb-2">
+                Send an Atelier Inquiry
+              </h3>
+              <p className="text-xs text-dark-brown/70 font-sans mb-6">
+                Our design engineers and curatorial directors respond within one business day.
+              </p>
+
+              <form onSubmit={handleContactSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider font-mono text-dark-brown/70 mb-1.5">
+                      Your Full Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                      placeholder="e.g. Marc Van Hout"
+                      className="w-full px-3.5 py-2.5 rounded-[2px] border border-border text-xs bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-1 focus:ring-burgundy text-dark-brown"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider font-mono text-dark-brown/70 mb-1.5">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                      placeholder="e.g. marc@studio.com"
+                      className="w-full px-3.5 py-2.5 rounded-[2px] border border-border text-xs bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-1 focus:ring-burgundy text-dark-brown"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-mono text-dark-brown/70 mb-1.5">
+                    Inquiry Topic
+                  </label>
+                  <select
+                    value={contactForm.subject}
+                    onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-[2px] border border-border text-xs bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-1 focus:ring-burgundy text-dark-brown"
+                  >
+                    <option value="Collector Consultation">Collector Art Consultation</option>
+                    <option value="Custom Sizing / CAD">Custom Sizing or CAD Request</option>
+                    <option value="Order Tracking & Logistics">Order Tracking & White-Glove Crate Delivery</option>
+                    <option value="Architectural Trade / B2B">Architectural Trade & Hospitality Specifications</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-mono text-dark-brown/70 mb-1.5">
+                    Your Message / Project Specifications
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    placeholder="Tell us about your space, dimensions, or specific inquiries..."
+                    className="w-full px-3.5 py-2.5 rounded-[2px] border border-border text-xs bg-[#FAF8F5] focus:bg-white focus:outline-none focus:ring-1 focus:ring-burgundy text-dark-brown leading-relaxed"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-[2px] bg-burgundy hover:bg-burgundy-hover text-cream text-xs uppercase tracking-[0.2em] font-sans font-semibold transition shadow-sm cursor-pointer disabled:opacity-60"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmitting ? 'Transmitting...' : 'Transmit Message to Atelier'}</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CALL TO ACTION */}
       <section className="max-w-6xl mx-auto px-6 pb-20 w-full">
         <div className="bg-oxblood-deep rounded-sm p-8 sm:p-14 text-center text-ivory space-y-6 relative overflow-hidden noise-overlay">
@@ -531,7 +877,7 @@ export default function About() {
                 onClick={() => setB2bOpen(true)}
                 className="inline-flex items-center gap-2 bg-brass text-oxblood-deep hover:bg-ivory hover:text-oxblood font-bold text-xs uppercase tracking-widest px-8 py-3.5 rounded-sm transition shadow-soft"
               >
-                <Building2 className="w-4 h-4" /> B2B Bulk Inquiry
+                <span>B2B Bulk Inquiry</span>
               </button>
               <Link 
                 to="/customize" 

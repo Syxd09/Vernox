@@ -428,7 +428,7 @@ export const defaultReviews: ProductReviewItem[] = [
     customerRole: 'Creative Director, Studio Brandt',
     location: 'Munich, Germany',
     rating: 5,
-    comment: 'The contrast of deep burgundy #722F37 against natural Belgian linen ground is masterfully dialed. The razor-sharp gold leaf line brings strict architectural order to the room.',
+    comment: 'The contrast of deep burgundy #5B262C against natural Belgian linen ground is masterfully dialed. The razor-sharp gold leaf line brings strict architectural order to the room.',
     placedAt: daysAgo(11),
     verified: true,
     featured: true,

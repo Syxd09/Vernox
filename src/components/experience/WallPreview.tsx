@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { Upload, Move, ZoomIn, RotateCcw, User, Sparkles, Ruler } from 'lucide-react';
+import { Upload, Move, ZoomIn, RotateCcw, User, Check, Ruler } from 'lucide-react';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { Product } from '@/lib/catalog';
 import { cn } from '@/lib/utils';
@@ -288,7 +288,7 @@ export function WallPreview({ product, shapeId, finish, widthMm, heightMm }: Pro
           </div>
           {justResized && (
             <span className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider font-sans font-bold text-burgundy ml-1">
-              <Sparkles className="w-2.5 h-2.5 text-gold" />
+              <Check className="w-2.5 h-2.5 text-burgundy" />
               Scale Updated
             </span>
           )}

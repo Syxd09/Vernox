@@ -49,24 +49,24 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
   return (
     <>
       {/* Top Subtle Announcement Ribbon */}
-      <div className="bg-maroon-deep text-cream text-[9px] sm:text-[10px] uppercase tracking-[0.24em] py-2 px-6 font-sans text-center relative z-20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <span className="hidden sm:inline-block text-gold">Antwerp & Milan Studios</span>
-          <span className="mx-auto sm:mx-0 font-medium tracking-[0.26em]">
+      <div className="bg-maroon-deep text-cream text-[9px] sm:text-[10px] uppercase tracking-[0.16em] sm:tracking-[0.24em] py-2 px-3 sm:px-6 font-sans text-center relative z-20 w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between w-full min-w-0">
+          <span className="hidden sm:inline-block text-gold shrink-0">Antwerp & Milan Studios</span>
+          <span className="mx-auto sm:mx-0 font-medium tracking-[0.16em] sm:tracking-[0.26em] truncate max-w-full block min-w-0 flex-1 px-2">
             Curated Wall Art & Statement Pieces · Complimentary Insured Crating Worldwide
           </span>
-          <span className="hidden sm:inline-block text-cream/70">Solid Alloy & Fine Canvas</span>
+          <span className="hidden sm:inline-block text-cream/70 shrink-0">Solid Alloy & Fine Canvas</span>
         </div>
       </div>
 
       {/* Main Clean Sticky Header */}
       <header
         className={cn(
-          "sticky top-0 z-40 transition-all duration-300 bg-cream/95 backdrop-blur-md border-b border-[#EBE4D6]",
+          "sticky top-0 z-40 transition-all duration-300 bg-cream/95 backdrop-blur-md border-b border-[#EBE4D6] w-full max-w-full overflow-hidden",
           scrolled ? "py-3 shadow-xs" : "py-4.5"
         )}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between w-full min-w-0">
           {/* Left: Brand Logo */}
           <Link to="/" className="flex items-center group py-1" title="Vernox Art & Sculptures">
             <div className="flex flex-col">

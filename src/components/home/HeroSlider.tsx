@@ -112,10 +112,10 @@ export function HeroSlider() {
         <div className="lg:col-span-6 flex flex-col justify-center px-6 sm:px-10 lg:px-14 xl:px-20 py-12 lg:py-20 z-10">
           <div className="max-w-xl">
             
-            {/* Eyebrow with Dusty Pink Accent Pill */}
-            <div className="inline-flex items-center gap-2 mb-4 sm:mb-6">
-              <span className="brand-pill">CURATED CONTEMPORARY ART</span>
-            </div>
+            {/* Editorial Kicker */}
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold mb-4 sm:mb-6">
+              Curated Contemporary Art
+            </p>
 
             {/* Main Headline - Exact Reference Typography */}
             <h1 className="font-editorial text-5xl sm:text-6xl lg:text-7xl xl:text-[80px] text-dark-brown font-normal leading-[1.04] tracking-tight mb-5 sm:mb-6">

@@ -123,7 +123,7 @@ export function SearchModal({ open, onClose, onOpenChange }: Props) {
                         <button
                           key={item}
                           onClick={() => setQuery(item)}
-                          className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-white/80 hover:text-white transition"
+                          className="px-3 py-1.5 rounded-[2px] bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-white/80 hover:text-white transition"
                         >
                           {item}
                         </button>

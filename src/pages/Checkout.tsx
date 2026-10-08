@@ -6,7 +6,7 @@ import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
 import { toast } from 'sonner';
-import { ShieldCheck, CreditCard, Landmark, QrCode, CheckCircle, Smartphone, X, Lock, Truck, Award, Phone, Shield, Clock } from 'lucide-react';
+import { CreditCard, Landmark, QrCode, Smartphone, X, Phone } from 'lucide-react';
 
 export default function Checkout() {
   const { items, subtotal, clear } = useCart();
@@ -237,8 +237,8 @@ export default function Checkout() {
         },
         theme: { 
           color: typeof window !== 'undefined' 
-            ? getComputedStyle(document.documentElement).getPropertyValue('--burgundy').trim() || '#722F37' 
-            : '#722F37' 
+            ? getComputedStyle(document.documentElement).getPropertyValue('--burgundy').trim() || '#5B262C' 
+            : '#5B262C' 
         },
         modal: {
           ondismiss: function () {
@@ -275,21 +275,12 @@ export default function Checkout() {
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
 
-      {/* TOP BANK-GRADE SECURITY BAR */}
-      <div className="bg-[#0f131a] text-[#ded3c3] text-[10px] tracking-[0.2em] uppercase py-2 px-6 border-b border-white/10">
+      {/* ATELIER CHECKOUT BANNER */}
+      <div className="bg-[#1C1615] text-[#E8DFD3] text-[10px] tracking-[0.24em] uppercase py-2.5 px-6 border-b border-white/10 font-sans">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-brass">
-            <Lock className="w-3.5 h-3.5" />
-            <span>256-Bit SSL Encrypted Checkout</span>
-          </span>
-          <div className="hidden sm:flex items-center gap-4 text-muted-foreground/80">
-            <span>PCI-DSS Level 1 Compliant</span>
-            <span>·</span>
-            <span>100% Insured Crate Transit</span>
-            <span>·</span>
-            <span>Zero-Risk Guarantee</span>
-          </div>
-          <span className="font-mono text-muted-foreground">ID: {idempotencyKey.slice(0, 8)}</span>
+          <span className="font-brand tracking-[0.26em]">VERNOX ATELIER</span>
+          <span className="hidden sm:inline-block text-white/60">Complimentary Insured Crated Transit</span>
+          <span className="text-white/80 font-sans text-[10px]">Secure Checkout</span>
         </div>
       </div>
 
@@ -312,16 +303,16 @@ export default function Checkout() {
 
           {/* Step Badges */}
           <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider font-semibold border-y border-border/70 py-3">
-            <div className="flex items-center gap-2 text-burgundy">
-              <span className="w-5 h-5 rounded-full bg-burgundy text-cream flex items-center justify-center font-mono">1</span>
+            <div className="flex items-center gap-1.5 text-burgundy">
+              <span className="font-mono text-xs font-bold text-burgundy">01.</span>
               <span>Destination</span>
             </div>
-            <div className="flex items-center gap-2 text-burgundy font-bold">
-              <span className="w-5 h-5 rounded-full bg-gold text-black flex items-center justify-center font-mono">2</span>
+            <div className="flex items-center gap-1.5 text-burgundy font-bold">
+              <span className="font-mono text-xs font-bold text-gold">02.</span>
               <span>Payment</span>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground/60">
-              <span className="w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center font-mono">3</span>
+            <div className="flex items-center gap-1.5 text-muted-foreground/60">
+              <span className="font-mono text-xs font-bold text-muted-foreground/40">03.</span>
               <span>Hallmark</span>
             </div>
           </div>
@@ -346,8 +337,8 @@ export default function Checkout() {
           <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
               <h2 className="font-display text-lg text-burgundy font-semibold">2. Insured Freight Delivery Destination</h2>
-              <span className="text-[10px] text-gold uppercase font-semibold flex items-center gap-1">
-                <Truck className="w-3.5 h-3.5" /> Archival Crate
+              <span className="text-[10px] text-gold uppercase font-semibold font-mono tracking-wider">
+                Archival Crate
               </span>
             </div>
 
@@ -401,9 +392,9 @@ export default function Checkout() {
           {/* PAYMENT OPTIONS SELECTOR */}
           <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-5">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-burgundy font-semibold">3. Payment Authorization Rail</h2>
-              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> 3D-Secure 2.0
+              <h2 className="font-display text-lg text-burgundy font-semibold">3. Payment Method</h2>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-sans">
+                Encrypted & Authenticated
               </span>
             </div>
             
@@ -411,7 +402,7 @@ export default function Checkout() {
               {[
                 { id: 'card', label: 'Credit Card', icon: CreditCard, sub: 'Visa, Amex, MC' },
                 { id: 'upi', label: 'UPI / QR', icon: QrCode, sub: 'GPay, PhonePe' },
-                { id: 'razorpay', label: 'Razorpay Gateway', icon: Smartphone, sub: 'NetBanking / Wallets' }
+                { id: 'razorpay', label: 'NetBanking', icon: Smartphone, sub: 'All Indian Banks' }
               ].map(method => {
                 const MethodIcon = method.icon;
                 const isSelected = paymentMethod === method.id;
@@ -439,17 +430,11 @@ export default function Checkout() {
               {paymentMethod === 'card' && (
                 <div className="space-y-2.5 animate-fade-in">
                   <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4" /> Bank-Grade 256-Bit Encrypted Card Authorization
+                    <CreditCard className="w-4 h-4" /> Credit & Debit Card
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Pay with Visa, MasterCard, RuPay, Maestro & American Express. 3D-Secure 2-Factor OTP authorization is handled directly inside the encrypted Razorpay gateway modal.
+                    Visa, MasterCard, RuPay, and American Express accepted. Secure authorization via verified banking rails.
                   </p>
-                  <div className="flex items-center gap-2 pt-1 text-[9px] font-mono font-semibold text-muted-foreground">
-                    <span className="px-2 py-0.5 bg-muted rounded border border-border">VISA</span>
-                    <span className="px-2 py-0.5 bg-muted rounded border border-border">MASTERCARD</span>
-                    <span className="px-2 py-0.5 bg-muted rounded border border-border">AMEX</span>
-                    <span className="px-2 py-0.5 bg-muted rounded border border-border">RUPAY</span>
-                  </div>
                 </div>
               )}
 
@@ -509,8 +494,8 @@ export default function Checkout() {
                 <h2 className="font-display text-xl text-dark-brown font-semibold">Commission Manifest</h2>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">Antwerp Reserved Items</p>
               </div>
-              <span className="bg-burgundy/10 text-burgundy text-xs px-2.5 py-0.5 rounded-full font-mono font-bold">
-                {items.reduce((acc, i) => acc + i.quantity, 0)}
+              <span className="text-burgundy text-xs font-mono font-bold">
+                ({items.reduce((acc, i) => acc + i.quantity, 0)} works)
               </span>
             </div>
 
@@ -518,13 +503,13 @@ export default function Checkout() {
             <div className="space-y-3.5 max-h-80 overflow-y-auto divide-y divide-border/40 pr-1">
               {items.map((i, idx) => (
                 <div key={i.id} className={`flex gap-3 text-xs ${idx > 0 ? 'pt-3.5' : ''}`}>
-                  <div className="w-14 h-14 bg-background border border-border/80 rounded p-1.5 flex items-center justify-center shrink-0 shadow-xs relative">
+                  <div className="w-14 h-14 bg-background border border-border/80 rounded-[2px] p-1.5 flex items-center justify-center shrink-0 shadow-xs relative">
                     {i.customDesignThumb ? (
                       <img src={i.customDesignThumb} alt="" className="w-full h-full object-contain" />
                     ) : (
                       <ShapeThumb shapeId={i.shapeId} finish={i.finish} className="w-full h-full" />
                     )}
-                    <span className="absolute -top-1.5 -right-1.5 bg-burgundy text-cream text-[9px] font-mono px-1 rounded-full font-bold">
+                    <span className="absolute -top-1 -right-1 bg-burgundy text-cream text-[9px] font-mono px-1 rounded-[1px] font-bold">
                       ×{i.quantity}
                     </span>
                   </div>
@@ -547,7 +532,7 @@ export default function Checkout() {
             {/* Estimated Arrival Banner */}
             <div className="bg-muted/40 border border-border/70 rounded p-3 text-xs space-y-1">
               <div className="flex items-center gap-1.5 font-semibold text-dark-brown">
-                <Truck className="w-3.5 h-3.5 text-gold" />
+                <span className="font-mono text-gold text-[10px] uppercase tracking-wider">TRANSIT ·</span>
                 <span>Estimated Insured Arrival</span>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -578,26 +563,26 @@ export default function Checkout() {
               
               <div className="flex justify-between text-sm font-semibold border-t border-border/70 pt-3 text-dark-brown">
                 <div>
-                  <span>Total Investment</span>
-                  <span className="block text-[9px] text-muted-foreground font-normal">All duties & crating included</span>
+                  <span>Total</span>
+                  <span className="block text-[9px] text-muted-foreground font-normal">All duties, taxes & crating included</span>
                 </div>
                 <span className="font-mono text-xl font-bold text-burgundy">{storeConfig.currency}{total.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Guarantees Box */}
+            {/* Inclusions Box */}
             <div className="pt-3 border-t border-border/60 space-y-2 text-[11px] text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-3.5 h-3.5 text-gold shrink-0" />
-                <span>10-Year Weathering & Corrosion Warranty</span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-gold text-[10px] font-semibold">01 ·</span>
+                <span>Signed Certificate of Authenticity & Studio Hallmark</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Award className="w-3.5 h-3.5 text-gold shrink-0" />
-                <span>Numbered Hallmark & Signed Certificate</span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-gold text-[10px] font-semibold">02 ·</span>
+                <span>Reinforced Timber Crated Transit Included</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Lock className="w-3.5 h-3.5 text-gold shrink-0" />
-                <span>Zero-Risk Crated Replacement Guarantee</span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-mono text-gold text-[10px] font-semibold">03 ·</span>
+                <span>Concealed Float Standoffs & 1:1 Mounting Template</span>
               </div>
             </div>
 
@@ -609,15 +594,15 @@ export default function Checkout() {
             </Link>
           </div>
 
-          {/* Concierge Hotline */}
-          <div className="bg-card border border-border/70 rounded-lg p-4 flex items-center gap-3 shadow-soft">
-            <div className="p-2 rounded-full bg-burgundy/10 text-burgundy shrink-0">
+          {/* Concierge Assistance */}
+          <div className="bg-card border border-border/70 rounded-[2px] p-4 flex items-center gap-3 shadow-2xs">
+            <div className="p-2 rounded-[2px] bg-burgundy/10 text-burgundy shrink-0">
               <Phone className="w-4 h-4" />
             </div>
             <div className="text-xs">
               <div className="font-semibold text-dark-brown">Need Checkout Assistance?</div>
               <div className="text-muted-foreground text-[11px] mt-0.5">
-                Our Antwerp desk is ready: <a href="tel:+3232314490" className="text-burgundy font-semibold underline">+32 3 231 44 90</a>
+                Our studio concierge is available at: <a href="mailto:concierge@vernox.com" className="text-burgundy font-semibold underline">concierge@vernox.com</a>
               </div>
             </div>
           </div>

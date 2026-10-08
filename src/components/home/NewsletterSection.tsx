@@ -25,8 +25,8 @@ export function NewsletterSection() {
         {/* Subtle decorative gold line */}
         <div className="w-12 h-[1px] bg-gold mx-auto mb-6" />
 
-        <div className="inline-flex items-center gap-2 mb-2">
-          <span className="brand-pill">
+        <div className="mb-2">
+          <span className="text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold">
             Curator's Dispatch
           </span>
         </div>

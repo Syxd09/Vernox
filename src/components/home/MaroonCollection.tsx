@@ -1,18 +1,15 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export function MaroonCollection() {
   return (
     <section className="relative bg-burgundy text-cream py-20 lg:py-28 overflow-hidden border-y border-gold/30">
-      {/* Subtle atmospheric glow behind image */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-96 h-96 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
-
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Text Content */}
           <div className="lg:col-span-6 space-y-6 lg:space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-[1px] bg-burgundy-hover border border-dusty-pink/30 text-dusty-pink text-[9px] uppercase tracking-[0.28em] font-sans font-medium">
-              <Sparkles className="w-3 h-3 text-dusty-pink" />
+            <div className="flex items-center gap-2.5 text-dusty-pink text-[10px] uppercase tracking-[0.28em] font-mono font-medium">
+              <span className="w-6 h-px bg-dusty-pink/60" />
               <span>Limited Atelier Release</span>
             </div>
 

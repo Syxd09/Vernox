@@ -46,8 +46,8 @@ export function ShopBySpace() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-14 lg:mb-20">
-          <div className="inline-flex items-center justify-center gap-2 mb-2">
-            <span className="brand-pill">
+          <div className="mb-2">
+            <span className="text-[10px] uppercase tracking-[0.28em] font-sans text-burgundy font-semibold">
               Architectural Context
             </span>
           </div>
@@ -76,21 +76,21 @@ export function ShopBySpace() {
                   loading="lazy"
                 />
 
-                {/* Subtle vignette and hover veil */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-500" />
+                {/* Deep atmospheric gradient overlay for crisp legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent transition-opacity duration-500" />
 
                 {/* Space Title Overlay on Image */}
-                <div className="absolute bottom-4 left-5 right-5 flex items-end justify-between text-white">
+                <div className="absolute bottom-5 left-6 right-6 flex items-end justify-between text-white">
                   <div>
-                    <span className="text-[9px] uppercase tracking-[0.25em] text-gold font-mono block mb-1">
+                    <span className="text-[10px] uppercase tracking-[0.26em] text-[#F3E5C8] font-sans font-semibold block mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                       Space Inspiration
                     </span>
-                    <h3 className="font-editorial text-2xl sm:text-3xl text-white font-normal tracking-wide">
+                    <h3 className="font-editorial text-2xl sm:text-3xl text-white font-normal tracking-wide drop-shadow-md">
                       {space.name}
                     </h3>
                   </div>
 
-                  <span className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white group-hover:bg-burgundy group-hover:text-cream transition-all duration-300">
+                  <span className="w-8 h-8 rounded-[2px] bg-white/20 backdrop-blur-xs flex items-center justify-center text-white group-hover:bg-burgundy group-hover:text-cream transition-all duration-300">
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
@@ -103,8 +103,8 @@ export function ShopBySpace() {
                 </p>
 
                 <div className="text-right sm:border-l sm:border-[#EBE4D6] sm:pl-5 shrink-0">
-                  <span className="text-[8px] uppercase tracking-[0.2em] text-burgundy block font-mono font-semibold">
-                    Featured
+                  <span className="text-[9px] uppercase tracking-[0.24em] text-burgundy block font-sans font-semibold">
+                    Featured Work
                   </span>
                   <span className="text-xs font-editorial text-dark-brown block mt-0.5">
                     {space.artHighlighted}

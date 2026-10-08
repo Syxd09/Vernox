@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 /**
@@ -62,6 +62,17 @@ export function ScrollToTop() {
       document.body.style.scrollBehavior = prevBodyScrollBehavior;
     };
   }, [pathname, search, hash]);
+
+  // Continuous runtime horizontal scroll lock: prevents touch / gesture horizontal swaying
+  useEffect(() => {
+    const clampHorizontal = () => {
+      if (window.scrollX !== 0) {
+        window.scrollTo(0, window.scrollY);
+      }
+    };
+    window.addEventListener('scroll', clampHorizontal, { passive: true });
+    return () => window.removeEventListener('scroll', clampHorizontal);
+  }, []);
 
   return null;
 }

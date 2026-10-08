@@ -24,7 +24,6 @@ import {
   Crop,
   Check,
   RefreshCw,
-  Sparkles,
   Sliders,
   CheckCircle2,
   Cpu,
@@ -626,8 +625,8 @@ export function VectorTraceModal({
                     <svg className="absolute inset-0 w-full h-full pointer-events-none">
                       <polygon
                         points={lassoPoints.map(p => `${p.x}%,${p.y}%`).join(' ')}
-                        fill="rgba(114, 47, 55, 0.25)"
-                        stroke="#722F37"
+                        fill="rgba(91, 38, 44, 0.25)"
+                        stroke="#5B262C"
                         strokeWidth="2"
                         strokeDasharray="4,3"
                       />
