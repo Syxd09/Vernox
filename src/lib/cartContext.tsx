@@ -14,6 +14,8 @@ export interface CartItem {
   quantity: number;
   customDesignThumb?: string; // dataURL preview from customizer
   customDesignRef?: string;   // project id in localStorage
+  userUploadedImage?: string; // Client reference artwork uploaded in Crafting Studio
+  uploadedArtworkName?: string;
 }
 
 interface CartCtx {

@@ -82,5 +82,30 @@ service cloud.firestore {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }
+
+    // 10. Coupons & Promotions: Publicly readable; Admin editable
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 11. Coupon Redemptions / Usages: Admin read/write; users can view their own
+    match /coupon_usages/{usageId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.customerEmail == request.auth.token.email);
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // 12. Admin Users & Permissions: Strictly Admin restricted
+    match /admin_users/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 13. System Audit Logs: Strictly Admin readable; creation permitted by system/admin
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if false; // Immutable audit records
+    }
   }
 }

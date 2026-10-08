@@ -3,17 +3,36 @@ import { parse } from 'url';
 import createOrderHandler from '../api/create-order';
 import checkoutIntentHandler from '../api/checkout-intent';
 import verifyPaymentHandler from '../api/verify-payment';
+import validateCouponHandler from '../api/validate-coupon';
+import adminHandler from '../api/admin';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
-function setCorsHeaders(res: http.ServerResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function setSecurityAndCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse) {
+  const origin = (req.headers.origin as string) || '';
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://vernox.com',
+    'https://www.vernox.com',
+    'https://vernox-atelier.vercel.app'
+  ];
+
+  if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production' || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-idempotency-key');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-idempotency-key, x-admin-token');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 }
 
 const server = http.createServer(async (req, res) => {
-  setCorsHeaders(res);
+  setSecurityAndCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -64,6 +83,10 @@ const server = http.createServer(async (req, res) => {
       try {
         if (pathname === '/api/checkout-intent') {
           await checkoutIntentHandler(vercelReq as any, vercelRes as any);
+        } else if (pathname === '/api/validate-coupon') {
+          await validateCouponHandler(vercelReq as any, vercelRes as any);
+        } else if (pathname === '/api/admin') {
+          await adminHandler(vercelReq as any, vercelRes as any);
         } else if (pathname === '/api/create-order') {
           await createOrderHandler(vercelReq as any, vercelRes as any);
         } else if (pathname === '/api/verify-payment') {

@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { useCatalog, Order, OrderStatus } from '@/lib/catalogContext';
 import { 
-  TrendingUp, ShoppingCart, Tag, Scissors, Clock, Eye 
+  TrendingUp, ShoppingCart, Tag, Scissors, Clock, Eye, AlertTriangle, Users, Package 
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, 
@@ -22,10 +22,17 @@ interface AdminOverviewProps {
 }
 
 export function AdminOverview({ onSelectTab, onSelectOrder }: AdminOverviewProps) {
-  const { orders, storeConfig } = useCatalog();
+  const { orders, products, coupons, customers, storeConfig } = useCatalog();
 
   const totalRevenue = useMemo(() => {
     return orders.reduce((sum, order) => sum + order.total, 0);
+  }, [orders]);
+
+  const todaySales = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return orders
+      .filter(o => new Date(o.placedAt || 0).toDateString() === todayStr)
+      .reduce((sum, order) => sum + order.total, 0);
   }, [orders]);
 
   const avgOrderValue = useMemo(() => {
@@ -35,6 +42,18 @@ export function AdminOverview({ onSelectTab, onSelectOrder }: AdminOverviewProps
   const pendingOrdersCount = useMemo(() => {
     return orders.filter(o => o.status === 'Pending' || o.status === 'Designing' || o.status === 'Cutting').length;
   }, [orders]);
+
+  const lowStockCount = useMemo(() => {
+    return products.filter(p => (p.stock ?? 0) <= 5 && (p.stock ?? 0) > 0).length;
+  }, [products]);
+
+  const outOfStockCount = useMemo(() => {
+    return products.filter(p => (p.stock ?? 0) === 0).length;
+  }, [products]);
+
+  const activeCouponsCount = useMemo(() => {
+    return coupons.filter(c => c.isActive).length;
+  }, [coupons]);
 
   // Revenue trend (last 7 days)
   const revenueTrendData = useMemo(() => {
@@ -94,34 +113,49 @@ export function AdminOverview({ onSelectTab, onSelectOrder }: AdminOverviewProps
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-3xl text-oxblood-deep">Atelier Overview</h2>
+          <h2 className="font-display text-3xl text-oxblood-deep">Store Overview</h2>
           <p className="text-muted-foreground text-sm">Key statistics and recent storefront activity.</p>
         </div>
         <div className="bg-card border border-border/60 rounded-lg px-4 py-2 text-xs font-mono text-muted-foreground shadow-soft flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 text-brass" />
-          Live telemetry · {new Date().toLocaleDateString()}
+          Live data · {new Date().toLocaleDateString()}
         </div>
       </div>
 
       {/* STATS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
-          { label: 'Total Revenue', value: `${storeConfig.currency}${totalRevenue.toFixed(2)}`, desc: 'From verified orders', icon: TrendingUp, color: 'text-brass bg-brass/10' },
-          { label: 'Total Orders', value: orders.length, desc: 'Processed in platform', icon: ShoppingCart, color: 'text-oxblood bg-oxblood/10' },
-          { label: 'Avg. Order Value', value: `${storeConfig.currency}${avgOrderValue.toFixed(2)}`, desc: 'Average cart size', icon: Tag, color: 'text-purple-600 bg-purple-500/10' },
-          { label: 'Pending Production', value: pendingOrdersCount, desc: 'Waiting in studio / shop', icon: Scissors, color: 'text-blue-600 bg-blue-500/10' },
+          { label: 'Total Revenue', value: `${storeConfig.currency}${totalRevenue.toFixed(2)}`, desc: 'Verified orders', icon: TrendingUp, color: 'text-brass bg-brass/10' },
+          { label: "Today's Sales", value: `${storeConfig.currency}${todaySales.toFixed(2)}`, desc: 'Current calendar day', icon: TrendingUp, color: 'text-emerald-600 bg-emerald-500/10' },
+          { label: 'Total Orders', value: orders.length, desc: `${pendingOrdersCount} in pipeline`, icon: ShoppingCart, color: 'text-oxblood bg-oxblood/10', action: () => onSelectTab('orders') },
+          { 
+            label: 'Stock Alerts', 
+            value: outOfStockCount > 0 ? `${outOfStockCount} Out` : lowStockCount > 0 ? `${lowStockCount} Low` : 'Healthy', 
+            desc: `${lowStockCount} low stock units`, 
+            icon: AlertTriangle, 
+            color: outOfStockCount > 0 ? 'text-destructive bg-destructive/10' : lowStockCount > 0 ? 'text-amber-600 bg-amber-500/10' : 'text-emerald-600 bg-emerald-500/10',
+            action: () => onSelectTab('products') 
+          },
+          { label: 'Active Promotions', value: activeCouponsCount, desc: `${coupons.length} total codes`, icon: Tag, color: 'text-purple-600 bg-purple-500/10', action: () => onSelectTab('coupons') },
+          { label: 'Total Customers', value: customers.length, desc: 'Registered & buyers', icon: Users, color: 'text-blue-600 bg-blue-500/10', action: () => onSelectTab('customers') },
         ].map((stat, idx) => {
           const Icon = stat.icon;
           return (
-            <div key={idx} className="bg-card border border-border/50 rounded-lg p-5 shadow-soft hover:border-oxblood/20 transition-all">
+            <div 
+              key={idx} 
+              onClick={stat.action}
+              className={`bg-card border border-border/50 rounded-xl p-4 shadow-soft transition-all ${
+                stat.action ? 'cursor-pointer hover:border-oxblood/40 hover:shadow-md' : ''
+              }`}
+            >
               <div className="flex justify-between items-start">
-                <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{stat.label}</span>
-                <div className={`p-2 rounded ${stat.color}`}>
-                  <Icon className="w-4 h-4" />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{stat.label}</span>
+                <div className={`p-1.5 rounded-lg ${stat.color}`}>
+                  <Icon className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <div className="font-display text-3xl text-oxblood-deep mt-2">{stat.value}</div>
-              <div className="text-xs text-muted-foreground mt-1">{stat.desc}</div>
+              <div className="font-display text-2xl text-oxblood-deep mt-2">{stat.value}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{stat.desc}</div>
             </div>
           );
         })}
@@ -219,7 +253,7 @@ export function AdminOverview({ onSelectTab, onSelectOrder }: AdminOverviewProps
       {/* ACTIVE RECENT ORDERS */}
       <div className="bg-card border border-border/50 rounded-lg shadow-soft overflow-hidden">
         <div className="px-6 py-4 border-b border-border/60 flex items-center justify-between">
-          <h3 className="font-display text-xl text-oxblood-deep">Active Atelier Orders</h3>
+          <h3 className="font-display text-xl text-oxblood-deep">Active Orders</h3>
           <button onClick={() => onSelectTab('orders')} className="text-xs uppercase tracking-widest text-brass hover:underline font-semibold">View All Orders →</button>
         </div>
         {orders.length === 0 ? (

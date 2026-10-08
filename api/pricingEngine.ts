@@ -29,6 +29,9 @@ export interface CalculatedLineItem {
 
 export interface CalculatedPricingResult {
   subtotal: number;
+  discount: number;
+  discountedSubtotal: number;
+  couponCode?: string;
   shipping: number;
   tax: number;
   total: number;
@@ -41,6 +44,8 @@ export interface PricingEngineOptions {
   taxRate?: number;
   freeShippingThreshold?: number;
   shippingFee?: number;
+  discountAmount?: number;
+  couponCode?: string;
 }
 
 interface CatalogProductPricing {
@@ -242,8 +247,8 @@ const FINISH_MARKUPS: Record<string, number> = {
 
 export const PRICING_CONFIG = {
   freeShippingThreshold: 150,
-  shippingFee: 15,
-  taxRate: 0.08,
+  shippingFee: 40,
+  taxRate: 0.18,
 };
 
 export function calculateServerOrderPricing(
@@ -352,20 +357,26 @@ export function calculateServerOrderPricing(
     });
   }
 
+  const discount = Math.min(subtotal, Math.max(0, options?.discountAmount ?? 0));
+  const discountedSubtotal = Math.max(0, subtotal - discount);
+
   const freeShippingThreshold = options?.freeShippingThreshold ?? PRICING_CONFIG.freeShippingThreshold;
   const shippingFee = options?.shippingFee ?? PRICING_CONFIG.shippingFee;
   const rawTaxRate = options?.taxRate ?? PRICING_CONFIG.taxRate;
   const taxRate = rawTaxRate > 1 ? rawTaxRate / 100 : rawTaxRate;
 
-  // Free shipping on orders >= threshold
+  // Free shipping on orders >= threshold (calculated on original merchandise subtotal)
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFee;
-  // Tax calculation
-  const tax = Math.round(subtotal * taxRate * 100) / 100;
-  const total = Math.round((subtotal + shipping + tax) * 100) / 100;
+  // Tax calculation on discounted subtotal
+  const tax = Math.round(discountedSubtotal * taxRate * 100) / 100;
+  const total = Math.round((discountedSubtotal + shipping + tax) * 100) / 100;
   const amountInSubunits = Math.round(total * 100);
 
   return {
     subtotal,
+    discount,
+    discountedSubtotal,
+    couponCode: options?.couponCode,
     shipping,
     tax,
     total,

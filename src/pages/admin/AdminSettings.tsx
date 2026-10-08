@@ -4,44 +4,65 @@
  * schema validation import, and factory reset routines.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCatalog, hashPassphrase } from '@/lib/catalogContext';
 import { Download, Upload, Clipboard, ShieldAlert, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AdminSettings() {
   const {
-    products, categories, homepageSettings, orders, topics, storeConfig,
+    products, categories, homepageSettings, orders, topics, storeConfig, coupons,
     updateStoreConfig, importDatabase, resetAll
   } = useCatalog();
 
   const [configForm, setConfigForm] = useState({
     storeName: storeConfig.storeName,
-    currency: storeConfig.currency,
+    currency: storeConfig.currency || '$',
     taxRate: storeConfig.taxRate,
     freeShippingThreshold: storeConfig.freeShippingThreshold,
     shippingFee: storeConfig.shippingFee,
     newPassphrase: ''
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync form state when storeConfig updates or finishes Firestore hydration
+  useEffect(() => {
+    setConfigForm(prev => ({
+      ...prev,
+      storeName: storeConfig.storeName,
+      currency: storeConfig.currency || '$',
+      taxRate: storeConfig.taxRate,
+      freeShippingThreshold: storeConfig.freeShippingThreshold,
+      shippingFee: storeConfig.shippingFee,
+    }));
+  }, [storeConfig]);
+
   const [dbImportText, setDbImportText] = useState('');
   const [dbImportError, setDbImportError] = useState<string | null>(null);
 
-  const handleConfigSubmit = (e: React.FormEvent) => {
+  const handleConfigSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updates: any = {
-      storeName: configForm.storeName,
-      currency: configForm.currency,
-      taxRate: Number(configForm.taxRate),
-      freeShippingThreshold: Number(configForm.freeShippingThreshold),
-      shippingFee: Number(configForm.shippingFee),
-    };
-    if (configForm.newPassphrase && configForm.newPassphrase.trim()) {
-      updates.adminPassphraseHash = hashPassphrase(configForm.newPassphrase.trim());
+    setIsSaving(true);
+    try {
+      const updates: any = {
+        storeName: configForm.storeName,
+        currency: configForm.currency,
+        taxRate: Number(configForm.taxRate),
+        freeShippingThreshold: Number(configForm.freeShippingThreshold),
+        shippingFee: Number(configForm.shippingFee),
+      };
+      if (configForm.newPassphrase && configForm.newPassphrase.trim()) {
+        updates.adminPassphraseHash = hashPassphrase(configForm.newPassphrase.trim());
+      }
+      await updateStoreConfig(updates);
+      setConfigForm(prev => ({ ...prev, newPassphrase: '' }));
+      toast.success(`Store settings saved! Tax rate: ${updates.taxRate}%, Shipping fee: ${updates.currency}${updates.shippingFee}`);
+    } catch {
+      toast.error('Failed to save store configurations');
+    } finally {
+      setIsSaving(false);
     }
-    updateStoreConfig(updates);
-    setConfigForm(prev => ({ ...prev, newPassphrase: '' }));
-    toast.success('Store configurations saved');
   };
 
   const handleExportDB = () => {
@@ -51,7 +72,8 @@ export function AdminSettings() {
       homepageSettings,
       orders,
       topics,
-      storeConfig
+      storeConfig,
+      coupons
     }, null, 2);
 
     navigator.clipboard.writeText(payload);
@@ -65,7 +87,8 @@ export function AdminSettings() {
       homepageSettings,
       orders,
       topics,
-      storeConfig
+      storeConfig,
+      coupons
     }, null, 2);
 
     const blob = new Blob([payload], { type: 'application/json' });
@@ -98,15 +121,18 @@ export function AdminSettings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
       <div>
-        <h2 className="font-display text-3xl text-oxblood-deep">Store Settings & System Portability</h2>
-        <p className="text-muted-foreground text-sm">Manage business configurations, database backups, and system recovery.</p>
+        <h2 className="font-display text-3xl text-oxblood-deep">Store Settings</h2>
+        <p className="text-muted-foreground text-sm">Configure business parameters, tax rates, shipping rates, and database backups.</p>
       </div>
 
       {/* 1. Global Business Configuration */}
-      <form onSubmit={handleConfigSubmit} className="bg-card border border-border/50 rounded-lg p-6 shadow-soft space-y-6">
-        <h3 className="font-display text-xl text-oxblood border-b border-border/60 pb-2">Business & Pricing Parameters</h3>
+      <form onSubmit={handleConfigSubmit} className="bg-card border border-border/70 rounded-xl p-6 shadow-soft space-y-6">
+        <div className="border-b border-border/60 pb-3">
+          <h3 className="font-display text-xl text-oxblood">Business & Pricing Settings</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Configure tax percentages, standard courier fees, and order delivery thresholds.</p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -116,7 +142,7 @@ export function AdminSettings() {
               required
               value={configForm.storeName}
               onChange={e => setConfigForm({ ...configForm, storeName: e.target.value })}
-              className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-oxblood transition"
             />
           </div>
 
@@ -125,60 +151,80 @@ export function AdminSettings() {
             <select
               value={configForm.currency}
               onChange={e => setConfigForm({ ...configForm, currency: e.target.value })}
-              className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-oxblood transition"
             >
               <option value="₹">₹ (INR - Rupee)</option>
-              <option value="$">$ (USD)</option>
-              <option value="€">€ (EUR)</option>
-              <option value="£">£ (GBP)</option>
-              <option value="¥">¥ (JPY)</option>
+              <option value="$">$ (USD - Dollar)</option>
+              <option value="€">€ (EUR - Euro)</option>
+              <option value="£">£ (GBP - Pound)</option>
+              <option value="¥">¥ (JPY - Yen)</option>
             </select>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 md:col-span-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tax Rate (%)</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2 pt-2">
+            <div className="space-y-1.5 p-3.5 rounded-lg bg-muted/20 border border-border/60">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                <span>Tax Rate (%)</span>
+                <span className="text-oxblood font-mono font-bold">{configForm.taxRate}%</span>
+              </label>
               <input 
                 type="number"
                 required
                 min={0}
                 max={100}
+                step={0.1}
                 value={configForm.taxRate}
                 onChange={e => setConfigForm({ ...configForm, taxRate: Number(e.target.value) })}
-                className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood text-center"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-oxblood text-center font-mono font-bold"
               />
+              <p className="text-[11px] text-muted-foreground">Applied at checkout on taxable items</p>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Free Ship Cutoff</label>
+
+            <div className="space-y-1.5 p-3.5 rounded-lg bg-muted/20 border border-border/60">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                <span>Free Shipping Cutoff</span>
+                <span className="text-foreground font-mono font-bold">{configForm.currency}{configForm.freeShippingThreshold}</span>
+              </label>
               <input 
                 type="number"
                 required
                 min={0}
                 value={configForm.freeShippingThreshold}
                 onChange={e => setConfigForm({ ...configForm, freeShippingThreshold: Number(e.target.value) })}
-                className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood text-center"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-oxblood text-center font-mono font-bold"
               />
+              <p className="text-[11px] text-muted-foreground">Orders above this amount ship free</p>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Shipping Fee</label>
+
+            <div className="space-y-1.5 p-3.5 rounded-lg bg-muted/20 border border-border/60">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                <span>Standard Shipping</span>
+                <span className="text-oxblood font-mono font-bold">{configForm.currency}{configForm.shippingFee}</span>
+              </label>
               <input 
                 type="number"
                 required
                 min={0}
                 value={configForm.shippingFee}
                 onChange={e => setConfigForm({ ...configForm, shippingFee: Number(e.target.value) })}
-                className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood text-center"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-oxblood text-center font-mono font-bold"
               />
+              <p className="text-[11px] text-muted-foreground">Standard delivery rate</p>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-border/40">
+        <div className="flex justify-between items-center pt-4 border-t border-border/40">
+          <span className="text-xs text-muted-foreground">
+            Changes apply instantly across Cart, Checkout, and Admin Orders.
+          </span>
           <button 
             type="submit"
-            className="bg-oxblood text-ivory hover:bg-oxblood-deep px-6 py-2.5 rounded-full text-xs font-semibold shadow-soft transition"
+            disabled={isSaving}
+            className="bg-oxblood text-ivory hover:bg-oxblood-deep disabled:opacity-50 px-6 py-2.5 rounded-full text-xs font-semibold shadow-soft transition flex items-center gap-2"
           >
-            Save Store Settings
+            {isSaving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+            <span>{isSaving ? 'Saving Parameters…' : 'Save Store Settings'}</span>
           </button>
         </div>
       </form>

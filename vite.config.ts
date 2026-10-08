@@ -4,6 +4,8 @@ import path from "path";
 import createOrderHandler from "./api/create-order";
 import checkoutIntentHandler from "./api/checkout-intent";
 import verifyPaymentHandler from "./api/verify-payment";
+import validateCouponHandler from "./api/validate-coupon";
+import adminHandler from "./api/admin";
 
 function apiMiddlewarePlugin(env: Record<string, string>): Plugin {
   return {
@@ -53,6 +55,10 @@ function apiMiddlewarePlugin(env: Record<string, string>): Plugin {
           try {
             if (url === "/api/checkout-intent") {
               await checkoutIntentHandler(vercelReq as any, vercelRes as any);
+            } else if (url === "/api/validate-coupon") {
+              await validateCouponHandler(vercelReq as any, vercelRes as any);
+            } else if (url === "/api/admin") {
+              await adminHandler(vercelReq as any, vercelRes as any);
             } else if (url === "/api/create-order") {
               await createOrderHandler(vercelReq as any, vercelRes as any);
             } else if (url === "/api/verify-payment") {

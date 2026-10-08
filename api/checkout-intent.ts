@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Razorpay from 'razorpay';
 import { calculateServerOrderPricing } from './pricingEngine';
+import { validateAndCalculateCoupon } from './couponEngine';
 import { db } from '../src/lib/firebase';
 import { 
   collection, 
@@ -28,7 +29,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     customer,
     taxRate,
     freeShippingThreshold,
-    shippingFee 
+    shippingFee,
+    couponCode
   } = req.body || {};
 
   // 1. Input Validation
@@ -72,10 +74,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // 3. Server-Authoritative Pricing Recalculation
-  let pricing: ReturnType<typeof calculateServerOrderPricing>;
+  // 3. Server-Authoritative Pricing & Coupon Recalculation
+  let preCouponPricing: ReturnType<typeof calculateServerOrderPricing>;
   try {
-    pricing = calculateServerOrderPricing(items, currency, {
+    preCouponPricing = calculateServerOrderPricing(items, currency, {
       taxRate: typeof taxRate === 'number' ? taxRate : undefined,
       freeShippingThreshold: typeof freeShippingThreshold === 'number' ? freeShippingThreshold : undefined,
       shippingFee: typeof shippingFee === 'number' ? shippingFee : undefined,
@@ -83,6 +85,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (priceErr: any) {
     return res.status(400).json({ error: priceErr.message || 'Invalid item parameters for pricing' });
   }
+
+  // Validate coupon authoritatively on the server if couponCode is provided
+  let validatedDiscount = 0;
+  let appliedCouponCode: string | undefined = undefined;
+  let appliedCouponId: string | undefined = undefined;
+
+  if (couponCode && typeof couponCode === 'string' && couponCode.trim()) {
+    try {
+      const couponRes = await validateAndCalculateCoupon({
+        code: couponCode.trim(),
+        cartSubtotal: preCouponPricing.subtotal,
+        cartItems: items,
+        customerEmail: customer.email,
+        currency,
+      });
+
+      if (!couponRes.isValid) {
+        return res.status(400).json({ 
+          error: couponRes.error || 'The applied coupon code is invalid or ineligible.',
+          errorCode: couponRes.errorCode 
+        });
+      }
+
+      validatedDiscount = couponRes.discountAmount;
+      appliedCouponCode = couponRes.couponCode;
+      appliedCouponId = couponRes.couponId;
+    } catch (cErr: any) {
+      console.warn('Coupon verification exception in checkout-intent:', cErr);
+      return res.status(400).json({ error: 'Failed to verify promotional code.' });
+    }
+  }
+
+  // Final authoritative server pricing with validated discount
+  const pricing = calculateServerOrderPricing(items, currency, {
+    taxRate: typeof taxRate === 'number' ? taxRate : undefined,
+    freeShippingThreshold: typeof freeShippingThreshold === 'number' ? freeShippingThreshold : undefined,
+    shippingFee: typeof shippingFee === 'number' ? shippingFee : undefined,
+    discountAmount: validatedDiscount,
+    couponCode: appliedCouponCode,
+  });
 
   // 4. Concurrency-Safe Stock Reservation (Best-effort for standard catalog items)
   // Custom bespoke pieces are made-to-order and do not decrement finite stock
@@ -178,6 +220,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       idempotencyKey: idempotencyKey || null,
       total: pricing.total,
       subtotal: pricing.subtotal,
+      discount: pricing.discount,
+      discountedSubtotal: pricing.discountedSubtotal,
+      couponCode: appliedCouponCode || null,
+      couponId: appliedCouponId || null,
       shipping: pricing.shipping,
       tax: pricing.tax,
       currency: pricing.currency,
@@ -206,6 +252,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       currency: rzpOrder.currency,
       pricing: {
         subtotal: pricing.subtotal,
+        discount: pricing.discount,
+        discountedSubtotal: pricing.discountedSubtotal,
+        couponCode: appliedCouponCode,
         shipping: pricing.shipping,
         tax: pricing.tax,
         total: pricing.total,
@@ -229,6 +278,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         isDevFallback: true,
         pricing: {
           subtotal: pricing.subtotal,
+          discount: pricing.discount,
+          discountedSubtotal: pricing.discountedSubtotal,
+          couponCode: appliedCouponCode,
           shipping: pricing.shipping,
           tax: pricing.tax,
           total: pricing.total,

@@ -61,9 +61,23 @@ export function TopBar({ onClose }: TopBarProps = {}) {
     // Serialize compact VectorDocument JSON (< 20KB)
     const designJson = JSON.stringify(doc);
 
+    // Check if user uploaded any custom reference artwork
+    const customRasterLayer = doc.layers.find(l => (l as any).tracedFromRaster && (l as any).sourceImagePreview);
+    const userUploadedImage = 
+      doc.userUploadedImage || 
+      (customRasterLayer as any)?.sourceImagePreview || 
+      localStorage.getItem('vernox-studio-artwork') || 
+      undefined;
+
+    const uploadedArtworkName = 
+      doc.uploadedArtworkName || 
+      customRasterLayer?.name || 
+      localStorage.getItem('vernox-studio-artwork-name') || 
+      (userUploadedImage ? 'Client Custom Logo Artwork' : undefined);
+
     add({
       productId: 'custom-bespoke',
-      productName: 'Bespoke Architectural Metal Sign',
+      productName: uploadedArtworkName ? `Bespoke Sign (${uploadedArtworkName})` : 'Bespoke Architectural Metal Sign',
       productSlug: 'custom-bespoke',
       shapeId: doc.boundary.shapeTemplateId || 'rectangle',
       sizeLabel: `${doc.boundary.widthMm}mm × ${doc.boundary.heightMm}mm`,
@@ -73,6 +87,8 @@ export function TopBar({ onClose }: TopBarProps = {}) {
       unitPrice,
       customDesignThumb: compactSvgDataUri,
       customDesignRef: designJson,
+      userUploadedImage,
+      uploadedArtworkName,
     });
 
     toast({

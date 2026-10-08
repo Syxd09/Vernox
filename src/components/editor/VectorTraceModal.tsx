@@ -45,7 +45,7 @@ interface VectorTraceModalProps {
   onOpenChange: (open: boolean) => void;
   imageFile: File | null;
   workpieceWidthMm: number;
-  onApplyVector: (pathData: string, boundsMm: BoundingBox2D, name: string) => void;
+  onApplyVector: (pathData: string, boundsMm: BoundingBox2D, name: string, userImagePreview?: string) => void;
 }
 
 export function VectorTraceModal({
@@ -418,7 +418,32 @@ export function VectorTraceModal({
     const name = imageFile?.name
       ? `Laser ${imageFile.name.replace(/\.[^/.]+$/, '')}`
       : 'Bespoke Laser Contour';
-    onApplyVector(traceResult.pathData, traceResult.boundsMm, name);
+
+    // Capture optimized user reference artwork snapshot
+    let userImagePreview: string | undefined = undefined;
+    if (imgElement) {
+      try {
+        const offscreen = document.createElement('canvas');
+        const maxDim = 800;
+        let w = imgElement.naturalWidth || imgElement.width || 400;
+        let h = imgElement.naturalHeight || imgElement.height || 400;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+          else { w = Math.round((w * maxDim) / h); h = maxDim; }
+        }
+        offscreen.width = w;
+        offscreen.height = h;
+        const ctx = offscreen.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0, w, h);
+          userImagePreview = offscreen.toDataURL('image/jpeg', 0.82);
+        }
+      } catch {
+        userImagePreview = imgElement.src;
+      }
+    }
+
+    onApplyVector(traceResult.pathData, traceResult.boundsMm, name, userImagePreview);
     onOpenChange(false);
   };
 

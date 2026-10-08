@@ -100,9 +100,9 @@ async function runAllTests() {
 
     assert(p1.items[0].unitPrice === 189, 'p-01 Ember Round Frame calculates unit price 189');
     assert(p1.shipping === 0, 'Orders over 150 receive free shipping (shipping: 0)');
-    assert(p1.tax === 15.12, 'Tax 8% correctly calculates 15.12');
-    assert(p1.total === 204.12, 'Authoritative total equals 204.12');
-    assert(p1.amountInSubunits === 20412, 'Subunit (paise) equals 20,412');
+    assert(p1.tax === 34.02, 'Tax 18% correctly calculates 34.02');
+    assert(p1.total === 223.02, 'Authoritative total equals 223.02');
+    assert(p1.amountInSubunits === 22302, 'Subunit (paise) equals 22,302');
 
     // Size delta check (Medium · 50cm adds +80)
     const pLarge = calculateServerOrderPricing([
@@ -115,7 +115,7 @@ async function runAllTests() {
     const pSmall = calculateServerOrderPricing([
       { productId: 'p-05', widthMm: 250, heightMm: 250, finish: 'steel', quantity: 1 }
     ], 'INR');
-    assert(pSmall.shipping === PRICING_CONFIG.shippingFee, 'Subtotal < 150 incurs standard shipping fee (15)');
+    assert(pSmall.shipping === PRICING_CONFIG.shippingFee, 'Subtotal < 150 incurs standard shipping fee (40)');
 
     // Reject negative quantity
     let rejectedNegative = false;

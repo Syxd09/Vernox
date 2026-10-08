@@ -78,8 +78,12 @@ export function useVectorDocument(initialDoc?: VectorDocument) {
     return store.addVectorPath(pathData, name, boundsMm, isClosed, camLayer);
   }, [store]);
 
-  const addImageTracedPath = useCallback((pathData: string, boundsMm: BoundingBox2D, name?: string) => {
-    return store.addImageTracedPath(pathData, boundsMm, name);
+  const addImageTracedPath = useCallback((pathData: string, boundsMm: BoundingBox2D, name?: string, sourceImagePreview?: string) => {
+    return store.addImageTracedPath(pathData, boundsMm, name, sourceImagePreview);
+  }, [store]);
+
+  const setUserUploadedImage = useCallback((imageUrl: string, name?: string) => {
+    store.setUserUploadedImage(imageUrl, name);
   }, [store]);
 
   const updateTransform = useCallback((layerId: string, transform: Partial<AffineTransform2D>) => {
@@ -155,5 +159,6 @@ export function useVectorDocument(initialDoc?: VectorDocument) {
     reorderLayer,
     selectedLayerId,
     selectLayer,
+    setUserUploadedImage,
   };
 }

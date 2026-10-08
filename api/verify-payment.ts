@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import { db } from '../src/lib/firebase';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, collection, addDoc, increment, query, where, getDocs } from 'firebase/firestore';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -89,6 +89,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       try {
         await updateDoc(orderRef, updates);
+
+        // Record coupon usage if coupon was applied
+        if (existingOrder.couponCode) {
+          try {
+            await addDoc(collection(db, 'coupon_usages'), {
+              couponId: existingOrder.couponId || '',
+              couponCode: existingOrder.couponCode,
+              orderId: razorpay_order_id,
+              customerEmail: existingOrder.email || '',
+              discountAmount: existingOrder.discount || 0,
+              orderTotal: existingOrder.total || 0,
+              usedAt: Date.now(),
+            });
+
+            // Increment coupon usedCount
+            if (existingOrder.couponId && !existingOrder.couponId.startsWith('launch-')) {
+              await updateDoc(doc(db, 'coupons', existingOrder.couponId), {
+                usedCount: increment(1),
+                updatedAt: Date.now()
+              });
+            } else {
+              // Try finding coupon by code
+              const cSnap = await getDocs(query(collection(db, 'coupons'), where('code', '==', existingOrder.couponCode)));
+              if (!cSnap.empty) {
+                await updateDoc(doc(db, 'coupons', cSnap.docs[0].id), {
+                  usedCount: increment(1),
+                  updatedAt: Date.now()
+                });
+              }
+            }
+          } catch (couponUsageErr) {
+            console.warn('Coupon usage tracking notice:', couponUsageErr);
+          }
+        }
       } catch (updateErr: any) {
         console.warn('Notice: Firestore updateDoc notice in verify-payment:', updateErr?.message || updateErr);
       }

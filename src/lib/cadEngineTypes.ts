@@ -95,6 +95,7 @@ export interface VectorPathFeatureLayer extends BaseFeatureLayer {
   isClosed: boolean;
   boundsMm?: BoundingBox2D;
   tracedFromRaster?: boolean;
+  sourceImagePreview?: string; // Captured raster snapshot of user's uploaded artwork
 }
 
 export interface MountingHoleFeatureLayer extends BaseFeatureLayer {
@@ -191,6 +192,8 @@ export interface VectorDocument {
     boundingHeightMm?: number;
     isManufacturable?: boolean;
   };
+  userUploadedImage?: string; // High-level reference image uploaded by client in Crafting Studio
+  uploadedArtworkName?: string;
   validationIssues?: ValidationIssue[];
 }
 

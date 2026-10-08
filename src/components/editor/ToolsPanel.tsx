@@ -65,12 +65,18 @@ export function ToolsPanel({ initialTab = 'tools', onClose, className }: ToolsPa
     setTraceModalOpen(true);
   };
 
-  const handleApplyTracedVector = (pathData: string, boundsMm: any, name: string) => {
-    const layer = addImageTracedPath(pathData, boundsMm, name);
+  const handleApplyTracedVector = (pathData: string, boundsMm: any, name: string, userImagePreview?: string) => {
+    const layer = addImageTracedPath(pathData, boundsMm, name, userImagePreview);
+    if (userImagePreview) {
+      try {
+        localStorage.setItem('vernox-studio-artwork', userImagePreview);
+        localStorage.setItem('vernox-studio-artwork-name', name);
+      } catch {}
+    }
     selectLayer(layer.id);
     toast({
       title: "Precision Vector Applied",
-      description: `Laser toolpath placed on CAD plate with closed Bezier loops.`,
+      description: `Laser toolpath placed on CAD plate with client artwork referenced.`,
     });
   };
 
@@ -205,10 +211,18 @@ export function ToolsPanel({ initialTab = 'tools', onClose, className }: ToolsPa
         targetWidthMm: Math.min(doc.boundary.widthMm * 0.7, 180),
       });
 
+      const userImagePreview = canvas.toDataURL('image/jpeg', 0.82);
+      const artworkName = file.name.replace(/\.[^/.]+$/, '');
+      try {
+        localStorage.setItem('vernox-studio-artwork', userImagePreview);
+        localStorage.setItem('vernox-studio-artwork-name', artworkName);
+      } catch {}
+
       const layer = addImageTracedPath(
         result.pathData,
         result.boundsMm,
-        file.name.replace(/\.[^/.]+$/, '')
+        artworkName,
+        userImagePreview
       );
       selectLayer(layer.id);
 

@@ -235,7 +235,8 @@ export class CadDocumentStore {
   public addImageTracedPath(
     pathData: string,
     boundsMm: BoundingBox2D,
-    name = 'Traced Vector Art'
+    name = 'Traced Vector Art',
+    sourceImagePreview?: string
   ): VectorPathFeatureLayer {
     this.pushHistory();
     const layer: VectorPathFeatureLayer = {
@@ -251,13 +252,27 @@ export class CadDocumentStore {
       isClosed: true,
       boundsMm,
       tracedFromRaster: true,
+      sourceImagePreview,
     };
+
+    if (sourceImagePreview) {
+      this.currentDoc.userUploadedImage = sourceImagePreview;
+      this.currentDoc.uploadedArtworkName = name;
+    }
 
     this.currentDoc.layers.push(layer);
     this.currentDoc.updatedAt = Date.now();
     this.recomputeAnalytics();
     this.notify();
     return layer;
+  }
+
+  public setUserUploadedImage(imageUrl: string, name?: string): void {
+    this.pushHistory();
+    this.currentDoc.userUploadedImage = imageUrl;
+    if (name) this.currentDoc.uploadedArtworkName = name;
+    this.currentDoc.updatedAt = Date.now();
+    this.notify();
   }
 
   public updateTransform(layerId: string, transform: Partial<AffineTransform2D>): void {

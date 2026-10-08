@@ -6,6 +6,9 @@ export type { Product, ProductCategory };
 import { auth, db, googleProvider } from './firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, query, where, deleteDoc } from 'firebase/firestore';
+import type { Coupon, CouponUsage } from '@/types/coupon';
+import type { AdminUser, AdminRole, AuditLog, AuditTargetType } from '@/types/admin';
+import { LAUNCH_COUPONS } from '@/types/coupon';
 
 // Passphrase Salting & Hashing Helper
 export function hashPassphrase(passphrase: string): string {
@@ -87,6 +90,8 @@ export interface OrderItem {
   quantity: number;
   customDesignThumb?: string;
   customDesignRef?: string;
+  userUploadedImage?: string; // Client reference artwork uploaded in Crafting Studio
+  uploadedArtworkName?: string;
 }
 
 export interface Order {
@@ -178,6 +183,28 @@ interface CatalogCtx {
   logoutCustomer: () => Promise<void>;
   updateCustomerProfile: (updates: Partial<CustomerAccount>) => Promise<void>;
 
+  // Enterprise Coupon & Discount System
+  coupons: Coupon[];
+  couponUsages: CouponUsage[];
+  createCoupon: (coupon: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt' | 'usedCount'>) => Promise<boolean>;
+  updateCoupon: (id: string, updates: Partial<Coupon>) => Promise<boolean>;
+  deleteCoupon: (id: string) => Promise<boolean>;
+  toggleCouponStatus: (id: string, isActive: boolean) => Promise<boolean>;
+
+  // Enterprise Admin RBAC & Audit
+  adminUsers: AdminUser[];
+  currentAdmin: AdminUser | null;
+  adminRole: AdminRole;
+  logoutAdmin: () => void;
+  logAdminAudit: (action: string, targetType: AuditTargetType, targetId: string, details?: Record<string, any>) => Promise<void>;
+  fetchAuditLogs: (targetType?: string) => Promise<AuditLog[]>;
+  createAdminUser: (email: string, name: string, role: AdminRole) => Promise<boolean>;
+  updateAdminRole: (adminId: string, role: AdminRole, status: 'active' | 'suspended') => Promise<boolean>;
+
+  // Customers & Stock
+  customers: CustomerAccount[];
+  updateStock: (productId: string, newStock: number) => Promise<void>;
+
   // Reset
   resetAll: () => void;
 }
@@ -235,7 +262,9 @@ const OrderItemZSchema = z.object({
   unitPrice: z.number(),
   quantity: z.number(),
   customDesignThumb: z.string().optional(),
-  customDesignRef: z.string().optional()
+  customDesignRef: z.string().optional(),
+  userUploadedImage: z.string().optional(),
+  uploadedArtworkName: z.string().optional()
 });
 
 const OrderZSchema = z.object({
@@ -341,12 +370,80 @@ const DEFAULT_TOPICS: Topic[] = [
   }
 ];
 
+export const DEFAULT_ATELIER_ORDERS: Order[] = [
+  {
+    id: 'VX-89241',
+    total: 485.0,
+    placedAt: Date.now() - 2 * 3600 * 1000,
+    email: 'elena.rostova@atelier-v.com',
+    status: 'Designing',
+    shippingName: 'Elena Rostova',
+    shippingAddress: '42 Avenue Louise, Penthouse 8B',
+    shippingCity: 'Brussels',
+    shippingZip: '1050',
+    shippingCountry: 'Belgium',
+    trackingCarrier: 'Antwerp White-Glove Courier',
+    adminNotes: 'Client uploaded custom heraldic crest artwork in Crafting Studio. Requires 3.0mm Brushed Antique Brass plate with flush countersunk standoffs.',
+    items: [
+      {
+        id: 'item-custom-01',
+        productId: 'custom-bespoke',
+        productName: 'Bespoke Crest (Rostova Monogram Heraldry)',
+        productSlug: 'custom-bespoke',
+        shapeId: 'arch_monolith',
+        sizeLabel: '300mm × 450mm',
+        widthMm: 300,
+        heightMm: 450,
+        finish: 'antique_brass',
+        unitPrice: 485.0,
+        quantity: 1,
+        userUploadedImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="%231b1412" rx="12"/><path d="M 150 40 L 220 80 L 220 180 Q 150 260 150 260 Q 80 180 80 180 L 80 80 Z" fill="none" stroke="%23d4af37" stroke-width="4"/><path d="M 150 70 L 195 100 L 195 170 Q 150 230 150 230 Q 105 170 105 170 L 105 100 Z" fill="%23d4af37" fill-opacity="0.15" stroke="%23d4af37" stroke-width="2"/><text x="150" y="170" font-family="serif" font-size="70" font-weight="bold" fill="%23d4af37" text-anchor="middle">R</text><path d="M 130 90 L 170 90 M 150 75 L 150 105" stroke="%23d4af37" stroke-width="3"/></svg>',
+        uploadedArtworkName: 'Rostova_Family_Heraldic_Crest_Original.svg',
+        customDesignThumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450"><path d="M 0 50 Q 150 0 300 50 L 300 450 L 0 450 Z" fill="none" stroke="%23ef4444" stroke-width="2"/><circle cx="20" cy="65" r="4" fill="none" stroke="%23ef4444" stroke-width="1.5"/><circle cx="280" cy="65" r="4" fill="none" stroke="%23ef4444" stroke-width="1.5"/><circle cx="20" cy="430" r="4" fill="none" stroke="%23ef4444" stroke-width="1.5"/><circle cx="280" cy="430" r="4" fill="none" stroke="%23ef4444" stroke-width="1.5"/><path d="M 150 140 L 210 175 L 210 260 Q 150 330 150 330 Q 90 260 90 260 L 90 175 Z" fill="none" stroke="%23ef4444" stroke-width="2"/></svg>',
+        customDesignRef: '{"version":"3.0.0","documentId":"vdm-rostova-001","boundary":{"widthMm":300,"heightMm":450,"shapeTemplateId":"arch_monolith","pathData":"M 0 50 Q 150 0 300 50 L 300 450 L 0 450 Z"},"material":{"substrate":"brass_cz108","thicknessMm":3.0,"finish":"antique_brass"}}',
+      }
+    ]
+  },
+  {
+    id: 'VX-89218',
+    total: 320.0,
+    placedAt: Date.now() - 24 * 3600 * 1000,
+    email: 'marcus.vanderbilt@lumina-arch.com',
+    status: 'Pending',
+    shippingName: 'Marcus Vanderbilt',
+    shippingAddress: 'Studio Pickup - Antwerp Metalworks Dock 4',
+    shippingCity: 'Antwerp',
+    shippingZip: '2000',
+    shippingCountry: 'Belgium',
+    adminNotes: 'Bespoke Lumina Starburst logo uploaded via Studio Lasso crop tool. Corten weathering finish.',
+    items: [
+      {
+        id: 'item-custom-02',
+        productId: 'custom-bespoke',
+        productName: 'Bespoke Starburst Architectural Sign',
+        productSlug: 'custom-bespoke',
+        shapeId: 'circle',
+        sizeLabel: '400mm × 400mm',
+        widthMm: 400,
+        heightMm: 400,
+        finish: 'corten_rust',
+        unitPrice: 320.0,
+        quantity: 1,
+        userUploadedImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="%23261a15" rx="12"/><polygon points="150,30 180,110 260,110 195,160 220,240 150,190 80,240 105,160 40,110 120,110" fill="%23c27ba0" stroke="%23e8c2ca" stroke-width="3"/><circle cx="150" cy="150" r="30" fill="%23261a15" stroke="%23e8c2ca" stroke-width="2"/></svg>',
+        uploadedArtworkName: 'Lumina_Studio_Starburst_Cropped.png',
+        customDesignThumb: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><circle cx="150" cy="150" r="140" fill="none" stroke="%23ef4444" stroke-width="2"/><polygon points="150,50 175,115 245,115 185,160 210,230 150,185 90,230 115,160 55,115 125,115" fill="none" stroke="%23ef4444" stroke-width="2"/></svg>',
+        customDesignRef: '{"version":"3.0.0","documentId":"vdm-starburst-002","boundary":{"widthMm":400,"heightMm":400,"shapeTemplateId":"circle","pathData":"M 150 10 A 140 140 0 1 1 149.9 10 Z"},"material":{"substrate":"corten_weathering","thicknessMm":3.0,"finish":"corten_rust"}}',
+      }
+    ]
+  }
+];
+
 const DEFAULT_STORE_CONFIG: StoreConfig = {
   storeName: "Vernox Atelier",
   currency: "$",
-  taxRate: 8,
+  taxRate: 18,
   freeShippingThreshold: 150,
-  shippingFee: 15,
+  shippingFee: 40,
   adminEmail: "concierge@vernoxatelier.com"
 };
 
@@ -431,14 +528,16 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('vernox-orders');
       if (saved) {
         const rawOrders = JSON.parse(saved);
-        return rawOrders.map((o: any) => ({
-          ...o,
-          status: o.status || 'Pending'
-        }));
+        if (Array.isArray(rawOrders) && rawOrders.length > 0) {
+          return rawOrders.map((o: any) => ({
+            ...o,
+            status: o.status || 'Pending'
+          }));
+        }
       }
-      return [];
+      return DEFAULT_ATELIER_ORDERS;
     } catch {
-      return [];
+      return DEFAULT_ATELIER_ORDERS;
     }
   });
 
@@ -456,13 +555,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('vernox-store-config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (!parsed.currency || parsed.currency === '₹' || parsed.currency === 'INR') {
-          parsed.currency = '$';
-          try {
-            localStorage.setItem('vernox-store-config', JSON.stringify(parsed));
-          } catch {}
-        }
-        return parsed;
+        if (parsed.taxRate === 8) parsed.taxRate = 18;
+        if (parsed.shippingFee === 15) parsed.shippingFee = 40;
+        return { ...DEFAULT_STORE_CONFIG, ...parsed };
       }
       return DEFAULT_STORE_CONFIG;
     } catch {
@@ -471,6 +566,41 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   });
 
   const [currentCustomer, setCurrentCustomer] = useState<CustomerAccount | null>(null);
+
+  // Enterprise Coupons State
+  const [coupons, setCoupons] = useState<Coupon[]>(() => {
+    try {
+      const saved = localStorage.getItem('vernox-coupons');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return Object.values(LAUNCH_COUPONS).map(c => ({
+      id: `launch-${c.code.toLowerCase()}`,
+      ...c,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+  });
+
+  const [couponUsages, setCouponUsages] = useState<CouponUsage[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('vernox-admin-user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [adminToken, setAdminToken] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('vernox-admin-token');
+    } catch {
+      return null;
+    }
+  });
+
+  const [customers, setCustomers] = useState<CustomerAccount[]>([]);
   const [reviews, setReviews] = useState<Review[]>(() => {
     try {
       const saved = localStorage.getItem('vernox-reviews');
@@ -673,14 +803,16 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           const configDoc = configRes.value;
           if (!configDoc.exists()) {
             setDoc(doc(db, 'config', 'store'), DEFAULT_STORE_CONFIG).catch(() => {});
-            setStoreConfig(DEFAULT_STORE_CONFIG);
+            setStoreConfig(prev => ({ ...DEFAULT_STORE_CONFIG, ...prev }));
           } else {
             const loaded = configDoc.data() as StoreConfig;
-            if (!loaded.currency || loaded.currency === '₹' || loaded.currency === 'INR') {
-              loaded.currency = '$';
-              updateDoc(doc(db, 'config', 'store'), { currency: '$' }).catch(() => {});
-            }
-            setStoreConfig(loaded);
+            if (loaded.taxRate === 8) loaded.taxRate = 18;
+            if (loaded.shippingFee === 15) loaded.shippingFee = 40;
+            setStoreConfig(prev => {
+              const merged = { ...DEFAULT_STORE_CONFIG, ...loaded, ...prev };
+              try { localStorage.setItem('vernox-store-config', JSON.stringify(merged)); } catch {}
+              return merged;
+            });
           }
         }
 
@@ -753,6 +885,74 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     };
     loadAllOrders();
   }, []);
+
+  // Sync Coupons, Usages & Admin Users from Cloud Firestore
+  useEffect(() => {
+    const syncEnterpriseCollections = async () => {
+      try {
+        // Coupons
+        const cSnap = await getDocs(collection(db, 'coupons')).catch(() => null);
+        if (cSnap && !cSnap.empty) {
+          setCoupons(cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Coupon)));
+        }
+
+        // Coupon Usages
+        const uSnap = await getDocs(collection(db, 'coupon_usages')).catch(() => null);
+        if (uSnap && !uSnap.empty) {
+          setCouponUsages(uSnap.docs.map(d => ({ id: d.id, ...d.data() } as CouponUsage)));
+        }
+
+        // Admin Users
+        const aSnap = await getDocs(collection(db, 'admin_users')).catch(() => null);
+        if (aSnap && !aSnap.empty) {
+          setAdminUsers(aSnap.docs.map(d => ({ id: d.id, ...d.data() } as AdminUser)));
+        }
+      } catch (err) {
+        console.warn('Enterprise collections sync notice:', err);
+      }
+    };
+    syncEnterpriseCollections();
+  }, []);
+
+  // Sync Customers from Registered Users and Orders
+  useEffect(() => {
+    const deriveCustomers = async () => {
+      const customerMap = new Map<string, CustomerAccount>();
+      // 1. From placed orders
+      orders.forEach(o => {
+        if (o.email) {
+          const em = o.email.trim().toLowerCase();
+          if (!customerMap.has(em)) {
+            customerMap.set(em, {
+              email: em,
+              name: o.shippingName || em.split('@')[0],
+              address: o.shippingAddress,
+              city: o.shippingCity,
+              zip: o.shippingZip,
+              country: o.shippingCountry,
+              role: 'customer',
+            });
+          }
+        }
+      });
+
+      // 2. From Firestore registered accounts
+      try {
+        const uSnap = await getDocs(collection(db, 'users'));
+        uSnap.docs.forEach(d => {
+          const u = d.data() as CustomerAccount;
+          if (u.email) {
+            const em = u.email.trim().toLowerCase();
+            customerMap.set(em, { ...customerMap.get(em), ...u });
+          }
+        });
+      } catch {}
+
+      setCustomers(Array.from(customerMap.values()));
+    };
+
+    deriveCustomers();
+  }, [orders]);
 
   // Backup sync to localStorage for rapid access fallback
   useEffect(() => {
@@ -931,75 +1131,277 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     const nextConfig = { ...storeConfig, ...updates };
     setStoreConfig(nextConfig);
     try {
-      await setDoc(doc(db, 'config', 'store'), nextConfig);
+      localStorage.setItem('vernox-store-config', JSON.stringify(nextConfig));
+    } catch {}
+    try {
+      await setDoc(doc(db, 'config', 'store'), nextConfig, { merge: true });
     } catch (e) {
-      console.error("Firestore update store config error:", e);
+      console.warn("Firestore store config update notice (local state persisted):", e);
     }
   };
 
   const isAdmin = Boolean(
-    currentCustomer && (
-      currentCustomer.role === 'admin' ||
-      currentCustomer.isAdmin === true ||
-      currentCustomer.email.toLowerCase() === (storeConfig.adminEmail || 'admin@vernox.com').toLowerCase() ||
-      currentCustomer.email.toLowerCase() === 'concierge@vernoxatelier.com'
+    currentAdmin !== null || (
+      currentCustomer && (
+        currentCustomer.role === 'admin' ||
+        currentCustomer.isAdmin === true ||
+        currentCustomer.email.toLowerCase() === (storeConfig.adminEmail || 'admin@vernox.com').toLowerCase() ||
+        currentCustomer.email.toLowerCase() === 'concierge@vernoxatelier.com'
+      )
     )
   );
 
+  const adminRole: AdminRole = currentAdmin?.role || (isAdmin ? 'super_admin' : 'support');
+
+  const logoutAdmin = () => {
+    sessionStorage.removeItem('vernox-admin-token');
+    sessionStorage.removeItem('vernox-admin-user');
+    setCurrentAdmin(null);
+    setAdminToken(null);
+    signOut(auth).catch(() => {});
+  };
+
   const loginAdmin = async (email: string, pass: string): Promise<boolean> => {
     const cleanEmail = email.trim().toLowerCase();
-    const isDesignatedAdmin = 
-      cleanEmail === 'admin@vernox.com' || 
-      cleanEmail === 'concierge@vernoxatelier.com' ||
-      cleanEmail === (storeConfig.adminEmail || '').toLowerCase();
-
-    if (!isDesignatedAdmin) {
-      return false;
-    }
-
-    // 1. Try Firebase Authentication sign-in
+    
+    // 1. Authoritative login via /api/admin
     try {
-      await signInWithEmailAndPassword(auth, cleanEmail, pass);
-      return true;
-    } catch (authErr: any) {
-      console.warn("Standard Firebase Auth sign-in notice:", authErr?.code || authErr?.message);
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'LOGIN',
+          email: cleanEmail,
+          password: pass
+        })
+      });
 
-      // If user doesn't exist yet in Firebase Auth, auto-provision it with the provided password
-      if (authErr?.code === 'auth/user-not-found' || authErr?.code === 'auth/invalid-credential') {
-        try {
-          await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token && data.user) {
+          sessionStorage.setItem('vernox-admin-token', data.token);
+          sessionStorage.setItem('vernox-admin-user', JSON.stringify(data.user));
+          setCurrentAdmin(data.user);
+          setAdminToken(data.token);
+
+          const adminProfile: CustomerAccount = {
+            email: data.user.email,
+            name: data.user.name,
+            role: 'admin',
+            isAdmin: true,
+          };
+          setCurrentCustomer(adminProfile);
+
+          // Attempt parallel Firebase Auth sync
+          signInWithEmailAndPassword(auth, cleanEmail, pass).catch(() => {});
           return true;
-        } catch (createErr) {
-          console.warn("Notice: could not auto-create admin in Firebase Auth:", createErr);
         }
       }
+    } catch (apiErr) {
+      console.warn('Notice: /api/admin login call failed, trying direct Firebase Auth:', apiErr);
+    }
 
-      // 2. Dev & Atelier Master Passphrase Fallback:
-      // Accepts standard atelier master passphrases ('admin123', 'vernox2026', 'admin')
-      const isMasterPass = pass === 'admin123' || pass === 'vernox2026' || pass === 'admin';
-      if (isMasterPass || process.env.NODE_ENV !== 'production') {
+    // 2. Firebase Auth sign-in fallback
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+      if (userCred.user) {
         const adminProfile: CustomerAccount = {
           email: cleanEmail,
-          name: cleanEmail === 'admin@vernox.com' ? 'Atelier Administrator' : 'Vernox Concierge',
+          name: userCred.user.displayName || 'Atelier Administrator',
           role: 'admin',
           isAdmin: true,
-          phone: '+32 3 205 0000',
-          city: 'Antwerp',
-          country: 'Belgium'
         };
         setCurrentCustomer(adminProfile);
-        try {
-          localStorage.setItem('vernox-customer-profile', JSON.stringify(adminProfile));
-        } catch {}
+        const resolvedRole: AdminRole = cleanEmail === 'admin@vernox.com' ? 'super_admin' : 'admin';
+        const userObj: AdminUser = {
+          id: userCred.user.uid,
+          email: cleanEmail,
+          name: userCred.user.displayName || 'Atelier Administrator',
+          role: resolvedRole,
+          status: 'active',
+          createdAt: Date.now()
+        };
+        setCurrentAdmin(userObj);
+        sessionStorage.setItem('vernox-admin-user', JSON.stringify(userObj));
         return true;
       }
-
-      return false;
+    } catch (authErr: any) {
+      console.warn("Direct Firebase Auth sign-in notice:", authErr?.message);
     }
+
+    return false;
   };
 
   const verifyAdminPassphrase = (_passphrase: string) => {
     return isAdmin;
+  };
+
+  // Enterprise Coupon Actions
+  const createCoupon = async (couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt' | 'usedCount'>) => {
+    const code = couponData.code.trim().toUpperCase();
+    const newId = `c-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newCoupon: Coupon = {
+      ...couponData,
+      id: newId,
+      code,
+      usedCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setCoupons(prev => [newCoupon, ...prev]);
+    try {
+      localStorage.setItem('vernox-coupons', JSON.stringify([newCoupon, ...coupons]));
+      await setDoc(doc(db, 'coupons', newId), newCoupon);
+      await logAdminAudit('COUPON_CREATED', 'coupon', newId, { code, discountValue: newCoupon.discountValue });
+      return true;
+    } catch (err) {
+      console.error("Create coupon error:", err);
+      return false;
+    }
+  };
+
+  const updateCoupon = async (id: string, updates: Partial<Coupon>) => {
+    const cleanUpdates = { ...updates, updatedAt: Date.now() };
+    if (cleanUpdates.code) cleanUpdates.code = cleanUpdates.code.trim().toUpperCase();
+    const updated = coupons.map(c => c.id === id ? { ...c, ...cleanUpdates } : c);
+    setCoupons(updated);
+    try {
+      localStorage.setItem('vernox-coupons', JSON.stringify(updated));
+      await updateDoc(doc(db, 'coupons', id), cleanUpdates);
+      await logAdminAudit('COUPON_UPDATED', 'coupon', id, cleanUpdates);
+      return true;
+    } catch (err) {
+      console.error("Update coupon error:", err);
+      return false;
+    }
+  };
+
+  const deleteCoupon = async (id: string) => {
+    const target = coupons.find(c => c.id === id);
+    const filtered = coupons.filter(c => c.id !== id);
+    setCoupons(filtered);
+    try {
+      localStorage.setItem('vernox-coupons', JSON.stringify(filtered));
+      await deleteDoc(doc(db, 'coupons', id));
+      await logAdminAudit('COUPON_DELETED', 'coupon', id, { code: target?.code });
+      return true;
+    } catch (err) {
+      console.error("Delete coupon error:", err);
+      return false;
+    }
+  };
+
+  const toggleCouponStatus = async (id: string, isActive: boolean) => {
+    return updateCoupon(id, { isActive });
+  };
+
+  // Enterprise Stock Adjustment
+  const updateStock = async (productId: string, newStock: number) => {
+    const validStock = Math.max(0, Math.floor(newStock));
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: validStock } : p));
+    try {
+      await updateDoc(doc(db, 'products', productId), { stock: validStock, updatedAt: Date.now() });
+      await logAdminAudit('STOCK_ADJUSTED', 'inventory', productId, { newStock: validStock });
+    } catch (err) {
+      console.error("Update stock error:", err);
+    }
+  };
+
+  // Enterprise Audit Logging & RBAC API helpers
+  const logAdminAudit = async (action: string, targetType: AuditTargetType, targetId: string, details?: Record<string, any>) => {
+    try {
+      const token = sessionStorage.getItem('vernox-admin-token');
+      await fetch('/api/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          action: 'LOG_AUDIT',
+          eventAction: action,
+          targetType,
+          targetId,
+          details
+        })
+      });
+    } catch (err) {
+      console.warn("Audit log call deferred:", err);
+    }
+  };
+
+  const fetchAuditLogs = async (targetType?: string): Promise<AuditLog[]> => {
+    try {
+      const token = sessionStorage.getItem('vernox-admin-token');
+      const url = targetType ? `/api/admin?action=GET_AUDIT_LOGS&targetType=${encodeURIComponent(targetType)}` : '/api/admin?action=GET_AUDIT_LOGS';
+      const res = await fetch(url, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.logs || [];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  const createAdminUser = async (email: string, name: string, role: AdminRole): Promise<boolean> => {
+    try {
+      const token = sessionStorage.getItem('vernox-admin-token');
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          action: 'CREATE_ADMIN',
+          email,
+          name,
+          role
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.admin) {
+          setAdminUsers(prev => [data.admin, ...prev]);
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const updateAdminRole = async (adminId: string, role: AdminRole, status: 'active' | 'suspended'): Promise<boolean> => {
+    try {
+      const token = sessionStorage.getItem('vernox-admin-token');
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          action: 'UPDATE_ADMIN_ROLE',
+          adminId,
+          role,
+          status
+        })
+      });
+      if (res.ok) {
+        setAdminUsers(prev => prev.map(a => a.id === adminId ? { ...a, role, status } : a));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   // Review Actions
@@ -1184,7 +1586,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       topics,
       storeConfig: {
         ...storeConfig,
-        currency: (!storeConfig.currency || storeConfig.currency === '$') ? '₹' : storeConfig.currency
+        currency: storeConfig.currency || '$'
       },
       reviews,
       wishlist,
@@ -1208,6 +1610,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       importDatabase,
       isAdmin,
       loginAdmin,
+      logoutAdmin,
       currentCustomer,
       loginCustomer,
       loginWithGoogleMock,
@@ -1218,7 +1621,23 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       deleteReview,
       toggleWishlist,
       isInWishlist,
-      resetAll
+      resetAll,
+      // Enterprise extensions
+      coupons,
+      couponUsages,
+      createCoupon,
+      updateCoupon,
+      deleteCoupon,
+      toggleCouponStatus,
+      adminUsers,
+      currentAdmin,
+      adminRole,
+      logAdminAudit,
+      fetchAuditLogs,
+      createAdminUser,
+      updateAdminRole,
+      customers,
+      updateStock
     }}>
       {children}
     </CatalogContext.Provider>

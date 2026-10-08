@@ -6,7 +6,7 @@ import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
 import { toast } from 'sonner';
-import { CreditCard, Landmark, QrCode, Smartphone, X, Phone } from 'lucide-react';
+import { CreditCard, Landmark, QrCode, Smartphone, X, Phone, Tag } from 'lucide-react';
 
 export default function Checkout() {
   const { items, subtotal, clear } = useCart();
@@ -14,9 +14,16 @@ export default function Checkout() {
   const [placing, setPlacing] = useState(false);
   const navigate = useNavigate();
 
+  // Coupon State
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; description?: string } | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
+  const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const discountedSubtotal = Math.max(0, subtotal - discount);
   const shipping = subtotal > storeConfig.freeShippingThreshold ? 0 : storeConfig.shippingFee;
-  const tax = subtotal * (storeConfig.taxRate / 100);
-  const total = subtotal + shipping + tax;
+  const tax = discountedSubtotal * (storeConfig.taxRate / 100);
+  const total = discountedSubtotal + shipping + tax;
 
   const [form, setForm] = useState({
     email: currentCustomer?.email || '',
@@ -97,6 +104,7 @@ export default function Checkout() {
           taxRate: storeConfig.taxRate,
           freeShippingThreshold: storeConfig.freeShippingThreshold,
           shippingFee: storeConfig.shippingFee,
+          couponCode: appliedCoupon?.code || undefined,
           idempotencyKey,
           customer: {
             email: form.email.trim().toLowerCase(),
@@ -539,6 +547,89 @@ export default function Checkout() {
                 White-glove crated transit via <strong>DHL Express Priority</strong>. Tracking provided immediately upon laser inspection.
               </p>
             </div>
+
+            {/* PROMOTIONAL COUPON BOX */}
+            <div className="bg-background border border-border/70 rounded p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-dark-brown flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-oxblood" /> Promotional Voucher
+                </span>
+                {appliedCoupon && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setCouponInput('');
+                      toast.info('Coupon removed');
+                    }}
+                    className="text-[10px] text-destructive hover:underline font-semibold"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded text-xs">
+                  <div className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                    {appliedCoupon.code}
+                  </div>
+                  <div className="text-emerald-700 dark:text-emerald-400 font-semibold font-mono">
+                    -{storeConfig.currency}{appliedCoupon.discountAmount.toFixed(2)}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. WELCOME10"
+                    value={couponInput}
+                    onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                    className="flex-1 bg-card border border-border rounded px-3 py-1.5 text-xs font-mono uppercase outline-none focus:border-oxblood transition"
+                  />
+                  <button
+                    type="button"
+                    disabled={isValidatingCoupon || !couponInput.trim()}
+                    onClick={async () => {
+                      const cleanCode = couponInput.trim().toUpperCase();
+                      if (!cleanCode) return;
+                      setIsValidatingCoupon(true);
+                      try {
+                        const res = await fetch('/api/validate-coupon', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            code: cleanCode,
+                            cartSubtotal: subtotal,
+                            cartItems: items,
+                            customerEmail: form.email.trim() || undefined,
+                            currency: storeConfig.currency || '₹',
+                          })
+                        });
+                        const data = await res.json();
+                        if (data.isValid) {
+                          setAppliedCoupon({
+                            code: data.couponCode,
+                            discountAmount: data.discountAmount,
+                            description: data.description,
+                          });
+                          toast.success(`Coupon ${data.couponCode} applied! Saved ${storeConfig.currency}${data.discountAmount.toFixed(2)}`);
+                        } else {
+                          toast.error(data.error || 'Invalid coupon code');
+                        }
+                      } catch {
+                        toast.error('Failed to validate coupon');
+                      } finally {
+                        setIsValidatingCoupon(false);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-oxblood text-ivory hover:bg-oxblood-deep font-semibold text-xs rounded transition shadow-2xs disabled:opacity-50"
+                  >
+                    {isValidatingCoupon ? 'Checking...' : 'Apply'}
+                  </button>
+                </div>
+              )}
+            </div>
             
             {/* Totals */}
             <div className="space-y-2 text-xs border-t border-border/70 pt-3">
@@ -546,6 +637,12 @@ export default function Checkout() {
                 <span>Merchandise Subtotal</span>
                 <span className="font-semibold text-foreground font-mono">{storeConfig.currency}{subtotal.toFixed(2)}</span>
               </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-600 font-semibold">
+                  <span>Promotional Privilege ({appliedCoupon.code})</span>
+                  <span className="font-mono">-{storeConfig.currency}{appliedCoupon.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Insured Freight & Timber Crate</span>
                 <span className="font-mono">
