@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Product } from '@/lib/catalog';
 import { useCart } from '@/lib/cartContext';
-import { ShoppingBag, Heart } from 'lucide-react';
+import { ShoppingBag, Heart, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCatalog } from '@/lib/catalogContext';
 import { cn } from '@/lib/utils';
@@ -9,9 +9,11 @@ import { cn } from '@/lib/utils';
 interface ProductCardProps {
   product: Product;
   compact?: boolean;
+  onToggleCompare?: (product: Product) => void;
+  isComparing?: boolean;
 }
 
-export function ProductCard({ product, compact }: ProductCardProps) {
+export function ProductCard({ product, compact, onToggleCompare, isComparing }: ProductCardProps) {
   const { add } = useCart();
   const { wishlist, toggleWishlist } = useCatalog();
 
@@ -58,6 +60,31 @@ export function ProductCard({ product, compact }: ProductCardProps) {
             loading="lazy"
           />
         </Link>
+
+        {/* Compare Button (Top-Right beside wishlist) */}
+        {onToggleCompare && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleCompare(product);
+            }}
+            className={cn(
+              "absolute z-10 rounded-full border transition-all duration-200 cursor-pointer shadow-xs flex items-center justify-center",
+              compact
+                ? "top-1.5 right-8 w-6 h-6"
+                : "top-2 right-10 sm:top-3.5 sm:right-13 w-7 h-7 sm:w-8 sm:h-8",
+              isComparing
+                ? "bg-burgundy text-cream border-burgundy shadow-sm"
+                : "bg-white/90 backdrop-blur-xs border-[#EBE4D6] text-dark-brown/70 hover:text-burgundy hover:border-burgundy/30"
+            )}
+            title={isComparing ? "Remove from comparison" : "Compare this piece"}
+            aria-label="Compare"
+          >
+            <Layers className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
+          </button>
+        )}
 
         {/* Wishlist Button (Top-Right) */}
         <button

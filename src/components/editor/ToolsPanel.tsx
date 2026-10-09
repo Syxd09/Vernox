@@ -433,7 +433,7 @@ export function ToolsPanel({ initialTab = 'tools', onClose, className }: ToolsPa
       const rows = 3;
       const cellW = 640 / cols;
       const cellH = 480 / rows;
-      const symbols = ['♠', '♥', '♦', '♣', '★', '⚡', '✿', '⬡', '⚓', '⚜', '✦', '▲'];
+      const symbols = ['♠', '♥', '♦', '♣', '★', '◆', '❖', '⬡', '⚓', '⚜', '✦', '▲'];
       const names = ['ACES', 'ROYAL', 'SHIELD', 'CLUB', 'STELLA', 'BOLT', 'FLORA', 'HEXA', 'MARINA', 'CREST', 'AURA', 'DELTA'];
 
       ctx.textAlign = 'center';

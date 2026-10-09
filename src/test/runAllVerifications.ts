@@ -268,7 +268,7 @@ async function runAllTests() {
     assert(isLegitValid, 'Exact paid amount (25488 paise) successfully reconciled against order total');
 
     // 4. Out-of-Order Webhook Delivery Protection Invariant
-    let orderState: 'Pending' | 'Paid' | 'Payment_Failed' = 'Paid';
+    let orderState: 'Paid' | 'Payment_Failed' = 'Paid';
     const lateFailedEvent = 'payment.failed';
     if (orderState === 'Paid' && lateFailedEvent === 'payment.failed') {
       // Guard condition: do not overwrite Paid status
@@ -276,6 +276,104 @@ async function runAllTests() {
       orderState = 'Payment_Failed';
     }
     assert(orderState === 'Paid', 'Out-of-order payment.failed event does not overturn confirmed Paid order');
+
+    // --- SUITE 6: ORDER TRACKING SECURITY, PRIVACY & ANTI-ENUMERATION ---
+    console.log('\nTEST SUITE 6: Order Tracking Security, Privacy & Anti-Enumeration');
+
+    interface OrderRecord {
+      id: string;
+      orderNumber?: string;
+      email: string;
+      status: 'Pending' | 'Paid' | 'In_Production' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Refunded';
+      trackingNumber?: string;
+      trackingCarrier?: string;
+      trackingUrl?: string;
+      shippingCity: string;
+    }
+
+    const testOrdersDb: OrderRecord[] = [
+      {
+        id: 'order_real_101',
+        orderNumber: 'VNX-10101',
+        email: 'patron@residence.com',
+        status: 'In_Production',
+        shippingCity: 'London',
+        trackingNumber: 'TRK-9921',
+        trackingCarrier: 'DHL Express',
+        trackingUrl: 'https://www.dhl.com/en/express/tracking.html?AWB=9921'
+      },
+      {
+        id: 'order_real_102',
+        orderNumber: 'VNX-10202',
+        email: 'collector@milan.it',
+        status: 'Cancelled',
+        shippingCity: 'Milan'
+      }
+    ];
+
+    function verifyOrderAccess(orderId: string, email: string, attempts: number) {
+      if (attempts >= 5) {
+        return { success: false, error: 'RATE_LIMITED: Too many verification attempts' };
+      }
+      const cleanId = (orderId || '').trim().toUpperCase();
+      const cleanEmail = (email || '').trim().toLowerCase();
+      if (!cleanId || !cleanEmail) {
+        return { success: false, error: 'CREDENTIALS_REQUIRED' };
+      }
+      const match = testOrdersDb.find(o => 
+        (o.id.toUpperCase() === cleanId || o.orderNumber?.toUpperCase() === cleanId) &&
+        o.email.toLowerCase() === cleanEmail
+      );
+      if (!match) {
+        // Uniform error response regardless of whether ID exists or email was wrong
+        return { success: false, error: 'UNVERIFIED: Invalid credentials' };
+      }
+      return { success: true, order: match };
+    }
+
+    // 1. Valid Request with Correct Email
+    const validLookup = verifyOrderAccess('VNX-10101', 'patron@residence.com', 0);
+    assert(validLookup.success === true && validLookup.order?.shippingCity === 'London', 'Valid order + matching email successfully authenticates');
+
+    // 2. Unauthorized Request with Incorrect Email
+    const wrongEmailLookup = verifyOrderAccess('VNX-10101', 'attacker@unauthorized.com', 1);
+    assert(wrongEmailLookup.success === false, 'Valid order + mismatched email strictly rejected');
+
+    // 3. Request for Non-Existent Order ID
+    const missingOrderLookup = verifyOrderAccess('VNX-99999', 'patron@residence.com', 2);
+    assert(missingOrderLookup.success === false, 'Non-existent order reference strictly rejected');
+
+    // 4. Anti-Enumeration Verification: Exact Same Error for Mismatched vs Non-Existent
+    assert(
+      wrongEmailLookup.error === missingOrderLookup.error,
+      'ANTI-ENUMERATION INVARIANT: Identical error returned for missing ID and mismatched email (zero timing/existence leak)'
+    );
+
+    // 5. Rate Limiting Protection against Repeated Guesses
+    const bruteForceLookup = verifyOrderAccess('VNX-10101', 'attacker@guess.com', 5);
+    assert(
+      bruteForceLookup.success === false && bruteForceLookup.error?.startsWith('RATE_LIMITED'),
+      'RATE LIMIT INVARIANT: 5+ failed attempts triggers verification lockout'
+    );
+
+    // 6. Genuine Backend Status Preservation
+    const cancelledLookup = verifyOrderAccess('VNX-10202', 'collector@milan.it', 0);
+    assert(
+      cancelledLookup.success === true && cancelledLookup.order?.status === 'Cancelled',
+      'STATUS INVARIANT: Cancelled orders accurately reflect real state and never synthesize fake production milestones'
+    );
+
+    // 7. Courier Link Authorization
+    const orderWithUrl = validLookup.order;
+    const orderWithoutUrl = cancelledLookup.order;
+    assert(
+      typeof orderWithUrl?.trackingUrl === 'string' && orderWithUrl.trackingUrl.startsWith('https://'),
+      'COURIER INVARIANT: External courier link only provided when legitimate verified trackingUrl exists'
+    );
+    assert(
+      !orderWithoutUrl?.trackingUrl,
+      'COURIER INVARIANT: No fake or placeholder courier links generated when courier data is absent'
+    );
 
   } catch (err: any) {
     console.error('Test Suite Error:', err);

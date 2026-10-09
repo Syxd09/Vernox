@@ -3,10 +3,13 @@ import { useMemo, useState } from 'react';
 import { SiteHeader } from '@/components/shop/SiteHeader';
 import { SiteFooter } from '@/components/shop/SiteFooter';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { RecentlyViewed } from '@/components/shop/RecentlyViewed';
+import { ProductCompareModal } from '@/components/shop/ProductCompareModal';
 import { useCatalog } from '@/lib/catalogContext';
 import { ProductCategory } from '@/lib/catalog';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Check, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, Check, Search, SlidersHorizontal, X, Layers } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Shop() {
   const { products, categories, storeConfig } = useCatalog();
@@ -24,6 +27,29 @@ export default function Shop() {
   const [maxPrice, setMaxPrice] = useState(maxCatalogPrice);
   const [selectedFinishes, setSelectedFinishes] = useState<string[]>([]);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+  // Comparison State
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
+
+  const handleToggleCompare = (product: any) => {
+    setCompareIds(prev => {
+      if (prev.includes(product.id)) {
+        toast.info(`Removed ${product.name} from comparison.`);
+        return prev.filter(id => id !== product.id);
+      }
+      if (prev.length >= 3) {
+        toast.info('You can compare up to 3 masterworks simultaneously.');
+        return prev;
+      }
+      toast.success(`Added ${product.name} to comparison tray.`);
+      return [...prev, product.id];
+    });
+  };
+
+  const comparedProducts = useMemo(() => {
+    return compareIds.map(id => products.find(p => p.id === id)).filter(Boolean) as any[];
+  }, [compareIds, products]);
 
   const activeCategory = categories.find(c => c.id === (category as ProductCategory));
   
@@ -407,10 +433,53 @@ export default function Shop() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 transition-all duration-300 w-full max-w-full min-w-0">
             {filteredList.map(p => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                onToggleCompare={handleToggleCompare}
+                isComparing={compareIds.includes(p.id)}
+              />
             ))}
           </div>
         )}
+
+        {/* Recently Viewed Architectural Pieces */}
+        <RecentlyViewed className="mt-16" />
+
+        {/* Floating Persistent Comparison Bar */}
+        {compareIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-dark-brown text-cream px-5 py-3 rounded-full shadow-luxe border border-gold/40 flex items-center gap-4 animate-scale-in max-w-[90vw]">
+            <span className="text-xs font-sans font-medium flex items-center gap-2 truncate">
+              <Layers className="w-4 h-4 text-gold shrink-0" />
+              <span>{compareIds.length} piece{compareIds.length > 1 ? 's' : ''} selected</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setCompareModalOpen(true)}
+              className="bg-gold hover:bg-gold/90 text-dark-brown text-xs uppercase tracking-wider font-semibold px-4 py-1.5 rounded-full cursor-pointer transition-colors shrink-0"
+            >
+              Compare Specs
+            </button>
+            <button
+              type="button"
+              onClick={() => setCompareIds([])}
+              className="text-cream/60 hover:text-cream cursor-pointer p-1 rounded transition-colors"
+              title="Clear selection"
+              aria-label="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Product Comparison Modal */}
+        <ProductCompareModal
+          open={compareModalOpen}
+          onOpenChange={setCompareModalOpen}
+          productsToCompare={comparedProducts}
+          onRemoveProduct={(id) => setCompareIds(prev => prev.filter(item => item !== id))}
+          onClearAll={() => setCompareIds([])}
+        />
 
         {/* Bottom Editorial Atelier Callout */}
         <div className="mt-20 pt-12 border-t border-[#EBE4D6] w-full max-w-full overflow-hidden">

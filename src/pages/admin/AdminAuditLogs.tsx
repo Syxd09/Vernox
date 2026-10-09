@@ -9,7 +9,7 @@ import { useCatalog } from '@/lib/catalogContext';
 import type { AuditLog, AuditTargetType } from '@/types/admin';
 import { 
   Shield, Search, Download, RefreshCw, Filter, 
-  Clock, Eye, User, FileText, CheckCircle2, AlertTriangle, Key
+  Clock, Eye, User, FileText, CheckCircle2, AlertTriangle, Key, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -265,9 +265,10 @@ export function AdminAuditLogs() {
               </div>
               <button 
                 onClick={() => setInspectingLog(null)}
-                className="text-muted-foreground hover:text-foreground p-1"
+                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition"
+                aria-label="Close dialog"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

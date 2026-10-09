@@ -420,7 +420,7 @@ export function WallPreview({ product, shapeId, finish, widthMm, heightMm }: Pro
                     )}
                   >
                     <span className="font-mono text-[9px] sm:text-[11px] font-bold text-white flex items-center gap-1 leading-none">
-                      <span>↕</span>
+                      <span className="text-gold/90 font-sans text-[8px] sm:text-[9px] font-semibold tracking-wider uppercase">H:</span>
                       <span>{calHeightCm} cm</span>
                     </span>
                     <span className="font-sans text-[7px] sm:text-[8px] text-white/70 leading-tight mt-0.5">
@@ -471,8 +471,9 @@ export function WallPreview({ product, shapeId, finish, widthMm, heightMm }: Pro
                       showDimensionsOnTop ? "bottom-2.5" : "top-2.5"
                     )}
                   >
-                    <span className="font-mono text-[9px] sm:text-[11px] font-bold text-white leading-none">
-                      ↔ {calWidthCm} cm
+                    <span className="font-mono text-[9px] sm:text-[11px] font-bold text-white leading-none flex items-center gap-1">
+                      <span className="text-gold/90 font-sans text-[8px] sm:text-[9px] font-semibold tracking-wider uppercase">W:</span>
+                      <span>{calWidthCm} cm</span>
                     </span>
                     <span className="font-sans text-[7px] sm:text-[8px] text-white/70 leading-none">
                       ({calWidthIn}″)

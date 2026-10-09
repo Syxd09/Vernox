@@ -310,8 +310,9 @@ export function AdminRoles() {
               <button 
                 onClick={() => setIsInviteOpen(false)}
                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                aria-label="Close dialog"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -393,8 +394,9 @@ export function AdminRoles() {
               <button 
                 onClick={() => setEditingAdmin(null)}
                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                aria-label="Close dialog"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

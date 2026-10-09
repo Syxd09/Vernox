@@ -406,7 +406,7 @@ export function AdminOrders({ initialFilter = 'all' }: AdminOrdersProps = {}) {
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>✓ Paid</span>
+            <span>Paid</span>
           </span>
         );
       case 'Pending':
@@ -456,7 +456,7 @@ export function AdminOrders({ initialFilter = 'all' }: AdminOrdersProps = {}) {
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            <span>✕ Cancelled</span>
+            <span>Cancelled</span>
           </span>
         );
       default:
@@ -570,7 +570,7 @@ export function AdminOrders({ initialFilter = 'all' }: AdminOrdersProps = {}) {
               className="bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-oxblood cursor-pointer"
             >
               <option value="all">Status: All</option>
-              <option value="Paid">✓ Paid</option>
+              <option value="Paid">Paid</option>
               <option value="Pending">Pending</option>
               <option value="Designing">Designing</option>
               <option value="Cutting">Cutting</option>
@@ -1074,7 +1074,7 @@ export function AdminOrders({ initialFilter = 'all' }: AdminOrdersProps = {}) {
                   className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-semibold outline-none focus:border-oxblood cursor-pointer"
                 >
                   <option value="Pending">Pending</option>
-                  <option value="Paid">✓ Paid</option>
+                  <option value="Paid">Paid</option>
                   <option value="Designing">Designing</option>
                   <option value="Cutting">Cutting</option>
                   <option value="Finished">Finished</option>

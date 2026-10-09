@@ -5,7 +5,7 @@ import { SiteFooter } from '@/components/shop/SiteFooter';
 import { useCatalog } from '@/lib/catalogContext';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronUp, MapPin, Truck, Calendar, Package, AlertCircle, Layers, Sun, Moon, User, Lock, Settings, History, ShieldCheck, Mail, Phone, ArrowRight, Eye, EyeOff, X, PhoneCall, Heart } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin, Truck, Calendar, Package, AlertCircle, Layers, Sun, Moon, User, Lock, Settings, History, ShieldCheck, Mail, Phone, ArrowRight, Eye, EyeOff, X, PhoneCall, Heart, Activity, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import { auth, googleProvider } from '@/lib/firebase';
@@ -717,7 +717,7 @@ export default function Account() {
                                               : "bg-background border-border text-muted-foreground"
                                           )}
                                         >
-                                          {isCompleted && !isActive ? '✓' : idx + 1}
+                                          {isCompleted && !isActive ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : idx + 1}
                                         </div>
                                         <span className={cn("text-[9px] uppercase tracking-wider font-semibold", isCompleted ? "text-oxblood" : "text-muted-foreground")}>
                                           {stepLabel}
@@ -749,7 +749,7 @@ export default function Account() {
                                               : "border-border text-muted-foreground"
                                           )}
                                         >
-                                          {isCompleted && !isActive ? '✓' : idx + 1}
+                                          {isCompleted && !isActive ? <Check className="w-2.5 h-2.5 stroke-[2.5]" /> : idx + 1}
                                         </div>
                                         <span className={cn("text-xs uppercase tracking-widest font-semibold", isCompleted ? "text-oxblood font-bold" : "text-muted-foreground")}>
                                           {stepLabel}
@@ -817,9 +817,17 @@ export default function Account() {
 
                               {/* Order Tracking Card */}
                               <div className="space-y-2 text-xs">
-                                <h5 className="font-semibold text-oxblood flex items-center gap-1.5">
-                                  <Truck className="w-3.5 h-3.5" /> Order Tracking
-                                </h5>
+                                <div className="flex items-center justify-between">
+                                  <h5 className="font-semibold text-oxblood flex items-center gap-1.5">
+                                    <Truck className="w-3.5 h-3.5" /> Order Tracking
+                                  </h5>
+                                  <Link 
+                                    to={`/track-order?id=${o.id}`}
+                                    className="text-[10px] text-brass hover:text-oxblood font-semibold tracking-wider uppercase inline-flex items-center gap-1 transition"
+                                  >
+                                    Live Telemetry &rarr;
+                                  </Link>
+                                </div>
                                 {o.trackingNumber ? (
                                   <div className="text-muted-foreground leading-relaxed pl-5 space-y-1">
                                     <p>Carrier: <span className="font-semibold text-foreground capitalize">{o.trackingCarrier || 'Local Post'}</span></p>
@@ -829,14 +837,30 @@ export default function Account() {
                                         <Calendar className="w-3 h-3" /> Delivery: {o.estimatedDelivery}
                                       </p>
                                     )}
+                                    <div className="pt-2">
+                                      <Link
+                                        to={`/track-order?id=${o.id}`}
+                                        className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-oxblood border border-oxblood/20 bg-oxblood/5 hover:bg-oxblood hover:text-white px-3 py-1.5 rounded transition uppercase tracking-wider"
+                                      >
+                                        <Activity className="w-3 h-3" /> Dedicated Tracking Portal
+                                      </Link>
+                                    </div>
                                   </div>
                                 ) : (
-                                  <div className="text-muted-foreground leading-relaxed pl-5 flex items-start gap-1.5 bg-yellow-500/5 border border-yellow-500/10 p-2.5 rounded">
-                                    <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
-                                    <div>
-                                      <p className="font-semibold text-foreground text-[11px]">Production in Queue</p>
-                                      <p className="text-[10px] text-muted-foreground/80 mt-0.5">We are preparing your custom commission layout. Once laser cut and patinated, tracking codes will activate here.</p>
+                                  <div className="text-muted-foreground leading-relaxed pl-5 space-y-2">
+                                    <div className="flex items-start gap-1.5 bg-yellow-500/5 border border-yellow-500/10 p-2.5 rounded">
+                                      <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
+                                      <div>
+                                        <p className="font-semibold text-foreground text-[11px]">Production in Queue</p>
+                                        <p className="text-[10px] text-muted-foreground/80 mt-0.5">We are preparing your custom commission layout. Once laser cut and patinated, tracking codes will activate here.</p>
+                                      </div>
                                     </div>
+                                    <Link
+                                      to={`/track-order?id=${o.id}`}
+                                      className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-oxblood border border-oxblood/20 bg-oxblood/5 hover:bg-oxblood hover:text-white px-3 py-1.5 rounded transition uppercase tracking-wider"
+                                    >
+                                      <Activity className="w-3 h-3" /> Track Atelier Milestones &rarr;
+                                    </Link>
                                   </div>
                                 )}
                               </div>

@@ -11,7 +11,7 @@ import { useCatalog } from '@/lib/catalogContext';
 import type { Coupon, DiscountType } from '@/types/coupon';
 import { 
   Tag, Plus, Edit2, Trash2, Search, CheckCircle2, 
-  XCircle, Clock, Users, ArrowUpRight, Copy, Check, Eye, AlertTriangle, ShieldCheck
+  XCircle, Clock, Users, ArrowUpRight, Copy, Check, Eye, AlertTriangle, ShieldCheck, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -443,8 +443,9 @@ export function AdminCoupons() {
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                aria-label="Close dialog"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -646,8 +647,9 @@ export function AdminCoupons() {
               <button 
                 onClick={() => setViewingUsagesCoupon(null)}
                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                aria-label="Close drawer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

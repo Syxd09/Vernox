@@ -67,7 +67,7 @@ export function PageCurtain() {
               </div>
 
               <div className="text-[8px] uppercase tracking-[0.3em] text-cream/60 font-mono pt-1">
-                Antwerp · Milan · New York
+                Contemporary Metalwork & Sculptures
               </div>
             </motion.div>
 

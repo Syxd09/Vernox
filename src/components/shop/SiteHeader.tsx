@@ -43,6 +43,7 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
     { label: 'SCULPTURES', to: '/shop/sculptures' },
     { label: 'COLLECTIONS', to: '/shop' },
     { label: 'CRAFTING STUDIO', to: '/customize' },
+    { label: 'TRADE', to: '/trade' },
     { label: 'ABOUT', to: '/about' },
   ];
 
@@ -51,11 +52,15 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
       {/* Top Subtle Announcement Ribbon */}
       <div className="bg-maroon-deep text-cream text-[9px] sm:text-[10px] uppercase tracking-[0.16em] sm:tracking-[0.24em] py-2 px-3 sm:px-6 font-sans text-center relative z-20 w-full overflow-hidden">
         <div className="max-w-7xl mx-auto flex items-center justify-between w-full min-w-0">
-          <span className="hidden sm:inline-block text-gold shrink-0">Antwerp & Milan Studios</span>
+          <Link to="/trade" className="hidden sm:inline-block text-gold hover:text-cream transition-colors shrink-0">
+            Architect & Designer Trade Program
+          </Link>
           <span className="mx-auto sm:mx-0 font-medium tracking-[0.16em] sm:tracking-[0.26em] truncate max-w-full block min-w-0 flex-1 px-2">
             Curated Wall Art & Statement Pieces · Complimentary Insured Crating Worldwide
           </span>
-          <span className="hidden sm:inline-block text-cream/70 shrink-0">Solid Alloy & Fine Canvas</span>
+          <Link to="/track-order" className="hidden sm:inline-block text-cream/80 hover:text-gold transition-colors shrink-0">
+            Track Order →
+          </Link>
         </div>
       </div>
 
@@ -197,23 +202,55 @@ export function SiteHeader({ onOpenStudio }: Props = {}) {
                     {item.label}
                   </NavLink>
                 ))}
-                <div className="pt-4 border-t border-[#EBE4D6] flex items-center justify-between text-xs text-dark-brown/80">
-                  <Link
-                    to="/account"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 hover:text-burgundy"
-                  >
-                    <User className="w-4 h-4" />
-                    <span>My Account</span>
-                  </Link>
-                  <Link
-                    to="/account?tab=wishlist"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 hover:text-burgundy"
-                  >
-                    <Heart className="w-4 h-4" />
-                    <span>Wishlist ({wishlist.length})</span>
-                  </Link>
+                <div className="pt-4 border-t border-[#EBE4D6] space-y-2 text-xs text-dark-brown/80 font-sans">
+                  <div className="flex items-center justify-between pb-2">
+                    <Link
+                      to="/account"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 hover:text-burgundy"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>My Account</span>
+                    </Link>
+                    <Link
+                      to="/account?tab=wishlist"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 hover:text-burgundy"
+                    >
+                      <Heart className="w-4 h-4" />
+                      <span>Wishlist ({wishlist.length})</span>
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-[#EBE4D6]/60">
+                    <Link
+                      to="/track-order"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-burgundy font-semibold hover:underline"
+                    >
+                      Track Order →
+                    </Link>
+                    <Link
+                      to="/shipping"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-dark-brown/70 hover:text-burgundy"
+                    >
+                      Shipping & Crating
+                    </Link>
+                    <Link
+                      to="/returns"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-dark-brown/70 hover:text-burgundy"
+                    >
+                      30-Day Returns
+                    </Link>
+                    <Link
+                      to="/contact"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-dark-brown/70 hover:text-burgundy"
+                    >
+                      Contact Concierge
+                    </Link>
+                  </div>
                 </div>
               </div>
             </motion.div>

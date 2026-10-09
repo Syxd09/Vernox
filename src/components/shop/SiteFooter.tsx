@@ -21,7 +21,7 @@ export function SiteFooter() {
               Curated wall art, modernist sculptures, and decorative statement pieces designed for timeless architectural spaces.
             </p>
             <div className="pt-2 text-[10px] uppercase tracking-[0.2em] text-dusty-pink font-mono">
-              Antwerp · Milan · New York
+              Contemporary Art & Sculptures
             </div>
           </div>
 
@@ -71,23 +71,28 @@ export function SiteFooter() {
             </h4>
             <ul className="space-y-3 text-xs text-cream/80 font-sans">
               <li>
-                <Link to="/about#shipping" className="hover:text-dusty-pink transition-colors">
-                  Shipping
+                <Link to="/track-order" className="hover:text-dusty-pink transition-colors font-medium text-cream">
+                  Track Order
                 </Link>
               </li>
               <li>
-                <Link to="/about#returns" className="hover:text-dusty-pink transition-colors">
-                  Returns
+                <Link to="/shipping" className="hover:text-dusty-pink transition-colors">
+                  Shipping & Crating
                 </Link>
               </li>
               <li>
-                <Link to="/about#faqs" className="hover:text-dusty-pink transition-colors">
-                  FAQs
+                <Link to="/returns" className="hover:text-dusty-pink transition-colors">
+                  Returns & Guarantee
                 </Link>
               </li>
               <li>
-                <Link to="/about#contact" className="hover:text-dusty-pink transition-colors">
-                  Contact
+                <Link to="/faqs" className="hover:text-dusty-pink transition-colors">
+                  FAQs & Hanging
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-dusty-pink transition-colors">
+                  Concierge Contact
                 </Link>
               </li>
             </ul>
@@ -101,22 +106,22 @@ export function SiteFooter() {
             <ul className="space-y-3 text-xs text-cream/80 font-sans">
               <li>
                 <Link to="/about" className="hover:text-dusty-pink transition-colors">
-                  Our Story
+                  Our Story & Heritage
                 </Link>
               </li>
               <li>
                 <Link to="/shop" className="hover:text-dusty-pink transition-colors">
-                  Collections
+                  Curated Collections
                 </Link>
               </li>
               <li>
                 <Link to="/customize" className="hover:text-dusty-pink transition-colors">
-                  Custom Art
+                  Custom CAD Studio
                 </Link>
               </li>
               <li>
-                <Link to="/about#b2b" className="hover:text-dusty-pink transition-colors">
-                  Trade / Corporate
+                <Link to="/trade" className="hover:text-dusty-pink transition-colors">
+                  Architect & Trade B2B
                 </Link>
               </li>
             </ul>

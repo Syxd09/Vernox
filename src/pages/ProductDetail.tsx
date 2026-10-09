@@ -8,6 +8,7 @@ import { WallTiltPreview } from '@/components/experience/WallTiltPreview';
 import { WallPreview } from '@/components/experience/WallPreview';
 import { InlineStudio } from '@/components/experience/InlineStudio';
 import { ProductCard } from '@/components/shop/ProductCard';
+import { RecentlyViewed } from '@/components/shop/RecentlyViewed';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
 import { 
@@ -636,22 +637,33 @@ export default function ProductDetail() {
             </div>
 
             {/* Real-Time Atelier Dispatch & Crating Promise */}
-            {/* Atelier Dispatch & Transit Notes */}
             <div className="p-4 rounded-[2px] bg-white border border-[#EBE4D6] space-y-2.5 shadow-2xs">
-              <div className="flex items-baseline gap-2 text-xs font-sans">
-                <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Production</span>
-                <span className="text-dark-brown/40">·</span>
-                <span className="text-dark-brown font-medium">Hand-finished & crated within 5–7 business days</span>
+              <div className="flex items-baseline justify-between text-xs font-sans">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Production</span>
+                  <span className="text-dark-brown/40">·</span>
+                  <span className="text-dark-brown font-medium">Hand-finished & crated in 3–5 business days</span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2 text-xs text-dark-brown/75 font-sans">
-                <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Logistics</span>
-                <span className="text-dark-brown/40">·</span>
-                <span>Complimentary insured white-glove transit worldwide</span>
+              <div className="flex items-baseline justify-between text-xs text-dark-brown/75 font-sans">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Logistics</span>
+                  <span className="text-dark-brown/40">·</span>
+                  <span>Complimentary insured timber crate freight</span>
+                </div>
+                <Link to="/shipping" className="text-[10px] text-burgundy font-semibold hover:underline">
+                  Details →
+                </Link>
               </div>
-              <div className="flex items-baseline gap-2 text-[11px] text-dark-brown/70 font-sans">
-                <span className="font-mono text-[10px] text-burgundy font-semibold uppercase tracking-wider">Edition</span>
-                <span className="text-dark-brown/40">·</span>
-                <span>Numbered hallmark stamp & signed studio certificate included</span>
+              <div className="flex items-baseline justify-between text-[11px] text-dark-brown/70 font-sans border-t border-[#EBE4D6]/60 pt-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[10px] text-gold font-semibold uppercase tracking-wider">Trial</span>
+                  <span className="text-dark-brown/40">·</span>
+                  <span>30-Day in-situ gallery inspection period</span>
+                </div>
+                <Link to="/returns" className="text-[10px] text-burgundy font-semibold hover:underline">
+                  Returns →
+                </Link>
               </div>
             </div>
 
@@ -684,10 +696,10 @@ export default function ProductDetail() {
                 </summary>
                 <div className="pt-3 text-xs text-dark-brown/80 leading-relaxed space-y-2 font-sans border-t border-[#EBE4D6] mt-3">
                   <p>
-                    Cold-rolled Belgian metallurgical plate with an uncompromising 3.0mm thickness (gauge weight approx. 24kg/m²). Cut with fiber-optic nitrogen assist laser to ±0.05mm precision.
+                    Solid architectural metal plate with a substantial 3.0mm profile. Precision laser-cut for crisp edge fidelity and dimensional stability.
                   </p>
                   <p>
-                    Surface passivated to prevent natural oxidation while maintaining the tactile brushed metallurgical grain.
+                    Surface treated to protect the finish while highlighting the natural tactile brushed grain.
                   </p>
                 </div>
               </details>
@@ -730,7 +742,7 @@ export default function ProductDetail() {
                   Specifying for an Interior Project?
                 </div>
                 <div className="text-[11px] text-dark-brown/70 font-sans mt-0.5">
-                  Custom dimensions, 3D CAD DXF files & trade tier discounts available.
+                  Custom dimensions, CAD vector reviews & trade pricing available.
                 </div>
               </div>
               <a 
@@ -1098,6 +1110,11 @@ export default function ProductDetail() {
           </div>
         </section>
       )}
+
+      {/* Recently Viewed Works */}
+      <div className="max-w-7xl mx-auto px-6">
+        <RecentlyViewed currentProductId={product.id} className="mb-16" />
+      </div>
 
       <SiteFooter />
     </div>

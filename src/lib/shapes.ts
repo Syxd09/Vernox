@@ -179,7 +179,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'flower',
     name: 'Flower',
     category: 'decorative',
-    icon: '✿',
+    icon: 'flower',
     getPath: (w, h) => {
       const cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2;
       const petals = 6;
@@ -368,7 +368,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'keyhole',
     name: 'Keyhole',
     category: 'decorative',
-    icon: '🔑',
+    icon: 'keyhole',
     getPath: (w, h) => {
       const cx = w / 2, cy = h * 0.35, r = Math.min(w, h) * 0.22;
       return `M${cx - r * 0.4},${cy + r * 0.7} L${cx - r * 0.6},${h} L${cx + r * 0.6},${h} L${cx + r * 0.4},${cy + r * 0.7} A${r},${r} 0 1,0 ${cx - r * 0.4},${cy + r * 0.7} Z`;
@@ -378,7 +378,7 @@ export const shapeDefinitions: ShapeDefinition[] = [
     id: 'medal',
     name: 'Medal',
     category: 'decorative',
-    icon: '🏅',
+    icon: 'medal',
     getPath: (w, h) => {
       const cx = w / 2, cy = h * 0.6, r = Math.min(w, h) * 0.38;
       const ribbon = `M${cx - r * 0.6},0 L${cx - r * 0.2},${cy} L${cx + r * 0.2},${cy} L${cx + r * 0.6},0 Z`;

@@ -9,7 +9,7 @@ import { useCatalog, Order } from '@/lib/catalogContext';
 import type { CustomerAccount } from '@/lib/catalogContext';
 import { 
   Users, Search, ShoppingBag, MapPin, Mail, 
-  Phone, Calendar, ArrowUpRight, Eye, ShieldCheck, ChevronRight
+  Phone, Calendar, ArrowUpRight, Eye, ShieldCheck, ChevronRight, X
 } from 'lucide-react';
 
 export function AdminCustomers() {
@@ -233,9 +233,10 @@ export function AdminCustomers() {
               </div>
               <button 
                 onClick={() => setSelectedCustomer(null)}
-                className="text-muted-foreground hover:text-foreground p-1"
+                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition"
+                aria-label="Close profile"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

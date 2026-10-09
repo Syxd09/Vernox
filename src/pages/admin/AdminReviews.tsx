@@ -9,7 +9,7 @@ import { useCatalog } from '@/lib/catalogContext';
 import type { Review } from '@/lib/catalogContext';
 import { 
   Star, Search, Trash2, CheckCircle2, ShieldCheck, 
-  MessageSquare, Plus, Eye, AlertTriangle 
+  MessageSquare, Plus, Eye, AlertTriangle, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -201,7 +201,13 @@ export function AdminReviews() {
           <div className="bg-card border border-border rounded-xl w-full max-w-lg p-6 shadow-luxe space-y-4 animate-scale-in">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h3 className="font-display text-lg text-oxblood-deep">Add Collector Testimonial</h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+              <button 
+                onClick={() => setIsAddOpen(false)} 
+                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition"
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <form onSubmit={handleCreateReview} className="space-y-4">

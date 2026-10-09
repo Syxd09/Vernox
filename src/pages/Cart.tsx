@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { RecentlyViewed } from '@/components/shop/RecentlyViewed';
 
 export default function Cart() {
   const { storeConfig, products } = useCatalog();
@@ -466,8 +467,8 @@ export default function Cart() {
                   <div className="font-semibold text-burgundy">Atelier Concierge Inquiries</div>
                   <div className="text-muted-foreground text-[11px] mt-0.5">
                     Need custom dimensions or corporate trade advice?{' '}
-                    <a href="mailto:concierge@vernox.com" className="text-burgundy font-semibold hover:underline">
-                      concierge@vernox.com
+                    <a href="mailto:concierge@vernoxatelier.com" className="text-burgundy font-semibold hover:underline">
+                      concierge@vernoxatelier.com
                     </a>
                   </div>
                 </div>
@@ -475,6 +476,9 @@ export default function Cart() {
             </aside>
           </div>
         )}
+
+        {/* Recently Viewed Works */}
+        <RecentlyViewed className="mt-16" />
       </main>
 
       <SiteFooter />
