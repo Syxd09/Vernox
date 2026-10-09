@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -241,17 +242,18 @@ export default function Contact() {
                       <label className="text-[11px] uppercase tracking-[0.2em] text-dark-brown/80 font-sans font-semibold">
                         Inquiry Nature
                       </label>
-                      <select
+                      <AtelierSelect
                         value={formData.subject}
-                        onChange={e => setFormData({ ...formData, subject: e.target.value })}
-                        className="w-full px-3 py-3 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy transition-all"
-                      >
-                        <option value="Collector Consultation">Collector Consultation</option>
-                        <option value="Bespoke CAD Commission">Bespoke CAD / Custom Sizing</option>
-                        <option value="Trade & B2B Specification">Trade / Architectural Specification</option>
-                        <option value="Existing Order Inquiries">Order Status / Shipping Assistance</option>
-                        <option value="Press & Gallery Inquiries">Press & Exhibition Collaborations</option>
-                      </select>
+                        onValueChange={val => setFormData({ ...formData, subject: val })}
+                        className="w-full h-11 px-3.5 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:border-burgundy focus:ring-1 focus:ring-burgundy"
+                        options={[
+                          { value: 'Collector Consultation', label: 'Collector Consultation' },
+                          { value: 'Bespoke CAD Commission', label: 'Bespoke CAD / Custom Sizing' },
+                          { value: 'Trade & B2B Specification', label: 'Trade / Architectural Specification' },
+                          { value: 'Existing Order Inquiries', label: 'Order Status / Shipping Assistance' },
+                          { value: 'Press & Gallery Inquiries', label: 'Press & Exhibition Collaborations' },
+                        ]}
+                      />
                     </div>
                   </div>
 

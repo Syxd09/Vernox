@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useCatalog, hashPassphrase } from '@/lib/catalogContext';
 import { Download, Upload, Clipboard, ShieldAlert, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminSettings() {
   const {
@@ -148,17 +149,18 @@ export function AdminSettings() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Currency Symbol</label>
-            <select
+            <AtelierSelect
               value={configForm.currency}
-              onChange={e => setConfigForm({ ...configForm, currency: e.target.value })}
+              onValueChange={val => setConfigForm({ ...configForm, currency: val })}
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-oxblood transition"
-            >
-              <option value="₹">₹ (INR - Rupee)</option>
-              <option value="$">$ (USD - Dollar)</option>
-              <option value="€">€ (EUR - Euro)</option>
-              <option value="£">£ (GBP - Pound)</option>
-              <option value="¥">¥ (JPY - Yen)</option>
-            </select>
+              options={[
+                { value: '₹', label: '₹ (INR - Rupee)' },
+                { value: '$', label: '$ (USD - Dollar)' },
+                { value: '€', label: '€ (EUR - Euro)' },
+                { value: '£', label: '£ (GBP - Pound)' },
+                { value: '¥', label: '¥ (JPY - Yen)' },
+              ]}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2 pt-2">

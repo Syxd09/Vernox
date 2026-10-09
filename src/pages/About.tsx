@@ -12,7 +12,12 @@ import {
   ShieldCheck, 
   Compass, 
   CheckCircle2, 
-  ExternalLink 
+  ExternalLink,
+  Building2,
+  Home,
+  Briefcase,
+  Landmark,
+  Palette
 } from 'lucide-react';
 
 const PROCESS_STEPS = [
@@ -179,16 +184,19 @@ export default function About() {
         </section>
 
         {/* =========================================================================
-            SECTION 2: OUR PARTNERS (3x2 Logo Grid + Brand Introduction)
+            SECTION 2: SPATIAL APPLICATIONS (3x2 Architecture & Environment Grid)
             ========================================================================= */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center border-t border-[#E8E1D3] pt-20">
           {/* Left Column: Heading & Subtitle */}
           <div className="lg:col-span-5 space-y-4">
+            <span className="text-[11px] uppercase tracking-[0.22em] text-burgundy font-semibold font-sans">
+              Commission Sectors
+            </span>
             <h2 className="font-editorial text-4xl sm:text-5xl text-dark-brown font-normal leading-[1.12]">
-              Our<br />Partners
+              Spatial<br />Applications
             </h2>
             <p className="text-xs sm:text-sm text-dark-brown/70 font-sans leading-relaxed max-w-sm">
-              Explore curated pieces that bring comfort, character, and elegance to every corner of your home.
+              From private residential sanctuaries to flagship commercial spaces, our architectural metalwork is engineered to command presence in curated interiors.
             </p>
             <div className="pt-2">
               <Link
@@ -201,74 +209,72 @@ export default function About() {
             </div>
           </div>
 
-          {/* Right Column: 3x2 Grid of Refined Brand & Architecture Marks */}
+          {/* Right Column: 3x2 Grid of Spatial Sectors */}
           <div className="lg:col-span-7">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {/* Partner 1: Logoipsum Clean */}
-              <div className="bg-white border border-[#E8E1D3] rounded-sm p-6 sm:p-8 flex items-center justify-center min-h-[110px] shadow-2xs hover:border-burgundy/40 transition-all group">
-                <div className="flex items-center gap-2 text-dark-brown/85 group-hover:text-dark-brown transition-colors">
-                  <div className="w-6 h-6 rounded-xs bg-dark-brown text-cream flex items-center justify-center font-bold font-sans text-xs">
-                    G
-                  </div>
-                  <span className="font-sans font-bold tracking-tight text-sm uppercase">
-                    LOGOIPSUM
-                  </span>
+              {/* Sector 1: Private Residences */}
+              <div className="bg-white border border-[#E8E1D3] rounded-sm p-5 sm:p-6 flex flex-col justify-between min-h-[130px] shadow-2xs hover:border-burgundy/40 transition-all group">
+                <div className="w-8 h-8 rounded-full bg-cream/70 flex items-center justify-center text-burgundy group-hover:bg-burgundy group-hover:text-cream transition-colors">
+                  <Home className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-sm font-semibold text-dark-brown tracking-tight">Private Residences</h3>
+                  <p className="text-[11px] text-dark-brown/60 font-sans mt-0.5">Living salons, foyers & stairwell reliefs</p>
                 </div>
               </div>
 
-              {/* Partner 2: DARDEN */}
-              <div className="bg-white border border-[#E8E1D3] rounded-sm p-6 sm:p-8 flex items-center justify-center min-h-[110px] shadow-2xs hover:border-burgundy/40 transition-all group">
-                <div className="flex items-center gap-2 text-dark-brown/85 group-hover:text-dark-brown transition-colors">
-                  <span className="text-burgundy text-xl font-bold font-editorial">)</span>
-                  <span className="font-sans font-semibold tracking-wider text-sm uppercase">
-                    DARDEN
-                  </span>
+              {/* Sector 2: Hotels & Resorts */}
+              <div className="bg-white border border-[#E8E1D3] rounded-sm p-5 sm:p-6 flex flex-col justify-between min-h-[130px] shadow-2xs hover:border-burgundy/40 transition-all group">
+                <div className="w-8 h-8 rounded-full bg-cream/70 flex items-center justify-center text-burgundy group-hover:bg-burgundy group-hover:text-cream transition-colors">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-sm font-semibold text-dark-brown tracking-tight">Hotels & Resorts</h3>
+                  <p className="text-[11px] text-dark-brown/60 font-sans mt-0.5">Grand lobbies, suites & feature screens</p>
                 </div>
               </div>
 
-              {/* Partner 3: CoStar Group */}
-              <div className="bg-white border border-[#E8E1D3] rounded-sm p-6 sm:p-8 flex items-center justify-center min-h-[110px] shadow-2xs hover:border-burgundy/40 transition-all group">
-                <div className="flex items-center gap-2 text-dark-brown/85 group-hover:text-dark-brown transition-colors">
-                  <div className="w-5 h-5 rounded-full border border-dark-brown/80 flex items-center justify-center text-[10px]">
-                    ✦
-                  </div>
-                  <span className="font-sans font-semibold tracking-tight text-sm">
-                    CoStarGroup
-                  </span>
+              {/* Sector 3: Corporate HQs */}
+              <div className="bg-white border border-[#E8E1D3] rounded-sm p-5 sm:p-6 flex flex-col justify-between min-h-[130px] shadow-2xs hover:border-burgundy/40 transition-all group">
+                <div className="w-8 h-8 rounded-full bg-cream/70 flex items-center justify-center text-burgundy group-hover:bg-burgundy group-hover:text-cream transition-colors">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-sm font-semibold text-dark-brown tracking-tight">Corporate HQs</h3>
+                  <p className="text-[11px] text-dark-brown/60 font-sans mt-0.5">Boardrooms & executive reception focal points</p>
                 </div>
               </div>
 
-              {/* Partner 4: COTERRA */}
-              <div className="bg-white border border-[#E8E1D3] rounded-sm p-6 sm:p-8 flex items-center justify-center min-h-[110px] shadow-2xs hover:border-burgundy/40 transition-all group">
-                <div className="flex items-center gap-2 text-dark-brown/85 group-hover:text-dark-brown transition-colors">
-                  <div className="w-4 h-4 rounded-full border-2 border-teal-600" />
-                  <span className="font-sans font-bold tracking-wider text-sm uppercase">
-                    COTERRA
-                  </span>
+              {/* Sector 4: Design Studios */}
+              <div className="bg-white border border-[#E8E1D3] rounded-sm p-5 sm:p-6 flex flex-col justify-between min-h-[130px] shadow-2xs hover:border-burgundy/40 transition-all group">
+                <div className="w-8 h-8 rounded-full bg-cream/70 flex items-center justify-center text-burgundy group-hover:bg-burgundy group-hover:text-cream transition-colors">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-sm font-semibold text-dark-brown tracking-tight">Design Studios</h3>
+                  <p className="text-[11px] text-dark-brown/60 font-sans mt-0.5">Interior specifiers & bespoke CAD translations</p>
                 </div>
               </div>
 
-              {/* Partner 5: Prudential */}
-              <div className="bg-white border border-[#E8E1D3] rounded-sm p-6 sm:p-8 flex items-center justify-center min-h-[110px] shadow-2xs hover:border-burgundy/40 transition-all group">
-                <div className="flex items-center gap-2 text-dark-brown/85 group-hover:text-dark-brown transition-colors">
-                  <div className="w-5 h-5 rounded-full bg-blue-700 text-white flex items-center justify-center text-[9px] font-bold">
-                    P
-                  </div>
-                  <span className="font-editorial font-medium text-base tracking-tight">
-                    Prudential
-                  </span>
+              {/* Sector 5: Curated Galleries */}
+              <div className="bg-white border border-[#E8E1D3] rounded-sm p-5 sm:p-6 flex flex-col justify-between min-h-[130px] shadow-2xs hover:border-burgundy/40 transition-all group">
+                <div className="w-8 h-8 rounded-full bg-cream/70 flex items-center justify-center text-burgundy group-hover:bg-burgundy group-hover:text-cream transition-colors">
+                  <Palette className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-sm font-semibold text-dark-brown tracking-tight">Curated Galleries</h3>
+                  <p className="text-[11px] text-dark-brown/60 font-sans mt-0.5">Numbered limited editions & hallmark pieces</p>
                 </div>
               </div>
 
-              {/* Partner 6: Logoipsum Secondary */}
-              <div className="bg-white border border-[#E8E1D3] rounded-sm p-6 sm:p-8 flex items-center justify-center min-h-[110px] shadow-2xs hover:border-burgundy/40 transition-all group">
-                <div className="flex items-center gap-2 text-dark-brown/85 group-hover:text-dark-brown transition-colors">
-                  <div className="w-6 h-6 rounded-xs bg-dark-brown/90 text-cream flex items-center justify-center font-bold font-sans text-xs">
-                    L
-                  </div>
-                  <span className="font-sans font-bold tracking-tight text-sm uppercase">
-                    LOGOIPSUM
-                  </span>
+              {/* Sector 6: Luxury Developments */}
+              <div className="bg-white border border-[#E8E1D3] rounded-sm p-5 sm:p-6 flex flex-col justify-between min-h-[130px] shadow-2xs hover:border-burgundy/40 transition-all group">
+                <div className="w-8 h-8 rounded-full bg-cream/70 flex items-center justify-center text-burgundy group-hover:bg-burgundy group-hover:text-cream transition-colors">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-editorial text-sm font-semibold text-dark-brown tracking-tight">Luxury Developments</h3>
+                  <p className="text-[11px] text-dark-brown/60 font-sans mt-0.5">Penthouse installations & architectural accents</p>
                 </div>
               </div>
             </div>

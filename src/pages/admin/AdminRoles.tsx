@@ -15,6 +15,7 @@ import {
   Check, X, AlertTriangle, CheckCircle2, Lock 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminRoles() {
   const { 
@@ -343,16 +344,17 @@ export function AdminRoles() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Administrative Role *</label>
-                <select
+                <AtelierSelect
                   value={inviteForm.role}
-                  onChange={e => setInviteForm({ ...inviteForm, role: e.target.value as AdminRole })}
+                  onValueChange={val => setInviteForm({ ...inviteForm, role: val as AdminRole })}
                   className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
-                >
-                  <option value="admin">Admin (Catalog, Orders, Inventory, Coupons)</option>
-                  <option value="manager">Manager (Products, Orders, Coupons)</option>
-                  <option value="support">Support (Orders, Tracking, Customer Inquiries)</option>
-                  <option value="super_admin">Super Admin (Full Platform Control)</option>
-                </select>
+                  options={[
+                    { value: 'admin', label: 'Admin (Catalog, Orders, Inventory, Coupons)' },
+                    { value: 'manager', label: 'Manager (Products, Orders, Coupons)' },
+                    { value: 'support', label: 'Support (Orders, Tracking, Customer Inquiries)' },
+                    { value: 'super_admin', label: 'Super Admin (Full Platform Control)' },
+                  ]}
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-border">
@@ -408,28 +410,30 @@ export function AdminRoles() {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assign Role</label>
-                <select
+                <AtelierSelect
                   value={editForm.role}
-                  onChange={e => setEditForm({ ...editForm, role: e.target.value as AdminRole })}
+                  onValueChange={val => setEditForm({ ...editForm, role: val as AdminRole })}
                   className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
-                >
-                  <option value="super_admin">Super Admin</option>
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                  <option value="support">Support</option>
-                </select>
+                  options={[
+                    { value: 'super_admin', label: 'Super Admin' },
+                    { value: 'admin', label: 'Admin' },
+                    { value: 'manager', label: 'Manager' },
+                    { value: 'support', label: 'Support' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Access Status</label>
-                <select
+                <AtelierSelect
                   value={editForm.status}
-                  onChange={e => setEditForm({ ...editForm, status: e.target.value as any })}
+                  onValueChange={val => setEditForm({ ...editForm, status: val as any })}
                   className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
-                >
-                  <option value="active">Active (Full Credentials Allowed)</option>
-                  <option value="suspended">Suspended (Access Blocked Immediately)</option>
-                </select>
+                  options={[
+                    { value: 'active', label: 'Active (Full Credentials Allowed)' },
+                    { value: 'suspended', label: 'Suspended (Access Blocked Immediately)' },
+                  ]}
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-border">

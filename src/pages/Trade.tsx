@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export default function Trade() {
   const [formData, setFormData] = useState({
@@ -300,49 +301,52 @@ export default function Trade() {
                     <label className="text-[11px] uppercase tracking-[0.2em] text-dark-brown/80 font-sans font-semibold">
                       Project Type
                     </label>
-                    <select
+                    <AtelierSelect
                       value={formData.projectType}
-                      onChange={e => setFormData({ ...formData, projectType: e.target.value })}
-                      className="w-full px-3 py-3 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy transition-all"
-                    >
-                      <option value="hospitality">Hospitality / Hotel</option>
-                      <option value="residential">High-End Residential</option>
-                      <option value="commercial">Corporate HQ / Commercial</option>
-                      <option value="retail">Luxury Retail</option>
-                      <option value="general_trade">General Trade Account</option>
-                    </select>
+                      onValueChange={val => setFormData({ ...formData, projectType: val })}
+                      className="w-full h-11 px-3.5 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:border-burgundy focus:ring-1 focus:ring-burgundy"
+                      options={[
+                        { value: 'hospitality', label: 'Hospitality / Hotel' },
+                        { value: 'residential', label: 'High-End Residential' },
+                        { value: 'commercial', label: 'Corporate HQ / Commercial' },
+                        { value: 'retail', label: 'Luxury Retail' },
+                        { value: 'general_trade', label: 'General Trade Account' },
+                      ]}
+                    />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-[11px] uppercase tracking-[0.2em] text-dark-brown/80 font-sans font-semibold">
                       Estimated Volume
                     </label>
-                    <select
+                    <AtelierSelect
                       value={formData.estimatedQuantity}
-                      onChange={e => setFormData({ ...formData, estimatedQuantity: e.target.value })}
-                      className="w-full px-3 py-3 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy transition-all"
-                    >
-                      <option value="1-5 units">Single Spec / 1–5 Units</option>
-                      <option value="10-50 units">10 – 50 Units (Boutique)</option>
-                      <option value="50-200 units">50 – 200 Units (Hotel Wing)</option>
-                      <option value="200+ units">200+ Units (Enterprise Rollout)</option>
-                    </select>
+                      onValueChange={val => setFormData({ ...formData, estimatedQuantity: val })}
+                      className="w-full h-11 px-3.5 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:border-burgundy focus:ring-1 focus:ring-burgundy"
+                      options={[
+                        { value: '1-5 units', label: 'Single Spec / 1–5 Units' },
+                        { value: '10-50 units', label: '10 – 50 Units (Boutique)' },
+                        { value: '50-200 units', label: '50 – 200 Units (Hotel Wing)' },
+                        { value: '200+ units', label: '200+ Units (Enterprise Rollout)' },
+                      ]}
+                    />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-[11px] uppercase tracking-[0.2em] text-dark-brown/80 font-sans font-semibold">
                       Target Timeline
                     </label>
-                    <select
+                    <AtelierSelect
                       value={formData.timeline}
-                      onChange={e => setFormData({ ...formData, timeline: e.target.value })}
-                      className="w-full px-3 py-3 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy transition-all"
-                    >
-                      <option value="immediate">Immediate (under 30 days)</option>
-                      <option value="1-3 months">1 – 3 Months</option>
-                      <option value="3-6 months">3 – 6 Months</option>
-                      <option value="planning">Concept / Planning Stage</option>
-                    </select>
+                      onValueChange={val => setFormData({ ...formData, timeline: val })}
+                      className="w-full h-11 px-3.5 rounded-xs border border-[#E0D7C6] bg-cream/40 text-dark-brown text-sm font-sans focus:border-burgundy focus:ring-1 focus:ring-burgundy"
+                      options={[
+                        { value: 'immediate', label: 'Immediate (under 30 days)' },
+                        { value: '1-3 months', label: '1 – 3 Months' },
+                        { value: '3-6 months', label: '3 – 6 Months' },
+                        { value: 'planning', label: 'Concept / Planning Stage' },
+                      ]}
+                    />
                   </div>
                 </div>
 

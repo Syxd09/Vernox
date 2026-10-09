@@ -23,6 +23,7 @@ import {
   ZoomIn, Image as ImageIcon, ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export interface AdminOrdersProps {
   initialFilter?: 'all' | 'custom' | 'shipping' | 'pickups';
@@ -564,33 +565,35 @@ export function AdminOrders({ initialFilter = 'all' }: AdminOrdersProps = {}) {
         <div className="flex flex-wrap gap-2 items-center justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {/* Status Filter */}
-            <select
+            <AtelierSelect
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-oxblood cursor-pointer"
-            >
-              <option value="all">Status: All</option>
-              <option value="Paid">Paid</option>
-              <option value="Pending">Pending</option>
-              <option value="Designing">Designing</option>
-              <option value="Cutting">Cutting</option>
-              <option value="Finished">Finished</option>
-              <option value="Shipped">Shipped</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
+              onValueChange={setStatusFilter}
+              className="h-8 bg-background border border-border rounded-lg px-2.5 py-1 text-xs font-semibold"
+              options={[
+                { value: 'all', label: 'Status: All' },
+                { value: 'Paid', label: 'Paid' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Designing', label: 'Designing' },
+                { value: 'Cutting', label: 'Cutting' },
+                { value: 'Finished', label: 'Finished' },
+                { value: 'Shipped', label: 'Shipped' },
+                { value: 'Delivered', label: 'Delivered' },
+                { value: 'Cancelled', label: 'Cancelled' },
+              ]}
+            />
 
             {/* Date Filter */}
-            <select
+            <AtelierSelect
               value={dateFilter}
-              onChange={e => setDateFilter(e.target.value as any)}
-              className="bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-oxblood cursor-pointer"
-            >
-              <option value="all">Order date: All</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">This Month</option>
-            </select>
+              onValueChange={val => setDateFilter(val as any)}
+              className="h-8 bg-background border border-border rounded-lg px-2.5 py-1 text-xs font-semibold"
+              options={[
+                { value: 'all', label: 'Order date: All' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'Last 7 Days' },
+                { value: 'month', label: 'This Month' },
+              ]}
+            />
           </div>
 
           {/* Search Field */}
@@ -1063,25 +1066,26 @@ export function AdminOrders({ initialFilter = 'all' }: AdminOrdersProps = {}) {
                   <span>Print</span>
                 </button>
 
-                <select
+                <AtelierSelect
                   value={inspectingOrder.status}
-                  onChange={e => {
-                    const nextStatus = e.target.value as OrderStatus;
+                  onValueChange={val => {
+                    const nextStatus = val as OrderStatus;
                     updateOrderStatus(inspectingOrder.id, nextStatus);
                     setInspectingOrder({ ...inspectingOrder, status: nextStatus });
                     toast.success(`Status updated to ${nextStatus}`);
                   }}
-                  className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-semibold outline-none focus:border-oxblood cursor-pointer"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Designing">Designing</option>
-                  <option value="Cutting">Cutting</option>
-                  <option value="Finished">Finished</option>
-                  <option value="Shipped">Shipped</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
+                  className="h-8 bg-background border border-border rounded-lg px-3 py-1 text-xs font-semibold"
+                  options={[
+                    { value: 'Pending', label: 'Pending' },
+                    { value: 'Paid', label: 'Paid' },
+                    { value: 'Designing', label: 'Designing' },
+                    { value: 'Cutting', label: 'Cutting' },
+                    { value: 'Finished', label: 'Finished' },
+                    { value: 'Shipped', label: 'Shipped' },
+                    { value: 'Delivered', label: 'Delivered' },
+                    { value: 'Cancelled', label: 'Cancelled' },
+                  ]}
+                />
               </div>
 
               {/* Tab Selector */}

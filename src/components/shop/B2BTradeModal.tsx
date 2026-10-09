@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { AtelierSelect } from '@/components/ui/select';
 import {
   Building2,
   CheckCircle2,
@@ -241,66 +242,70 @@ export function B2BTradeModal({ open, onOpenChange, defaultProjectType }: Props)
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                   Project Sector
                 </label>
-                <select
+                <AtelierSelect
                   value={formData.projectType}
-                  onChange={e => setFormData({ ...formData, projectType: e.target.value })}
+                  onValueChange={val => setFormData({ ...formData, projectType: val })}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-xs"
-                >
-                  <option value="hospitality">Hospitality & Resorts (Hotels / Bars / Lounges)</option>
-                  <option value="corporate">Corporate Headquarters & Boardrooms</option>
-                  <option value="real_estate">Luxury Real Estate Developments & Penthouses</option>
-                  <option value="retail">Flagship Retail Chains & Showrooms</option>
-                  <option value="architecture">Architectural / Interior Design Practice</option>
-                  <option value="other">Bespoke Custom Commission</option>
-                </select>
+                  options={[
+                    { value: 'hospitality', label: 'Hospitality & Resorts (Hotels / Bars / Lounges)' },
+                    { value: 'corporate', label: 'Corporate Headquarters & Boardrooms' },
+                    { value: 'real_estate', label: 'Luxury Real Estate Developments & Penthouses' },
+                    { value: 'retail', label: 'Flagship Retail Chains & Showrooms' },
+                    { value: 'architecture', label: 'Architectural / Interior Design Practice' },
+                    { value: 'other', label: 'Bespoke Custom Commission' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                   Estimated Volume
                 </label>
-                <select
+                <AtelierSelect
                   value={formData.volume}
-                  onChange={e => setFormData({ ...formData, volume: e.target.value })}
+                  onValueChange={val => setFormData({ ...formData, volume: val })}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-xs"
-                >
-                  <option value="10-25">10 – 25 Pieces (15% Trade Tier)</option>
-                  <option value="26-50">26 – 50 Pieces (25% Trade Tier)</option>
-                  <option value="51-150">51 – 150 Pieces (35% Volume Tier)</option>
-                  <option value="150+">150+ Pieces (Contract Architecture Tier)</option>
-                </select>
+                  options={[
+                    { value: '10-25', label: '10 – 25 Pieces (15% Trade Tier)' },
+                    { value: '26-50', label: '26 – 50 Pieces (25% Trade Tier)' },
+                    { value: '51-150', label: '51 – 150 Pieces (35% Volume Tier)' },
+                    { value: '150+', label: '150+ Pieces (Contract Architecture Tier)' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                   Target Alloy / Finish
                 </label>
-                <select
+                <AtelierSelect
                   value={formData.alloyPreference}
-                  onChange={e => setFormData({ ...formData, alloyPreference: e.target.value })}
+                  onValueChange={val => setFormData({ ...formData, alloyPreference: val })}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-xs"
-                >
-                  <option value="brass_cz108">Solid 3.0mm Belgian CZ108 Brass</option>
-                  <option value="stainless_316l">316L Marine Surgical Stainless</option>
-                  <option value="corten">Cor-Ten Weathering Steel</option>
-                  <option value="french_patina">Archival French Wax Chemical Patina</option>
-                  <option value="mixed">Mixed Specification Across Project</option>
-                </select>
+                  options={[
+                    { value: 'brass_cz108', label: 'Solid 3.0mm Belgian CZ108 Brass' },
+                    { value: 'stainless_316l', label: '316L Marine Surgical Stainless' },
+                    { value: 'corten', label: 'Cor-Ten Weathering Steel' },
+                    { value: 'french_patina', label: 'Archival French Wax Chemical Patina' },
+                    { value: 'mixed', label: 'Mixed Specification Across Project' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                   Target Handover / Timeline
                 </label>
-                <select
+                <AtelierSelect
                   value={formData.timeline}
-                  onChange={e => setFormData({ ...formData, timeline: e.target.value })}
+                  onValueChange={val => setFormData({ ...formData, timeline: val })}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-xs"
-                >
-                  <option value="urgent_2_weeks">Priority Track (2 – 3 Weeks)</option>
-                  <option value="1-2 months">Standard Track (1 – 2 Months)</option>
-                  <option value="planning_quarter">Future Phased Project (3+ Months)</option>
-                </select>
+                  options={[
+                    { value: 'urgent_2_weeks', label: 'Priority Track (2 – 3 Weeks)' },
+                    { value: '1-2 months', label: 'Standard Track (1 – 2 Months)' },
+                    { value: 'planning_quarter', label: 'Future Phased Project (3+ Months)' },
+                  ]}
+                />
               </div>
             </div>
 

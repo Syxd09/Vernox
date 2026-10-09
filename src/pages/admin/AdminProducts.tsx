@@ -22,6 +22,7 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip 
 } from 'recharts';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminProducts() {
   const { 
@@ -669,15 +670,15 @@ export function AdminProducts() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category</label>
-                  <select
+                  <AtelierSelect
                     value={productForm.category}
-                    onChange={e => setProductForm({ ...productForm, category: e.target.value as any })}
-                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-oxblood"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    onValueChange={val => setProductForm({ ...productForm, category: val as any })}
+                    className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood"
+                    options={categories.map(c => ({
+                      value: c.id,
+                      label: c.name,
+                    }))}
+                  />
                 </div>
 
                 <div className="space-y-1.5">

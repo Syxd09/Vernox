@@ -585,3 +585,20 @@ html, body, #root {
   overscroll-behavior-x: none !important;
 }
 
+/* ────────── Universal Select & Dropdown Styling ────────── */
+select {
+  accent-color: var(--burgundy);
+}
+
+select option {
+  background-color: #FAF7F0;
+  color: var(--dark-brown);
+  padding: 8px 12px;
+  font-family: inherit;
+}
+
+select option:checked {
+  background-color: #E8DFCE !important;
+  color: var(--burgundy) !important;
+}
+

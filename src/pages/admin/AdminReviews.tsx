@@ -12,6 +12,7 @@ import {
   MessageSquare, Plus, Eye, AlertTriangle, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminReviews() {
   const { reviews, products, addReview, deleteReview } = useCatalog();
@@ -213,15 +214,15 @@ export function AdminReviews() {
             <form onSubmit={handleCreateReview} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product Target</label>
-                <select
+                <AtelierSelect
                   value={form.productId}
-                  onChange={e => setForm({ ...form, productId: e.target.value })}
+                  onValueChange={val => setForm({ ...form, productId: val })}
                   className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
-                >
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
-                  ))}
-                </select>
+                  options={products.map(p => ({
+                    value: p.id,
+                    label: `${p.name} (${p.id})`,
+                  }))}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -251,15 +252,16 @@ export function AdminReviews() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Star Rating</label>
-                <select
-                  value={form.rating}
-                  onChange={e => setForm({ ...form, rating: Number(e.target.value) })}
+                <AtelierSelect
+                  value={String(form.rating)}
+                  onValueChange={val => setForm({ ...form, rating: Number(val) })}
                   className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
-                >
-                  <option value={5}>5 Stars - Flawless</option>
-                  <option value={4}>4 Stars - Exquisite</option>
-                  <option value={3}>3 Stars - Satisfactory</option>
-                </select>
+                  options={[
+                    { value: '5', label: '5 Stars - Flawless' },
+                    { value: '4', label: '4 Stars - Exquisite' },
+                    { value: '3', label: '3 Stars - Satisfactory' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1.5">

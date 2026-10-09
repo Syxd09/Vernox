@@ -14,6 +14,7 @@ import {
   XCircle, Clock, Users, ArrowUpRight, Copy, Check, Eye, AlertTriangle, ShieldCheck, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminCoupons() {
   const { 
@@ -469,14 +470,15 @@ export function AdminCoupons() {
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Discount Type
                   </label>
-                  <select
+                  <AtelierSelect
                     value={formData.discountType}
-                    onChange={e => setFormData({ ...formData, discountType: e.target.value as DiscountType })}
+                    onValueChange={val => setFormData({ ...formData, discountType: val as DiscountType })}
                     className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
-                  >
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Currency ({storeConfig.currency})</option>
-                  </select>
+                    options={[
+                      { value: 'percentage', label: 'Percentage (%)' },
+                      { value: 'fixed', label: `Fixed Currency (${storeConfig.currency})` },
+                    ]}
+                  />
                 </div>
               </div>
 
