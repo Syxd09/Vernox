@@ -18,6 +18,7 @@ import About from "./pages/About.tsx";
 import Index from "./pages/Index.tsx";
 import Admin from "./pages/Admin.tsx";
 import Notebook from "./pages/Notebook.tsx";
+import Legal from "./pages/Legal.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { CartDrawer } from "@/components/shop/CartDrawer";
 import { PageCurtain } from "@/components/experience/PageCurtain";
@@ -53,6 +54,10 @@ const App = () => (
                 <Route path="/studio" element={<Index />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/notebook" element={<Notebook />} />
+                <Route path="/privacy" element={<Legal defaultTab="privacy" />} />
+                <Route path="/terms" element={<Legal defaultTab="terms" />} />
+                <Route path="/shipping-returns" element={<Legal defaultTab="shipping" />} />
+                <Route path="/legal" element={<Legal defaultTab="privacy" />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

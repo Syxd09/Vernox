@@ -177,11 +177,11 @@ export function SiteFooter() {
           </div>
 
           <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-[9px] sm:text-[10px] uppercase tracking-[0.16em] sm:tracking-[0.2em] font-sans">
-            <Link to="/about" className="hover:text-dusty-pink transition-colors">
+            <Link to="/privacy" className="hover:text-dusty-pink transition-colors">
               Privacy Policy
             </Link>
             <span className="text-dusty-pink/40">·</span>
-            <Link to="/about" className="hover:text-dusty-pink transition-colors">
+            <Link to="/terms" className="hover:text-dusty-pink transition-colors">
               Terms of Service
             </Link>
             <span className="text-dusty-pink/40">·</span>

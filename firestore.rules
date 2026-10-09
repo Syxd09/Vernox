@@ -46,10 +46,19 @@ service cloud.firestore {
     }
 
     // 5. Customer Profiles: Users can read/write their own; Admins can read all
+    // Invariant: Non-admin users cannot grant themselves 'admin' role
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && (
+        !('role' in request.resource.data) || 
+        request.resource.data.role == 'customer'
+      );
+      allow update: if isAdmin() || (
+        isOwner(userId) && (
+          !('role' in request.resource.data) || 
+          request.resource.data.role == resource.data.get('role', 'customer')
+        )
+      );
       allow delete: if isAdmin();
     }
 

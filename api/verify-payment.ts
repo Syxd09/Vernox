@@ -30,14 +30,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // 2. Cryptographic HMAC-SHA256 signature verification
-    const isDevOrder = typeof razorpay_order_id === 'string' && razorpay_order_id.startsWith('order_dev_');
+    const isDevOrder = 
+      process.env.NODE_ENV !== 'production' && 
+      typeof razorpay_order_id === 'string' && 
+      razorpay_order_id.startsWith('order_dev_');
+
     if (!isDevOrder) {
       const expectedSignature = crypto
         .createHmac('sha256', keySecret)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest('hex');
 
-      if (expectedSignature !== razorpay_signature) {
+      const sigBuffer = Buffer.from(razorpay_signature, 'utf8');
+      const expBuffer = Buffer.from(expectedSignature, 'utf8');
+      const isValid = sigBuffer.length === expBuffer.length && crypto.timingSafeEqual(sigBuffer, expBuffer);
+
+      if (!isValid) {
         return res.status(400).json({ 
           success: false, 
           error: 'Signature verification mismatch. Untrusted payment transaction.' 

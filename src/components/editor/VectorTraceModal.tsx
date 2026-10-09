@@ -39,6 +39,7 @@ import {
 } from '@/lib/imageTracer';
 import { cn } from '@/lib/utils';
 import type { BoundingBox2D, Point2D } from '@/lib/cadEngineTypes';
+import { toast } from 'sonner';
 
 interface VectorTraceModalProps {
   open: boolean;
@@ -110,17 +111,34 @@ export function VectorTraceModal({
     const url = URL.createObjectURL(imageFile);
     const img = new Image();
     img.src = url;
+    img.onerror = () => {
+      setImgElement(null);
+      toast.error('Corrupted or unsupported image file. Unable to decode artwork.');
+      onOpenChange(false);
+    };
     img.onload = () => {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      if (w <= 0 || h <= 0) {
+        toast.error('Image contains invalid dimensions.');
+        onOpenChange(false);
+        return;
+      }
+      if (w > 8192 || h > 8192) {
+        toast.error(`Image dimensions (${w}×${h}px) exceed safe processing limit of 8192px.`);
+        onOpenChange(false);
+        return;
+      }
       setImgElement(img);
-      setNaturalWidth(img.naturalWidth || img.width);
-      setNaturalHeight(img.naturalHeight || img.height);
+      setNaturalWidth(w);
+      setNaturalHeight(h);
       setCropBox({ x: 0, y: 0, w: 100, h: 100 });
       setLassoPoints([]);
     };
     return () => {
       URL.revokeObjectURL(url);
     };
-  }, [imageFile, open]);
+  }, [imageFile, open, onOpenChange]);
 
   // Main Vectorization Pipeline
   const runVectorization = useCallback(() => {

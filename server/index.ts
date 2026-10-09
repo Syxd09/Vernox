@@ -5,6 +5,7 @@ import checkoutIntentHandler from '../api/checkout-intent';
 import verifyPaymentHandler from '../api/verify-payment';
 import validateCouponHandler from '../api/validate-coupon';
 import adminHandler from '../api/admin';
+import razorpayWebhookHandler from '../api/razorpay-webhook';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
@@ -65,6 +66,7 @@ const server = http.createServer(async (req, res) => {
 
       const vercelReq = Object.assign(req, {
         body: parsedBody,
+        rawBody: bodyBuffer,
         query: parse(req.url || '', true).query,
       });
 
@@ -91,6 +93,8 @@ const server = http.createServer(async (req, res) => {
           await createOrderHandler(vercelReq as any, vercelRes as any);
         } else if (pathname === '/api/verify-payment') {
           await verifyPaymentHandler(vercelReq as any, vercelRes as any);
+        } else if (pathname === '/api/razorpay-webhook' || pathname === '/api/webhook') {
+          await razorpayWebhookHandler(vercelReq as any, vercelRes as any);
         } else {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json');

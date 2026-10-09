@@ -61,6 +61,29 @@ export function ToolsPanel({ initialTab = 'tools', onClose, className }: ToolsPa
   const [selectedTraceFile, setSelectedTraceFile] = useState<File | null>(null);
 
   const handleOpenTraceModal = (file: File) => {
+    const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+    const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
+    const hasValidType = ALLOWED_TYPES.includes(file.type.toLowerCase()) || 
+      /\.(png|jpe?g|webp|svg)$/i.test(file.name);
+
+    if (!hasValidType) {
+      toast({
+        title: "Unsupported File Format",
+        description: "Please upload a PNG, JPEG, WebP, or SVG vector file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File Size Exceeds Limit",
+        description: `Selected file is ${(file.size / (1024 * 1024)).toFixed(1)}MB. Maximum allowed size is 15MB.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedTraceFile(file);
     setTraceModalOpen(true);
   };

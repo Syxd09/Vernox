@@ -13,8 +13,14 @@ import {
 } from 'firebase/firestore';
 import type { AdminUser, AdminRole, AuditLog, AuditTargetType } from '../src/types/admin';
 
-// Admin Token Secret (falls back to a stable session seed if not set in env)
-const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || process.env.RAZORPAY_KEY_SECRET || 'vernox-enterprise-admin-secret-2026';
+// Admin Token Secret (Fail-closed in production; ephemeral random seed in development if env is unset)
+const isProduction = process.env.NODE_ENV === 'production';
+const envSecret = process.env.ADMIN_JWT_SECRET || process.env.RAZORPAY_KEY_SECRET;
+if (isProduction && !envSecret) {
+  console.error('FATAL SECURITY WARNING: ADMIN_JWT_SECRET or RAZORPAY_KEY_SECRET must be configured in production.');
+}
+const EPHEMERAL_DEV_SECRET = crypto.randomBytes(32).toString('hex');
+const ADMIN_SECRET = envSecret || (isProduction ? '' : EPHEMERAL_DEV_SECRET);
 
 // Rate Limiting (IP -> failed attempt count & lock time)
 const loginAttemptMap = new Map<string, { count: number; lockedUntil: number }>();
@@ -54,6 +60,9 @@ function clearFailedLogins(ip: string) {
 
 // Generate HMAC session token
 export function generateAdminSessionToken(user: { id: string; email: string; role: AdminRole }): string {
+  if (!ADMIN_SECRET) {
+    throw new Error('Admin token generation failed: Missing server cryptographic secret.');
+  }
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
   const payload = JSON.stringify({
     uid: user.id,
@@ -68,13 +77,19 @@ export function generateAdminSessionToken(user: { id: string; email: string; rol
 
 // Verify HMAC session token
 export function verifyAdminSessionToken(token: string): { valid: boolean; user?: { uid: string; email: string; role: AdminRole } } {
-  if (!token || typeof token !== 'string') return { valid: false };
+  if (!token || typeof token !== 'string' || !ADMIN_SECRET) return { valid: false };
   const parts = token.split('.');
   if (parts.length !== 2) return { valid: false };
 
   const [b64Payload, signature] = parts;
   const expectedSig = crypto.createHmac('sha256', ADMIN_SECRET).update(b64Payload).digest('base64url');
-  if (signature !== expectedSig) return { valid: false };
+
+  const sigBuffer = Buffer.from(signature, 'utf8');
+  const expectedBuffer = Buffer.from(expectedSig, 'utf8');
+
+  if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+    return { valid: false };
+  }
 
   try {
     const payload = JSON.parse(Buffer.from(b64Payload, 'base64url').toString('utf8'));
@@ -162,6 +177,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         details: { reason: adminRecord ? 'Account Suspended' : 'Unrecognized Admin Email', ip: clientIp }
       });
       return res.status(401).json({ error: 'Invalid administrative credentials or account suspended' });
+    }
+
+    // Password & Credential Verification
+    const configuredAdminPassword = process.env.ADMIN_PASSWORD;
+    let isPasswordValid = false;
+
+    if (adminRecord && (adminRecord as any).passwordHash) {
+      const hash = crypto.createHmac('sha256', ADMIN_SECRET).update(password).digest('hex');
+      const hashBuf = Buffer.from(hash, 'utf8');
+      const storedBuf = Buffer.from((adminRecord as any).passwordHash, 'utf8');
+      isPasswordValid = hashBuf.length === storedBuf.length && crypto.timingSafeEqual(hashBuf, storedBuf);
+    } else if (configuredAdminPassword) {
+      const inputPassBuf = Buffer.from(password, 'utf8');
+      const expectedPassBuf = Buffer.from(configuredAdminPassword, 'utf8');
+      isPasswordValid = inputPassBuf.length === expectedPassBuf.length && crypto.timingSafeEqual(inputPassBuf, expectedPassBuf);
+    } else if (!isProduction) {
+      // In development / testing environment, accept credentials if password provided is at least 6 characters
+      isPasswordValid = typeof password === 'string' && password.length >= 6;
+    } else {
+      // In production with no password hash or ADMIN_PASSWORD env var configured, strictly fail closed
+      isPasswordValid = false;
+    }
+
+    if (!isPasswordValid) {
+      recordFailedLogin(clientIp);
+      await recordAuditLog({
+        adminEmail: cleanEmail,
+        adminName: adminRecord.name,
+        adminRole: adminRecord.role,
+        action: 'FAILED_LOGIN_PASSWORD',
+        targetType: 'auth',
+        targetId: cleanEmail,
+        details: { reason: 'Incorrect administrative password', ip: clientIp }
+      });
+      return res.status(401).json({ error: 'Invalid administrative credentials' });
     }
 
     clearFailedLogins(clientIp);
