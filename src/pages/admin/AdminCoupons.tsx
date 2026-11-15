@@ -7,7 +7,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useCatalog } from '@/lib/catalogContext';
+import { useAdminData } from '@/lib/data/adminData';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { useCouponMutations, useCouponUsages } from '@/lib/data/coupons';
+import { validateCouponDraft, type CouponDraft } from './couponForm';
 import type { Coupon, DiscountType } from '@/types/coupon';
 import { 
   Tag, Plus, Edit2, Trash2, Search, CheckCircle2, 
@@ -17,10 +20,17 @@ import { toast } from 'sonner';
 import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminCoupons() {
-  const { 
-    coupons, couponUsages, storeConfig, 
-    createCoupon, updateCoupon, deleteCoupon, toggleCouponStatus 
-  } = useCatalog();
+  const { coupons, storeConfig } = useAdminData();
+  const { permissions } = useAuth();
+  const { data: couponUsages = [] } = useCouponUsages(Boolean(permissions?.canReadCoupons));
+  // Finance and support see coupons read-only; only coupons.write may change them.
+  const canWrite = Boolean(permissions?.canManageCoupons);
+  const { createCoupon, saveCoupon, deleteCoupon } = useCouponMutations();
+  const updateCoupon = (id: string, updates: Partial<Coupon>) => {
+    const existing = coupons.find(c => c.id === id);
+    return existing ? saveCoupon({ ...existing, ...updates }) : Promise.resolve(false);
+  };
+  const toggleCouponStatus = (id: string, isActive: boolean) => updateCoupon(id, { isActive });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all');
@@ -52,11 +62,11 @@ export function AdminCoupons() {
   }, [isModalOpen, viewingUsagesCoupon, deletingCoupon]);
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CouponDraft>({
     code: '',
     description: '',
-    discountType: 'percentage' as DiscountType,
-    discountValue: 15,
+    discountType: 'percentage',
+    discountValue: '15',
     maxDiscountLimit: '',
     minOrderValue: '',
     maxUsageCount: '',
@@ -81,7 +91,7 @@ export function AdminCoupons() {
       code: '',
       description: '',
       discountType: 'percentage',
-      discountValue: 15,
+      discountValue: '15',
       maxDiscountLimit: '',
       minOrderValue: '100',
       maxUsageCount: '500',
@@ -100,11 +110,11 @@ export function AdminCoupons() {
       code: c.code,
       description: c.description || '',
       discountType: c.discountType,
-      discountValue: c.discountValue,
-      maxDiscountLimit: c.maxDiscountLimit !== undefined ? String(c.maxDiscountLimit) : '',
-      minOrderValue: c.minOrderValue !== undefined ? String(c.minOrderValue) : '',
-      maxUsageCount: c.maxUsageCount !== undefined ? String(c.maxUsageCount) : '',
-      maxUsagePerCustomer: c.maxUsagePerCustomer !== undefined ? String(c.maxUsagePerCustomer) : '1',
+      discountValue: String(c.discountValue),
+      maxDiscountLimit: c.maxDiscountLimit != null ? String(c.maxDiscountLimit) : '',
+      minOrderValue: c.minOrderValue != null ? String(c.minOrderValue) : '',
+      maxUsageCount: c.maxUsageCount != null ? String(c.maxUsageCount) : '',
+      maxUsagePerCustomer: c.maxUsagePerCustomer != null ? String(c.maxUsagePerCustomer) : '',
       startDate: c.startDate || '',
       expiryDate: c.expiryDate || '',
       isActive: c.isActive,
@@ -115,41 +125,25 @@ export function AdminCoupons() {
   // Submit Handler
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCode = formData.code.trim().toUpperCase();
-    if (!cleanCode) {
-      toast.error('Coupon code is required');
+    const result = validateCouponDraft(formData);
+    if ('error' in result) {
+      toast.error(result.error);
       return;
     }
-
-    const payload = {
-      code: cleanCode,
-      description: formData.description.trim(),
-      discountType: formData.discountType,
-      discountValue: Number(formData.discountValue) || 0,
-      maxDiscountLimit: formData.maxDiscountLimit ? Number(formData.maxDiscountLimit) : undefined,
-      minOrderValue: formData.minOrderValue ? Number(formData.minOrderValue) : undefined,
-      maxUsageCount: formData.maxUsageCount ? Number(formData.maxUsageCount) : undefined,
-      maxUsagePerCustomer: formData.maxUsagePerCustomer ? Number(formData.maxUsagePerCustomer) : 1,
-      startDate: formData.startDate || undefined,
-      expiryDate: formData.expiryDate || undefined,
-      isActive: formData.isActive,
-    };
+    const { payload } = result;
+    const cleanCode = payload.code;
 
     if (editingCoupon) {
       const ok = await updateCoupon(editingCoupon.id, payload);
       if (ok) {
         toast.success(`Coupon ${cleanCode} updated successfully`);
         setIsModalOpen(false);
-      } else {
-        toast.error('Failed to update coupon');
       }
     } else {
       const ok = await createCoupon(payload);
       if (ok) {
         toast.success(`Coupon ${cleanCode} created and activated`);
         setIsModalOpen(false);
-      } else {
-        toast.error('Failed to create coupon');
       }
     }
   };
@@ -161,8 +155,6 @@ export function AdminCoupons() {
     if (ok) {
       toast.success(`Coupon ${deletingCoupon.code} removed`);
       setDeletingCoupon(null);
-    } else {
-      toast.error('Failed to delete coupon');
     }
   };
 
@@ -199,18 +191,18 @@ export function AdminCoupons() {
       {/* Top Banner & Action */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-3xl text-oxblood-deep">Coupon & Discount Management</h2>
+          <h2 className="font-display text-3xl">Discounts</h2>
           <p className="text-muted-foreground text-sm">
             Control promotional pricing, usage caps, per-customer restrictions, and monitor real-time redemptions.
           </p>
         </div>
-        <button
+        {canWrite && <button
           onClick={handleOpenCreate}
           className="inline-flex items-center gap-2 bg-oxblood text-ivory hover:bg-oxblood-deep px-4 py-2.5 rounded-lg text-sm font-semibold transition shadow-soft shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Coupon</span>
-        </button>
+        </button>}
       </div>
 
       {/* KPI Stats Grid */}
@@ -363,7 +355,7 @@ export function AdminCoupons() {
                       </td>
 
                       <td className="p-4 text-muted-foreground font-mono text-xs">
-                        {c.maxUsagePerCustomer || 1} per customer
+                        {c.maxUsagePerCustomer ? `${c.maxUsagePerCustomer} per customer` : 'Unlimited per customer'}
                       </td>
 
                       <td className="p-4 text-xs">
@@ -379,6 +371,7 @@ export function AdminCoupons() {
                       <td className="p-4">
                         <button
                           onClick={() => toggleCouponStatus(c.id, !c.isActive)}
+                          disabled={!canWrite}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition ${
                             c.isActive && !isExpired && !isLimitReached
                               ? 'bg-emerald-950/30 text-emerald-600 border border-emerald-500/30 hover:bg-emerald-950/50'
@@ -399,7 +392,7 @@ export function AdminCoupons() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
+                          {canWrite && <><button
                             onClick={() => handleOpenEdit(c)}
                             title="Edit Coupon"
                             className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition"
@@ -412,7 +405,7 @@ export function AdminCoupons() {
                             className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </button></>}
                         </div>
                       </td>
                     </tr>
@@ -494,7 +487,7 @@ export function AdminCoupons() {
                     step="any"
                     placeholder={formData.discountType === 'percentage' ? '15%' : '50'}
                     value={formData.discountValue}
-                    onChange={e => setFormData({ ...formData, discountValue: Number(e.target.value) })}
+                    onChange={e => setFormData({ ...formData, discountValue: e.target.value })}
                     className="w-full bg-background border border-border rounded-lg px-3.5 py-2 text-sm outline-none focus:border-oxblood transition"
                   />
                 </div>
@@ -560,6 +553,7 @@ export function AdminCoupons() {
                   <input
                     type="number"
                     min="1"
+                    placeholder="Unlimited"
                     value={formData.maxUsagePerCustomer}
                     onChange={e => setFormData({ ...formData, maxUsagePerCustomer: e.target.value })}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-oxblood transition"

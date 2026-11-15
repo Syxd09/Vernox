@@ -6,7 +6,11 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useCatalog, Review } from '@/lib/catalogContext';
+import { useProducts } from '@/lib/data/products';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { useAllReviews, useReviewMutations } from '@/lib/data/reviews';
+import { ReviewPhotoStrip } from '@/components/shop/ReviewPhotoStrip';
+import type { Review } from '@/types/store';
 import { 
   Star, Search, Trash2, Edit2, ShieldCheck, 
   MessageSquare, Plus, Eye, AlertTriangle, X,
@@ -17,16 +21,23 @@ import { toast } from 'sonner';
 import { AtelierSelect } from '@/components/ui/select';
 
 export function AdminReviews() {
-  const { 
-    reviews, 
-    products, 
-    addReview, 
-    updateReview, 
-    deleteReview, 
-    toggleReviewFeatured, 
-    toggleReviewVerified,
-    replyToReview 
-  } = useCatalog();
+  const { data: products = [] } = useProducts();
+  const { permissions } = useAuth();
+  const { data: reviews = [], isLoading, error: loadError } = useAllReviews(Boolean(permissions?.canModerateReviews));
+  const { saveReview, deleteReview: removeReview } = useReviewMutations();
+
+  const patchReview = async (id: string, updates: Partial<Review>): Promise<boolean> => {
+    const existing = reviews.find(r => r.id === id);
+    return existing ? saveReview({ ...existing, ...updates }) : false;
+  };
+  const addReview = (review: Omit<Review, 'id'>) =>
+    saveReview({ ...review, id: `rev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, status: 'published' });
+  const updateReview = patchReview;
+  const deleteReview = (id: string) => removeReview(id);
+  const toggleReviewFeatured = (id: string) => patchReview(id, { featured: !reviews.find(r => r.id === id)?.featured });
+  const toggleReviewVerified = (id: string) => patchReview(id, { verified: !reviews.find(r => r.id === id)?.verified });
+  const replyToReview = (id: string, response: string) =>
+    patchReview(id, { conciergeResponse: response.trim() || undefined, conciergeRespondedAt: response.trim() ? Date.now() : undefined });
 
   // Filter & Search States
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +53,7 @@ export function AdminReviews() {
 
   // Forms
   const [addForm, setAddForm] = useState({
-    productId: products[0]?.id || 'p-01',
+    productId: products[0]?.id || '',
     customerName: '',
     customerRole: '',
     location: '',
@@ -68,8 +79,8 @@ export function AdminReviews() {
   // Analytics
   const stats = useMemo(() => {
     const total = reviews.length;
-    if (total === 0) return { total: 0, avgRating: 5.0, verifiedCount: 0, featuredCount: 0, repliedCount: 0 };
-    const sum = reviews.reduce((acc, r) => acc + (r.rating || 5), 0);
+    if (total === 0) return { total: 0, avgRating: '0.0', verifiedCount: 0, featuredCount: 0, repliedCount: 0 };
+    const sum = reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
     const avgRating = (sum / total).toFixed(1);
     const verifiedCount = reviews.filter(r => r.verified).length;
     const featuredCount = reviews.filter(r => r.featured).length;
@@ -115,7 +126,7 @@ export function AdminReviews() {
   // Handlers
   const handleOpenAdd = () => {
     setAddForm({
-      productId: products[0]?.id || 'p-01',
+      productId: products[0]?.id || '',
       customerName: '',
       customerRole: '',
       location: '',
@@ -134,7 +145,7 @@ export function AdminReviews() {
       return;
     }
 
-    await addReview({
+    const saved = await addReview({
       productId: addForm.productId,
       customerName: addForm.customerName.trim(),
       customerRole: addForm.customerRole.trim() || undefined,
@@ -145,8 +156,9 @@ export function AdminReviews() {
       featured: addForm.featured,
       placedAt: Date.now(),
     });
+    if (!saved) return;
 
-    toast.success('Collector review added to catalogue');
+    toast.success('Review added');
     setIsAddOpen(false);
   };
 
@@ -172,7 +184,7 @@ export function AdminReviews() {
       return;
     }
 
-    await updateReview(editingReview.id, {
+    const saved = await updateReview(editingReview.id, {
       productId: editForm.productId,
       customerName: editForm.customerName.trim(),
       customerRole: editForm.customerRole.trim() || undefined,
@@ -182,6 +194,7 @@ export function AdminReviews() {
       verified: editForm.verified,
       featured: editForm.featured,
     });
+    if (!saved) return;
 
     toast.success('Review updated successfully');
     setEditingReview(null);
@@ -196,25 +209,25 @@ export function AdminReviews() {
     e.preventDefault();
     if (!replyingReview) return;
 
-    await replyToReview(replyingReview.id, replyText);
+    if (!(await replyToReview(replyingReview.id, replyText))) return;
     toast.success('Atelier Concierge response saved');
     setReplyingReview(null);
   };
 
   const handleConfirmDelete = async () => {
     if (!deletingReview) return;
-    await deleteReview(deletingReview.id);
+    if (!(await deleteReview(deletingReview.id))) return;
     toast.success('Review removed');
     setDeletingReview(null);
   };
 
   const handleToggleFeatured = async (r: Review) => {
-    await toggleReviewFeatured(r.id);
+    if (!(await toggleReviewFeatured(r.id))) return;
     toast.success(r.featured ? `Removed from Spotlight` : `Added ${r.customerName} to Spotlight`);
   };
 
   const handleToggleVerified = async (r: Review) => {
-    await toggleReviewVerified(r.id);
+    if (!(await toggleReviewVerified(r.id))) return;
     toast.success(r.verified ? `Verification removed` : `Verified purchaser status granted`);
   };
 
@@ -224,12 +237,18 @@ export function AdminReviews() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
-      
+      {loadError && (
+        <div role="alert" className="border border-destructive/30 bg-destructive/5 text-destructive text-xs rounded p-3">
+          Reviews could not be loaded: {loadError.message}
+        </div>
+      )}
+      {isLoading && <p className="text-xs text-muted-foreground">Loading reviews…</p>}
+
       {/* 1. Header with Stats & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-display text-3xl text-oxblood-deep">Collector & Patron Reviews</h2>
+            <h2 className="font-display text-3xl">Reviews</h2>
             <span className="text-xs font-mono bg-oxblood/10 text-oxblood border border-oxblood/20 px-2 py-0.5 rounded-full font-bold">
               {reviews.length} Total
             </span>
@@ -260,7 +279,7 @@ export function AdminReviews() {
             <span className="text-xs text-muted-foreground">/ 5.0</span>
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            Based on {stats.total} verified submissions
+            Based on {stats.total} {stats.total === 1 ? 'review' : 'reviews'}
           </div>
         </div>
 
@@ -341,7 +360,7 @@ export function AdminReviews() {
             <div className="w-36">
               <AtelierSelect
                 value={ratingFilter}
-                onValueChange={val => setRatingFilter(val as any)}
+                onValueChange={val => setRatingFilter(val as typeof ratingFilter)}
                 options={[
                   { value: 'all', label: 'All Ratings' },
                   { value: '5', label: '★ 5 Stars Only' },
@@ -356,7 +375,7 @@ export function AdminReviews() {
             <div className="w-44">
               <AtelierSelect
                 value={badgeFilter}
-                onValueChange={val => setBadgeFilter(val as any)}
+                onValueChange={val => setBadgeFilter(val as typeof badgeFilter)}
                 options={[
                   { value: 'all', label: 'All Badges' },
                   { value: 'verified', label: 'Verified Purchasers' },
@@ -455,9 +474,9 @@ export function AdminReviews() {
                       {/* Artwork Target */}
                       <td className="p-4 align-top">
                         <div className="flex items-center gap-2">
-                          {prod?.images?.[0] && (
+                          {prod?.imageUrl && (
                             <img 
-                              src={prod.images[0]} 
+                              src={prod.imageUrl} 
                               alt="" 
                               className="w-8 h-8 rounded object-cover border border-border shrink-0" 
                             />
@@ -493,6 +512,8 @@ export function AdminReviews() {
                         <div className="text-xs text-foreground/90 leading-relaxed font-sans">
                           "{r.comment}"
                         </div>
+                        {/* The customer's private uploads, so the photos can be judged before publishing. */}
+                        <ReviewPhotoStrip paths={r.photoPaths} size="h-14 w-14" />
 
                         {/* Official Concierge Reply Display */}
                         {r.conciergeResponse ? (

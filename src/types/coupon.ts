@@ -10,13 +10,13 @@ export interface Coupon {
   description: string;
   discountType: DiscountType;
   discountValue: number; // e.g. 20 for 20%, or 50 for $50/₹50
-  maxDiscountLimit?: number; // Capped max discount for percentage coupons (e.g. max $100 off)
-  minOrderValue?: number; // Minimum cart subtotal required to apply
-  maxUsageCount?: number; // Maximum total redemptions across all customers (null/undefined = unlimited)
+  maxDiscountLimit?: number | null; // Capped max discount for percentage coupons (e.g. max $100 off)
+  minOrderValue?: number | null; // Minimum cart subtotal required to apply
+  maxUsageCount?: number | null; // Maximum total redemptions across all customers (null/undefined = unlimited)
   usedCount: number; // Current redemption count
-  maxUsagePerCustomer?: number; // Maximum times a single customer email can use this (default: 1)
-  startDate?: string; // ISO date string or YYYY-MM-DD
-  expiryDate?: string; // ISO date string or YYYY-MM-DD
+  maxUsagePerCustomer?: number | null; // Maximum times a single customer email can use this (null/undefined = unlimited)
+  startDate?: string | null; // ISO date string or YYYY-MM-DD
+  expiryDate?: string | null; // ISO date string or YYYY-MM-DD
   isActive: boolean; // Enable/disable toggle
   applicableCategories?: string[]; // Empty or undefined = all categories
   applicableProductIds?: string[]; // Empty or undefined = all products
@@ -35,6 +35,10 @@ export interface CouponUsage {
   usedAt: number;
 }
 
+/**
+ * Input of the client-side display estimate (src/lib/couponValidator.ts). The server
+ * never accepts this shape: /api/validate-coupon takes cart items and prices them itself.
+ */
 export interface CouponValidationRequest {
   code: string;
   cartSubtotal: number;
@@ -47,7 +51,6 @@ export interface CouponValidationRequest {
   }>;
   customerEmail?: string;
   currency?: string;
-  clientCoupons?: Coupon[];
 }
 
 export interface CouponValidationResult {
@@ -58,6 +61,8 @@ export interface CouponValidationResult {
   discountValue?: number;
   discountAmount: number;
   description?: string;
+  /** Valid, but the volume (bulk) discount is at least as large, so checkout uses that instead (coupons do not stack). */
+  supersededByVolume?: boolean;
   error?: string;
   errorCode?: 
     | 'COUPON_NOT_FOUND' 
@@ -66,12 +71,19 @@ export interface CouponValidationResult {
     | 'COUPON_NOT_STARTED' 
     | 'USAGE_LIMIT_EXCEEDED' 
     | 'CUSTOMER_LIMIT_EXCEEDED' 
+    | 'COUPON_NOT_FOR_CUSTOMER'
     | 'MIN_ORDER_NOT_MET' 
     | 'NO_APPLICABLE_ITEMS' 
-    | 'INVALID_CODE';
+    | 'INVALID_CODE'
+    | 'RATE_LIMITED'
+    | 'SERVER_ERROR';
 }
 
-// Default Launch Master Coupons
+/**
+ * Launch coupon definitions. SEED DATA ONLY: scripts/seed-firestore.ts writes them to
+ * the `coupons` collection. The server evaluates coupons exclusively from Firestore,
+ * so these are never honoured unless seeded (and then usage is tracked there).
+ */
 export const LAUNCH_COUPONS: Record<string, Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>> = {
   'WELCOME10': {
     code: 'WELCOME10',

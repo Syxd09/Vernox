@@ -1,97 +1,52 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import createOrderHandler from "./api/create-order";
-import checkoutIntentHandler from "./api/checkout-intent";
-import verifyPaymentHandler from "./api/verify-payment";
-import validateCouponHandler from "./api/validate-coupon";
-import adminHandler from "./api/admin";
+import { DEFAULT_SITE_URL } from "./src/lib/seo/defaultSiteUrl";
 
-function apiMiddlewarePlugin(env: Record<string, string>): Plugin {
+/**
+ * Serves /api/* in `vite dev` through the same router as the Node server (server/apiRouter.ts).
+ * Loaded with ssrLoadModule so API code is never bundled into this config or the client build,
+ * and edits to api/ apply without restarting. Skipped when BACKEND_URL proxies to a container.
+ */
+function apiMiddlewarePlugin(): Plugin {
   return {
     name: "api-middleware",
+    apply: "serve",
     configureServer(server) {
-      if (process.env.BACKEND_URL) {
-        // Backend container handles /api proxying
-        return;
-      }
-
-      server.middlewares.use((req, res, next) => {
-        if (!req.url || !req.url.startsWith("/api/")) {
-          return next();
+      if (process.env.BACKEND_URL) return;
+      // Server code reads secrets from process.env; load .env* files (all keys, not only VITE_*).
+      Object.assign(process.env, loadEnv(server.config.mode, process.cwd(), ""));
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith("/api/") && req.url !== "/health" && req.url !== "/runtime-config.js") return next();
+        try {
+          const { handleApiRequest } = await server.ssrLoadModule("/server/apiRouter.ts");
+          await handleApiRequest(req, res);
+        } catch (err) {
+          next(err);
         }
-
-        // Populate process.env with freshly loaded environment variables
-        const currentEnv = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
-        Object.assign(process.env, currentEnv);
-
-        const url = req.url.split("?")[0];
-        let bodyBuffer = "";
-
-        req.on("data", (chunk) => {
-          bodyBuffer += chunk;
-        });
-
-        req.on("end", async () => {
-          let parsedBody = {};
-          try {
-            if (bodyBuffer) parsedBody = JSON.parse(bodyBuffer);
-          } catch (e) {
-            // Ignore json parse error
-          }
-
-          const vercelReq = Object.assign(req, {
-            body: parsedBody,
-            query: {},
-          });
-
-          const vercelRes = Object.assign(res, {
-            status(statusCode: number) {
-              res.statusCode = statusCode;
-              return vercelRes;
-            },
-            json(data: any) {
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify(data));
-              return vercelRes;
-            },
-          });
-
-          try {
-            if (url === "/api/health" || url === "/health") {
-              res.statusCode = 200;
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString() }));
-            } else if (url === "/api/checkout-intent") {
-              await checkoutIntentHandler(vercelReq as any, vercelRes as any);
-            } else if (url === "/api/validate-coupon") {
-              await validateCouponHandler(vercelReq as any, vercelRes as any);
-            } else if (url === "/api/admin") {
-              await adminHandler(vercelReq as any, vercelRes as any);
-            } else if (url === "/api/create-order") {
-              await createOrderHandler(vercelReq as any, vercelRes as any);
-            } else if (url === "/api/verify-payment") {
-              await verifyPaymentHandler(vercelReq as any, vercelRes as any);
-            } else {
-              res.statusCode = 404;
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ error: "Endpoint not found" }));
-            }
-          } catch (err: any) {
-            console.error("API middleware error:", err);
-            res.statusCode = 500;
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ error: err.message || "Internal server error" }));
-          }
-        });
       });
     },
   };
 }
 
+// Replaces %VITE_SITE_URL% in index.html (absolute OG image URLs) with the configured origin.
+function siteUrlHtmlPlugin(env: Record<string, string>): Plugin {
+  const siteUrl = (env.VITE_SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, "");
+  return {
+    name: "site-url-html",
+    transformIndexHtml: (html) => html.replace(/%VITE_SITE_URL%/g, siteUrl),
+  };
+}
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  // A production bundle without its Firebase project would load a blank site; fail the build instead.
+  // The Docker image sets VERNOX_RUNTIME_CONFIG=true: it takes these values from /runtime-config.js at start-up instead.
+  if (command === "build" && mode === "production" && env.VITE_USE_FIREBASE_EMULATOR !== "true" && process.env.VERNOX_RUNTIME_CONFIG !== "true") {
+    const missing = ["VITE_FIREBASE_API_KEY", "VITE_FIREBASE_AUTH_DOMAIN", "VITE_FIREBASE_PROJECT_ID", "VITE_FIREBASE_STORAGE_BUCKET", "VITE_FIREBASE_APP_ID"].filter(k => !env[k]);
+    if (missing.length > 0) throw new Error(`Missing ${missing.join(", ")} (see .env.example)`);
+  }
 
   return {
     server: {
@@ -106,7 +61,6 @@ export default defineConfig(({ mode }) => {
         "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
       },
       hmr: {
-        clientPort: 8080,
         overlay: false,
       },
       ...(process.env.BACKEND_URL
@@ -120,18 +74,38 @@ export default defineConfig(({ mode }) => {
           }
         : {}),
     },
-    plugins: [react(), apiMiddlewarePlugin(env)].filter(Boolean),
+    plugins: [react(), apiMiddlewarePlugin(), siteUrlHtmlPlugin(env)].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    // The studio lazy-loads react-konva; pre-bundling it avoids a forced reload on first open in dev.
+    optimizeDeps: { include: ["konva", "react-konva"] },
     build: {
       chunkSizeWarningLimit: 900,
       rollupOptions: {
         output: {
           manualChunks(id) {
+            // Vite's virtual helpers (dynamic-import preloader, CJS interop) are used everywhere;
+            // pin them to the core chunk so they don't drag pdf/charts into the entry.
+            if (id.includes('vite/preload-helper') || id.includes('commonjsHelpers')) {
+              return 'vendor-react';
+            }
             if (id.includes('node_modules')) {
+              // Core runtime first: without an explicit chunk Rollup parks shared React code inside
+              // whichever vendor chunk imports it first (charts/pdf), forcing them into the initial load.
+              if (/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom|@remix-run|clsx|tailwind-merge|class-variance-authority)\//.test(id)) {
+                return 'vendor-react';
+              }
+              // Storage is only loaded for uploads (photoStorage.ts imports it dynamically); keep it out of the entry.
+              if (/@firebase\/storage|firebase\/storage/.test(id)) {
+                return 'vendor-firebase-storage';
+              }
+              // Firestore is loaded on demand (firestoreDb.ts / appFirestore.ts): guests browse from /api/catalog.
+              if (/@firebase\/(firestore|webchannel-wrapper)|firebase\/firestore/.test(id)) {
+                return 'vendor-firebase-firestore';
+              }
               if (id.includes('firebase')) {
                 return 'vendor-firebase';
               }

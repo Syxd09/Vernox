@@ -1,0 +1,78 @@
+/**
+ * Staff-entered orders through /api/admin (QUOTE_STAFF_ORDER, CREATE_STAFF_ORDER; api/_lib/staffOrders.ts).
+ * The server prices everything; the quote only previews what the order will be created with.
+ */
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { DesignFile, OfflinePaymentMode, StaffOrderChannel } from '@/types/staffOrders';
+import { adminAction } from './adminApi';
+
+export interface StaffOrderItem {
+  productId: string;
+  sizeLabel?: string;
+  /** Custom (Studio) piece only: size in mm, and a plain-text reference to the customer's design. */
+  widthMm?: number;
+  heightMm?: number;
+  customDesignRef?: string;
+  /** Uploaded design files (staffDesignFiles.ts), sent with CREATE_STAFF_ORDER only. */
+  designFiles?: DesignFile[];
+  finish: string;
+  quantity: number;
+}
+
+export interface StaffOrderQuote {
+  lines: Array<{ productId: string; name: string; sizeLabel: string | null; finish: string; quantity: number; unitPricePaise: number; lineTotalPaise: number }>;
+  /** `superseded`: valid, but the volume discount is at least as large, so the order uses that instead. */
+  coupon: { ok: true; discountPaise: number; superseded?: true } | { ok: false; message: string } | null;
+  volumeDiscount: { minUnits: number; percent: number; units: number; discountPaise: number } | null;
+  totals: { subtotalPaise: number; discountPaise: number; couponDiscountPaise: number; shippingPaise: number; codFeePaise: number; taxPaise: number; totalPaise: number };
+}
+
+/** `advancePaise`: take (or ask the link for) only this part now; the balance is collected before dispatch. */
+export type StaffOrderPayment =
+  | { method: 'offline'; mode: OfflinePaymentMode; reference: string; advancePaise?: number }
+  | { method: 'payment_link'; advancePaise?: number }
+  | { method: 'cod' };
+
+export interface NewStaffOrder {
+  channel: StaffOrderChannel;
+  items: StaffOrderItem[];
+  couponCode?: string;
+  customer: { name: string; phone: string; email?: string; address?: string; city?: string; state?: string; pincode?: string };
+  payment: StaffOrderPayment;
+  handover: boolean;
+  whatsappOptIn: boolean;
+  idempotencyKey: string;
+  /** Id the design files were uploaded under; required when any line has designFiles. */
+  designDraftId?: string;
+  note?: string;
+  tradeEnquiryId?: string;
+}
+
+export interface StaffOrderCreated {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  paymentLink: { id: string; url: string; expiresAt: number } | null;
+  invoiceNumber: string | null;
+  /** Rupees; null when the order was paid (or asked) in full. */
+  advance: number | null;
+  balanceDue: number | null;
+}
+
+export type CustomerLookup =
+  | { found: false }
+  | { found: true; orderCount: number; lastOrderNumber: string; name: string; email: string; address: { address: string; city: string; state: string; pincode: string } | null };
+
+export const findCustomerByPhone = (phone: string) => adminAction<CustomerLookup>('FIND_CUSTOMER_BY_PHONE', { phone });
+
+export const quoteStaffOrder = (input: { items: StaffOrderItem[]; couponCode?: string; customerEmail?: string; cod: boolean; handover: boolean }) =>
+  adminAction<StaffOrderQuote>('QUOTE_STAFF_ORDER', input);
+
+export function useCreateStaffOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NewStaffOrder) => adminAction<StaffOrderCreated>('CREATE_STAFF_ORDER', { ...input }),
+    // Orders, stock and trade enquiries all change.
+    onSuccess: () => void qc.invalidateQueries(),
+  });
+}

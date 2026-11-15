@@ -1,0 +1,106 @@
+import { describe, expect, it } from 'vitest';
+import type { StoreConfig } from '@/types/store';
+import { PLACEHOLDER_CONTACT, PLACEHOLDER_SELLER } from '@/types/settings';
+import { draftFromConfig, launchChecklist, missingSellerFields, toStorePatch, validateBusiness } from '../settingsForm';
+
+const config: StoreConfig = { storeName: 'Vernox', currency: '₹', gstRatePercent: 18, freeShippingThreshold: 5000, shippingFee: 150, volumeDiscounts: [] };
+
+describe('business settings form', () => {
+  it('accepts a valid GSTIN whose state code matches and rejects a malformed one', () => {
+    const d = draftFromConfig(config);
+    d.seller.gstin = '29abcde1234f1z5';
+    d.seller.stateCode = '29';
+    expect(validateBusiness(d)).toEqual({});
+    d.seller.gstin = '29ABCDE1234F1Z';
+    expect(validateBusiness(d).gstin).toMatch(/valid 15-character GSTIN/);
+  });
+
+  it('requires the state code to be the GSTIN prefix', () => {
+    const d = draftFromConfig(config);
+    d.seller.gstin = '29ABCDE1234F1Z5';
+    d.seller.stateCode = '27';
+    expect(validateBusiness(d).stateCode).toMatch(/first two characters/);
+  });
+
+  it('validates contact fields and numeric limits', () => {
+    const d = draftFromConfig(config);
+    Object.assign(d, { whatsappNumber: '98', supportEmail: 'nope', codFee: '-1', returnWindowDays: '7.5', defaultLeadTimeDays: '400' });
+    expect(Object.keys(validateBusiness(d)).sort()).toEqual(['codFee', 'defaultLeadTimeDays', 'returnWindowDays', 'supportEmail', 'whatsappNumber']);
+  });
+
+  it('builds a patch with an upper-cased GSTIN and omits empty numbers', () => {
+    const d = draftFromConfig(config);
+    d.seller.gstin = '29abcde1234f1z5';
+    d.codEnabled = true;
+    d.codFee = '49';
+    const patch = toStorePatch(d);
+    expect(patch.seller?.gstin).toBe('29ABCDE1234F1Z5');
+    expect(patch).toMatchObject({ codEnabled: true, codOtpRequired: true, codFee: 49, supportEmail: '' });
+    expect(draftFromConfig({ codOtpRequired: false } as never).codOtpRequired).toBe(false);
+    expect(patch).not.toHaveProperty('returnWindowDays');
+  });
+
+  it('lists the seller fields still missing for invoices', () => {
+    expect(missingSellerFields(undefined)).toEqual(['legalName', 'gstin', 'address', 'state', 'stateCode', 'pincode']);
+    expect(missingSellerFields({ legalName: 'A', gstin: 'G', address: 'x', state: 'KA', stateCode: '29', pincode: '560001' })).toEqual([]);
+  });
+});
+
+describe('design consultation settings', () => {
+  it('starts from the defaults (disabled, 999, credit on, 60 days, 3 days)', () => {
+    expect(draftFromConfig(config).consultation).toEqual({ enabled: false, priceInr: '999', creditTowardsOrder: true, creditValidityDays: '60', turnaroundDays: '3', sacCode: '998391', gstRatePercent: '18' });
+  });
+
+  it('validates the fee, the day counts and the SAC code', () => {
+    const d = draftFromConfig(config);
+    d.consultation = { ...d.consultation, priceInr: '0', turnaroundDays: '2.5', creditValidityDays: '400', sacCode: '99' };
+    const errors = validateBusiness(d);
+    expect(errors.consultationPrice).toBeDefined();
+    expect(errors.turnaroundDays).toBeDefined();
+    expect(errors.creditValidityDays).toBeDefined();
+    expect(errors.sacCode).toBeDefined();
+  });
+
+  it('writes the consultation block with numbers into the patch', () => {
+    const d = draftFromConfig(config);
+    d.consultation = { ...d.consultation, enabled: true, priceInr: '1499' };
+    expect(toStorePatch(d).consultation).toEqual({ enabled: true, priceInr: 1499, creditTowardsOrder: true, creditValidityDays: 60, turnaroundDays: 3, sacCode: '998391', gstRatePercent: 18 });
+  });
+});
+
+describe('launch checklist', () => {
+  it('lists every placeholder and clears once real details are saved', () => {
+    const seeded = { ...config, seller: PLACEHOLDER_SELLER, ...PLACEHOLDER_CONTACT } as StoreConfig;
+    expect(launchChecklist(seeded)).toHaveLength(3);
+    const real = { ...config, seller: { ...PLACEHOLDER_SELLER, gstin: '29ABCDE1234F1Z5', stateCode: '29' }, supportEmail: 'hello@vernox.in', supportPhone: '+91 98000 00000', grievanceOfficerName: 'A. Rao', grievanceOfficerEmail: 'grievance@vernox.in' } as StoreConfig;
+    expect(launchChecklist(real)).toEqual([]);
+  });
+});
+
+describe('custom piece rates', () => {
+  it('saves nothing until the owner confirms, then saves rates that resolve exactly to the defaults', async () => {
+    const { DEFAULT_STORE_CONFIG } = await import('@/lib/data/catalogMappers');
+    const { DEFAULT_CUSTOM_FINISH_RATES, resolveCustomFinishRates, customPiecesSettingsProblem } = await import('@/lib/pricing/customPiece');
+    const draft = draftFromConfig(DEFAULT_STORE_CONFIG);
+    expect(draft.customRatesConfirmed).toBe(false);
+    expect(toStorePatch(draft, DEFAULT_STORE_CONFIG).customPieces).toBeUndefined();
+
+    const saved = toStorePatch({ ...draft, customRatesConfirmed: true }, DEFAULT_STORE_CONFIG).customPieces;
+    expect(customPiecesSettingsProblem(saved)).toBeNull();
+    const resolved = resolveCustomFinishRates(saved);
+    for (const [id, rate] of Object.entries(DEFAULT_CUSTOM_FINISH_RATES)) {
+      expect(resolved[id]).toMatchObject({
+        setupFeePaise: rate.setupFeePaise, ratePaisePerCm2: rate.ratePaisePerCm2, minimumPaise: rate.minimumPaise,
+        cutPaisePerMetre: rate.cutPaisePerMetre, includedCutMm: rate.includedCutMm, piercePaise: rate.piercePaise, includedPierces: rate.includedPierces,
+      });
+    }
+  });
+
+  it('refuses a negative or non-whole rate', async () => {
+    const { DEFAULT_STORE_CONFIG } = await import('@/lib/data/catalogMappers');
+    const draft = draftFromConfig(DEFAULT_STORE_CONFIG);
+    const [id] = Object.keys(draft.customRates);
+    expect(validateBusiness({ ...draft, customRates: { ...draft.customRates, [id]: { ...draft.customRates[id], pierceRate: '-1' } } }).customRates).toBeTruthy();
+    expect(validateBusiness({ ...draft, customRates: { ...draft.customRates, [id]: { ...draft.customRates[id], includedPierces: '2.5' } } }).customRates).toBeTruthy();
+  });
+});

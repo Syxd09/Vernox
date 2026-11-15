@@ -1,0 +1,460 @@
+/**
+ * Order document model (`orders/{orderId}`), written only by the server.
+ *
+ * Money is stored as integer paise in `amounts` and in each item's
+ * `unitPricePaise` / `lineTotalPaise`; these are authoritative. The rupee fields
+ * (`total`, `subtotal`, ..., `items[].unitPrice`) and flat `shipping*` fields are
+ * display copies written once at creation, for the existing admin UI; never read
+ * them back for money logic.
+ */
+import type { OrderHold } from '../../src/types/orderStatus';
+import type { DesignFile, OfflinePaymentMode, StaffOrderChannel } from '../../src/types/staffOrders';
+import crypto from 'crypto';
+import { paiseToRupees } from './money';
+import { CUSTOMER_CANCELLABLE_STATUSES, type OrderStatus, type StatusHistoryEntry } from './orderLifecycle';
+import type { ConsultationPurchase } from './consultations';
+import type { LineTax, OrderTotals, PricedLine } from './pricing';
+import type { CustomPieceBreakdown } from '../../src/lib/pricing/customPiece';
+import type { DocData } from './store';
+
+export interface CustomerDetails {
+  email: string;
+  name: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+  /** Business purchase: the buyer's legal name and GSTIN, printed on the tax invoice so they can claim input credit. */
+  companyName?: string;
+  gstin?: string;
+}
+
+export interface OrderItemSnapshot {
+  productId: string;
+  name: string;
+  productName: string; // legacy alias of name for the admin UI
+  category: string | null;
+  sizeLabel: string | null;
+  widthMm: number | null;
+  heightMm: number | null;
+  finish: string;
+  quantity: number;
+  unitPricePaise: number;
+  lineTotalPaise: number;
+  unitPrice: number; // ₹ display copy
+  lineTotal: number; // ₹ display copy
+  isCustom: boolean;
+  /** True for the design consultation service line. */
+  isService?: boolean;
+  customDesignRef: string | null;
+  /** Custom pieces (orders from 2026-11-15): plate, cutting, engraving and holes parts of the unit price, with the measured work. */
+  customPricing?: CustomPieceBreakdown;
+  /** Design files staff uploaded for a custom line of a staff-entered order (storage.rules `staff-designs/`). */
+  designFiles?: DesignFile[];
+  hsnCode: string;
+  gstRateBps: number;
+  /** Share of the order discount, taxable value and GST of this line (see pricing.computeTotals). */
+  discountPaise: number;
+  taxablePaise: number;
+  taxPaise: number;
+}
+
+export type PaymentMethod = 'prepaid' | 'cod' | 'replacement';
+
+/** Money taken in person for a staff-entered order (api/_lib/staffOrders.ts); the order is `prepaid` with no Razorpay payment. */
+export interface OfflinePayment {
+  mode: OfflinePaymentMode;
+  /** UPI / card / bank reference, or '' for cash. */
+  reference: string;
+  receivedBy: string;
+  at: number;
+}
+
+/** Razorpay payment link sent for a staff-entered prepaid order, or for the balance of an advance-paid order. */
+export interface PaymentLinkRecord {
+  id: string;
+  url: string;
+  expiresAt: number;
+  /** Amount the link asks for, when it is not the order total (an advance or a balance). */
+  amountPaise?: number;
+}
+
+/**
+ * One part payment of an order paid in instalments (api/_lib/orderBalance.ts): the advance taken when the order
+ * was entered, then balance payments until `balanceDuePaise` is 0. Orders paid in full in one go have no entries.
+ */
+export interface OrderPaymentEntry {
+  /** Razorpay payment id, or a generated id for money taken in person. Unique per order (idempotency). */
+  id: string;
+  kind: 'advance' | 'balance';
+  amountPaise: number;
+  mode: OfflinePaymentMode | 'razorpay';
+  /** UPI / card / bank reference, the Razorpay payment id, or '' for cash. */
+  reference: string;
+  at: number;
+  by: string;
+}
+
+/** Who entered an order that did not come through the storefront checkout. */
+export interface OrderSource {
+  channel: StaffOrderChannel;
+  by: string;
+}
+
+export type ReservationStatus = 'held' | 'released' | 'committed' | 'none';
+
+export interface StockReservation {
+  status: ReservationStatus;
+  items: Array<{ productId: string; quantity: number }>;
+}
+
+export interface RefundRecord {
+  refundId: string;
+  amountPaise: number;
+  at: number;
+}
+
+/** Courier shipment (api/_lib/shipping/shipments.ts). */
+export interface ShipmentRecord {
+  provider: 'shiprocket' | 'manual';
+  status: 'created' | 'awb_assigned' | 'pickup_scheduled' | 'in_transit' | 'delivered' | 'rto' | 'cancelled';
+  shipmentId: string | null;
+  providerOrderId: string | null;
+  awb: string | null;
+  courier: string | null;
+  trackingUrl: string | null;
+  labelUrl: string | null;
+  manifestUrl: string | null;
+  pickupScheduledAt: string | null;
+  lastEvent: { status: string; at: string } | null;
+  error: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OrderDoc {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  statusHistory: StatusHistoryEntry[];
+  userId: string | null;
+  email: string;
+  customer: CustomerDetails;
+  items: OrderItemSnapshot[];
+  currency: 'INR';
+  amounts: OrderTotals;
+  /**
+   * True on every order created since GST-inclusive pricing (2026-11-15): item and fee amounts include GST and
+   * `amounts.taxPaise` is the GST inside `amounts.totalPaise`. Absent on older orders, whose prices were
+   * GST-exclusive (total = subtotal − discount + shipping + COD fee + tax). Only code that reads frozen
+   * component amounts (not the total) needs to look at it; stored orders are never rewritten.
+   */
+  pricesIncludeTax?: true;
+  coupon: { id: string; code: string; discountPaise: number } | null;
+  couponCode: string | null;
+  stockReservation: StockReservation;
+  reservationExpiresAt: number;
+  idempotencyKey: string;
+  razorpayOrderId: string | null;
+  razorpayPaymentId: string | null;
+  refunds: RefundRecord[];
+  refundedPaise: number;
+  /** Refunds requested from the provider but not yet processed (counted against the refund ceiling). */
+  refundPendingPaise?: number;
+  /** Set on cancellation when money taken in person or by a balance link must be paid back manually (REFUND_MANUAL_DUE). */
+  manualRefundDuePaise?: number;
+  paymentMethod: PaymentMethod;
+  /** Normalised 10-digit mobile number, for COD abuse limits. */
+  phoneKey: string;
+  /** Production days promised at checkout (max over lines). */
+  leadTimeDays?: number;
+  shipment?: ShipmentRecord | null;
+  /** Courier booking in progress until this time (shipments.ts lease); 0 or absent when free. */
+  shipmentBookingUntil?: number;
+  invoiceId?: string | null;
+  invoiceNumber?: string | null;
+  deliveredAt?: number | null;
+  /** COD cash collected by the courier on delivery (paise). */
+  codCollectedPaise?: number;
+  codCollectedAt?: number | null;
+  /** Replacement orders point at the order they replace. */
+  parentOrderId?: string | null;
+  replacementOrderId?: string | null;
+  flags: string[];
+  /** Set by CONFIRM_COD_ORDER when staff phoned the customer (clears the COD_UNVERIFIED flag). */
+  codConfirmedAt?: number;
+  codConfirmedBy?: string;
+  /** Fulfilment paused (src/types/orderStatus.ts OrderHold); null or absent when not held. */
+  hold?: OrderHold | null;
+  /**
+   * `service` orders sell a design consultation (api/_lib/consultations.ts): nothing ships, so they
+   * stay out of the workshop queues and cannot be cancelled by the customer (refunds go through finance).
+   */
+  kind?: 'service';
+  /** Frozen at purchase: what payment confirmation turns into `consultations/{id}` and the credit coupon. */
+  consultation?: ConsultationPurchase;
+  placedAt: number;
+  createdAt: number;
+  updatedAt: number;
+  // Display copies (₹) — see file comment.
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  tax: number;
+  total: number;
+  shippingName: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingZip: string;
+  shippingCountry: string;
+  phone: string;
+  tracking?: { carrier?: string; trackingNumber?: string; url?: string } | null;
+  /** Set on staff-entered orders (counter, phone, WhatsApp, email, trade); absent for storefront checkouts. */
+  source?: OrderSource;
+  offlinePayment?: OfflinePayment | null;
+  paymentLink?: PaymentLinkRecord | null;
+  /**
+   * Advance-paid staff orders: the advance asked for (a payment link for less than the total is checked against
+   * it), what is still owed, the instalments taken and the open balance link. Dispatch, delivery and the GST
+   * invoice wait until `balanceDuePaise` is 0. Absent on orders paid in full.
+   */
+  advancePaise?: number;
+  balanceDuePaise?: number;
+  payments?: OrderPaymentEntry[];
+  balanceLink?: PaymentLinkRecord | null;
+  /** Staff notes: free text plus the structured `#vernox:v1` block (src/lib/orders/orderNotes.ts). Staff-written only. */
+  notes?: string;
+}
+
+/** Indian mobile as 10 digits (strips +91 / 0 and separators); other formats are returned digits-only. */
+export function phoneKey(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  return digits.length > 10 && /^(91|0)/.test(digits) ? digits.slice(-10) : digits;
+}
+
+const ORDER_NUMBER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/** Human-facing order number, e.g. VX-20261105-7KQ2MZ. Also used as the Razorpay receipt (≤ 40 chars). */
+export function generateOrderNumber(now: number): string {
+  const date = new Date(now + 5.5 * 3600_000).toISOString().slice(0, 10).replace(/-/g, ''); // IST date
+  const bytes = crypto.randomBytes(6);
+  const suffix = Array.from(bytes, b => ORDER_NUMBER_ALPHABET[b % ORDER_NUMBER_ALPHABET.length]).join('');
+  return `VX-${date}-${suffix}`;
+}
+
+export function snapshotItem(line: PricedLine, tax: LineTax): OrderItemSnapshot {
+  return {
+    productId: line.productId,
+    name: line.name,
+    productName: line.name,
+    category: line.category,
+    sizeLabel: line.sizeLabel,
+    widthMm: line.widthMm,
+    heightMm: line.heightMm,
+    finish: line.finish,
+    quantity: line.quantity,
+    unitPricePaise: line.unitPricePaise,
+    lineTotalPaise: line.lineTotalPaise,
+    unitPrice: paiseToRupees(line.unitPricePaise),
+    lineTotal: paiseToRupees(line.lineTotalPaise),
+    isCustom: line.isCustom,
+    ...(line.isService ? { isService: true } : {}),
+    customDesignRef: line.customDesignRef,
+    ...(line.customPricing ? { customPricing: line.customPricing } : {}),
+    hsnCode: line.hsnCode,
+    gstRateBps: tax.gstRateBps,
+    discountPaise: tax.discountPaise,
+    taxablePaise: tax.taxablePaise,
+    taxPaise: tax.taxPaise,
+  };
+}
+
+export function buildOrderDoc(params: {
+  id: string;
+  orderNumber: string;
+  userId: string | null;
+  customer: CustomerDetails;
+  lines: PricedLine[];
+  totals: OrderTotals;
+  coupon: OrderDoc['coupon'];
+  reservedItems: StockReservation['items'];
+  idempotencyKey: string;
+  reservationTtlMs: number;
+  now: number;
+  paymentMethod?: PaymentMethod;
+  leadTimeDays?: number;
+  parentOrderId?: string | null;
+  consultation?: ConsultationPurchase;
+  /** Staff-entered order: who entered it, and the in-person payment if it was already taken. */
+  source?: OrderSource;
+  offlinePayment?: OfflinePayment;
+  /** Part of the total taken now (offline) or asked for by the payment link; the rest is the balance. */
+  advancePaise?: number;
+}): OrderDoc {
+  const { customer, totals, now } = params;
+  const paymentMethod = params.paymentMethod ?? 'prepaid';
+  // Prepaid orders hold stock until paid; COD, replacement and already-paid (offline) orders commit it immediately.
+  const awaitingPayment = paymentMethod === 'prepaid' && !params.offlinePayment;
+  const status: OrderStatus = awaitingPayment ? 'Pending_Payment' : paymentMethod === 'cod' ? 'Confirmed_COD' : 'Paid';
+  const reservationStatus: ReservationStatus =
+    params.reservedItems.length === 0 ? 'none' : awaitingPayment ? 'held' : 'committed';
+  const by = paymentMethod === 'replacement' ? 'system' : params.source?.by ?? 'customer';
+  return {
+    id: params.id,
+    orderNumber: params.orderNumber,
+    status,
+    statusHistory: [
+      {
+        status,
+        at: now,
+        by,
+        ...(paymentMethod === 'replacement'
+          ? { note: `replacement for ${params.parentOrderId}` }
+          : params.offlinePayment
+            ? {
+                note: `${params.advancePaise ? `advance ₹${paiseToRupees(params.advancePaise)} ` : ''}paid by ${params.offlinePayment.mode}${params.offlinePayment.reference ? ` (${params.offlinePayment.reference})` : ''}`,
+              }
+            : {}),
+      },
+    ],
+    userId: params.userId,
+    email: customer.email,
+    customer,
+    items: params.lines.map((line, idx) => snapshotItem(line, totals.taxBreakdown.lines[idx])),
+    currency: 'INR',
+    amounts: totals,
+    pricesIncludeTax: true,
+    coupon: params.coupon,
+    couponCode: params.coupon?.code ?? null,
+    stockReservation: { status: reservationStatus, items: params.reservedItems },
+    reservationExpiresAt: awaitingPayment ? now + params.reservationTtlMs : 0,
+    idempotencyKey: params.idempotencyKey,
+    razorpayOrderId: null,
+    razorpayPaymentId: null,
+    refunds: [],
+    refundedPaise: 0,
+    refundPendingPaise: 0,
+    paymentMethod,
+    phoneKey: phoneKey(customer.phone),
+    ...(params.leadTimeDays !== undefined ? { leadTimeDays: params.leadTimeDays } : {}),
+    shipment: null,
+    invoiceId: null,
+    invoiceNumber: null,
+    deliveredAt: null,
+    parentOrderId: params.parentOrderId ?? null,
+    ...(params.consultation ? { kind: 'service' as const, consultation: params.consultation } : {}),
+    ...(params.source ? { source: params.source, offlinePayment: params.offlinePayment ?? null, paymentLink: null } : {}),
+    ...(params.advancePaise ? advanceFields(params.advancePaise, totals.totalPaise, params.offlinePayment) : {}),
+    flags: [],
+    placedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    subtotal: paiseToRupees(totals.subtotalPaise),
+    discount: paiseToRupees(totals.discountPaise),
+    shipping: paiseToRupees(totals.shippingPaise),
+    tax: paiseToRupees(totals.taxPaise),
+    total: paiseToRupees(totals.totalPaise),
+    shippingName: customer.name,
+    shippingAddress: customer.address,
+    shippingCity: customer.city,
+    shippingState: customer.state,
+    shippingZip: customer.pincode,
+    shippingCountry: customer.country,
+    phone: customer.phone,
+  };
+}
+
+/** An advance taken in person is already an instalment; an advance by payment link is recorded when paid. */
+function advanceFields(advancePaise: number, totalPaise: number, offline: OfflinePayment | undefined): Partial<OrderDoc> {
+  if (!offline) return { advancePaise, payments: [], balanceLink: null };
+  return {
+    advancePaise,
+    balanceDuePaise: totalPaise - advancePaise,
+    payments: [{ id: `adv_${offline.at}`, kind: 'advance', amountPaise: advancePaise, mode: offline.mode, reference: offline.reference, at: offline.at, by: offline.receivedBy }],
+    balanceLink: null,
+  };
+}
+
+export const asOrder = (data: DocData | null) => data as unknown as OrderDoc | null;
+export const orderPath = (orderId: string) => `orders/${orderId}`;
+
+/**
+ * How the discount is made up (₹): the coupon's part and the volume discount with its tier. Orders placed before
+ * volume discounts have no `discountParts`; their whole discount was the coupon's.
+ */
+export function discountBreakdown(a: Pick<OrderTotals, 'discountPaise' | 'discountParts'>) {
+  const v = a.discountParts?.volume ?? null;
+  return {
+    couponDiscount: paiseToRupees(a.discountParts ? a.discountParts.couponPaise : a.discountPaise),
+    volumeDiscount: v ? { percent: v.percent, minUnits: v.minUnits, units: v.units, amount: paiseToRupees(v.discountPaise) } : null,
+  };
+}
+
+/** Rupee pricing block returned to the browser (checkout-intent response, order-status). */
+export function pricingPayload(order: Pick<OrderDoc, 'amounts' | 'items' | 'pricesIncludeTax'>) {
+  const a = order.amounts;
+  return {
+    /** false only for orders placed before GST-inclusive pricing, where `tax` was added to reach `total`. */
+    taxIncluded: order.pricesIncludeTax === true,
+    subtotal: paiseToRupees(a.subtotalPaise),
+    discount: paiseToRupees(a.discountPaise),
+    shipping: paiseToRupees(a.shippingPaise),
+    codFee: paiseToRupees(a.codFeePaise ?? 0),
+    tax: paiseToRupees(a.taxPaise),
+    total: paiseToRupees(a.totalPaise),
+    ...discountBreakdown(a),
+    items: order.items.map(i => ({
+      productId: i.productId,
+      name: i.name,
+      unitPrice: paiseToRupees(i.unitPricePaise),
+      quantity: i.quantity,
+      lineTotal: paiseToRupees(i.lineTotalPaise),
+    })),
+  };
+}
+
+/** Tracking block for customers: the courier shipment when there is one, else staff-entered tracking. */
+function publicTracking(order: OrderDoc) {
+  if (order.shipment?.awb) {
+    return { carrier: order.shipment.courier, trackingNumber: order.shipment.awb, url: order.shipment.trackingUrl };
+  }
+  return order.tracking
+    ? { carrier: order.tracking.carrier ?? null, trackingNumber: order.tracking.trackingNumber ?? null, url: order.tracking.url ?? null }
+    : null;
+}
+
+/** Guest-safe order view: no address line, phone, payment ids, design files or internal flags. */
+export function publicOrderSummary(order: OrderDoc, returnWindowDays?: number, now = Date.now()) {
+  const { items: pricedItems, ...totals } = pricingPayload(order);
+  return {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    placedAt: order.placedAt,
+    currency: order.currency,
+    couponCode: order.couponCode,
+    pricing: totals,
+    items: order.items.map((i, idx) => ({
+      ...pricedItems[idx],
+      sizeLabel: i.sizeLabel,
+      finish: i.finish,
+      isCustom: i.isCustom,
+    })),
+    timeline: (order.statusHistory ?? []).map(h => ({ status: h.status, at: h.at })),
+    paymentMethod: order.paymentMethod ?? 'prepaid',
+    tracking: publicTracking(order),
+    invoiceNumber: order.invoiceNumber ?? null,
+    canCancel: order.kind !== 'service' && CUSTOMER_CANCELLABLE_STATUSES.includes(order.status),
+    returnEligibleUntil:
+      order.status === 'Delivered' && order.deliveredAt && returnWindowDays !== undefined
+        ? order.deliveredAt + returnWindowDays * 24 * 3600_000
+        : null,
+    shipTo: { name: order.customer?.name ?? order.shippingName, city: order.customer?.city ?? order.shippingCity, state: order.customer?.state ?? order.shippingState },
+    /** Advance-paid orders: what is still owed (₹) and the open balance link, if staff sent one. */
+    balanceDue: order.balanceDuePaise ? paiseToRupees(order.balanceDuePaise) : null,
+    payBalanceUrl: order.balanceDuePaise && order.balanceLink && order.balanceLink.expiresAt > now ? order.balanceLink.url : null,
+  };
+}

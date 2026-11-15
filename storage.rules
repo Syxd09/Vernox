@@ -1,0 +1,180 @@
+rules_version = '2';
+
+// Vernox Cloud Storage security rules.
+//
+// returns/{orderId}/{file}: photos for a return request (api/_lib/returns.ts).
+//  - Create: the signed-in order owner, or a signed-in user whose verified email
+//    is the order's email (guest checkouts sign in with that email). Images only,
+//    at most 5 MB, at most 6 per order (enforced by /api/return-request).
+//  - Read: the same customer, or staff who can read orders (mirrors
+//    canReadOrders() in firestore.rules / STAFF_ROLE_PERMISSIONS 'orders.read').
+//  - Files are immutable once uploaded; nothing else in the bucket is accessible.
+// spaces/{uid}/{spaceId}/{wallId}.jpg: wall photos of My Space. Only the owner (verified email for
+//  password accounts) reads, writes and deletes; JPEG/PNG/WebP up to 5 MB. Staff have no access.
+// consultations/{id}/walls/{wallId}.jpg: server-written snapshot of a paid consultation's wall photos.
+// consultations/{id}/previews/{itemId}.png: proposal previews composed in the designer's browser.
+//  - Read: the consultation's customer, or staff who can read consultations (designer, admin, super_admin;
+//    mirrors canReadConsultations() in firestore.rules / STAFF_ROLE_PERMISSIONS 'consultations.read').
+//  - Previews: written and deleted by the same staff, images up to 5 MB. Walls: never from clients.
+// products/{productId}/{file}.webp: catalogue photos. Public read (they are the storefront's images);
+//  created and deleted by catalogue staff (super_admin, admin, catalog_manager; mirrors 'catalog.write'),
+//  WebP only (the admin form resizes in the browser), at most 2 MB. Never overwritten: names are unique.
+// review-uploads/{uid}/{file}.webp: PRIVATE review photos. The signed-in owner (verified email for password
+//  accounts) creates, reads and deletes; staff with reviews.moderate (super_admin, admin, catalog_manager,
+//  support) read them to judge a review. WebP only, at most 2 MB (the storefront resizes to 1600 px).
+//  Names are never overwritten, so what a moderator saw is what gets published.
+// reviews/{reviewId}/{n}.webp: PUBLIC copies the server makes when a moderator publishes a review
+//  (api/_lib/reviewPhotos.ts), removed on unpublish/delete. Public read; never written from clients.
+// qc/{orderId}/{file}.webp: photos of the finished piece taken at quality check (src/lib/data/orderPhotos.ts),
+//  evidence for damage claims and returns. Read by staff who can read orders; created by staff who can update
+//  orders (mirrors canUpdateOrders() / 'orders.update_status'). WebP only, at most 2 MB, never overwritten or
+//  deleted from clients.
+// staff-designs/{draftId}/{file}: design files (SVG, DXF, PDF, PNG, JPEG, WebP) staff attach to custom lines of a
+//  staff-entered order (Admin > New order). Uploaded before the order exists, under a browser-generated draft id;
+//  the order line stores the paths (api/_lib/staffOrders.ts). Read by staff who can read orders; created by staff
+//  who can create orders (mirrors 'orders.create': super_admin, admin, order_manager, support). At most 10 MB,
+//  never overwritten or deleted from clients. SVG can carry script: it must only be downloaded or shown through
+//  <img>, never inlined into the page from our origin.
+// Cross-service reads (firestore.get) require the Storage service agent to have
+// Firestore read access — Firebase grants it when these rules are first deployed.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function emailTrusted() {
+      return request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'password'
+        || request.auth.token.get('email_verified', false) == true;
+    }
+
+    function isStaffOrderReader() {
+      return request.auth != null && emailTrusted()
+        && request.auth.token.get('role', '') in ['super_admin', 'admin', 'order_manager', 'production', 'shipping', 'finance', 'support'];
+    }
+
+    function orderOf(orderId) {
+      return firestore.get(/databases/(default)/documents/orders/$(orderId)).data;
+    }
+
+    function ownsOrder(orderId) {
+      return request.auth != null && (
+        orderOf(orderId).userId == request.auth.uid
+        || (request.auth.token.get('email_verified', false) == true
+            && request.auth.token.get('email', '').lower() == orderOf(orderId).email)
+      );
+    }
+
+    function isStaffOrderWriter() {
+      return request.auth != null && emailTrusted()
+        && request.auth.token.get('role', '') in ['super_admin', 'admin', 'order_manager', 'production', 'shipping'];
+    }
+
+    function isStaffOrderCreator() {
+      return request.auth != null && emailTrusted()
+        && request.auth.token.get('role', '') in ['super_admin', 'admin', 'order_manager', 'support'];
+    }
+
+    function isConsultationStaff() {
+      return request.auth != null && emailTrusted()
+        && request.auth.token.get('role', '') in ['super_admin', 'admin', 'designer'];
+    }
+
+    function ownsConsultation(consultationId) {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/consultations/$(consultationId)).data.userId == request.auth.uid;
+    }
+
+    function isCatalogStaff() {
+      return request.auth != null && emailTrusted()
+        && request.auth.token.get('role', '') in ['super_admin', 'admin', 'catalog_manager'];
+    }
+
+    function isReviewModerator() {
+      return request.auth != null && emailTrusted()
+        && request.auth.token.get('role', '') in ['super_admin', 'admin', 'catalog_manager', 'support'];
+    }
+
+    function isImageUpTo5Mb() {
+      return request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    match /spaces/{uid}/{spaceId}/{fileName} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid && emailTrusted();
+      allow create, update: if request.auth != null && request.auth.uid == uid && emailTrusted()
+        && fileName.matches('^[A-Za-z0-9_-]{1,40}[.]jpg$')
+        && isImageUpTo5Mb();
+    }
+
+    match /consultations/{consultationId}/walls/{fileName} {
+      allow read: if ownsConsultation(consultationId) || isConsultationStaff();
+      allow write: if false;
+    }
+
+    match /consultations/{consultationId}/previews/{fileName} {
+      allow read: if ownsConsultation(consultationId) || isConsultationStaff();
+      allow create, update: if isConsultationStaff()
+        && fileName.matches('^[A-Za-z0-9_-]{1,40}[.]png$')
+        && isImageUpTo5Mb();
+      allow delete: if isConsultationStaff();
+    }
+
+    match /products/{productId}/{fileName} {
+      allow read: if true;
+      allow create: if isCatalogStaff()
+        && productId.matches('^[A-Za-z0-9_-]{1,64}$')
+        && fileName.matches('^[A-Za-z0-9_-]{1,60}[.]webp$')
+        && request.resource.size <= 2 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+      allow delete: if isCatalogStaff();
+    }
+
+    match /review-uploads/{uid}/{fileName} {
+      allow read: if (request.auth != null && request.auth.uid == uid && emailTrusted()) || isReviewModerator();
+      // `resource == null`: an upload over an existing object is refused (the emulator also routes
+      // overwrites through `create`).
+      allow create: if request.auth != null && request.auth.uid == uid && emailTrusted() && resource == null
+        && fileName.matches('^[A-Za-z0-9_-]{1,60}[.]webp$')
+        && request.resource.size <= 2 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+      allow delete: if request.auth != null && request.auth.uid == uid && emailTrusted();
+      allow update: if false;
+    }
+
+    match /reviews/{reviewId}/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /qc/{orderId}/{fileName} {
+      allow read: if isStaffOrderReader();
+      allow create: if isStaffOrderWriter() && resource == null
+        && orderId.matches('^[A-Za-z0-9_-]{1,128}$')
+        && fileName.matches('^[A-Za-z0-9_-]{1,60}[.]webp$')
+        && request.resource.size <= 2 * 1024 * 1024
+        && request.resource.contentType == 'image/webp';
+      allow update, delete: if false;
+    }
+
+    match /staff-designs/{draftId}/{fileName} {
+      allow read: if isStaffOrderReader();
+      allow create: if isStaffOrderCreator() && resource == null
+        && draftId.matches('^[A-Za-z0-9_-]{16,64}$')
+        && fileName.matches('^[A-Za-z0-9_-]{1,60}[.](svg|dxf|pdf|png|jpg|webp)$')
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['image/svg+xml', 'application/dxf', 'application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+      allow update, delete: if false;
+    }
+
+    match /returns/{orderId}/{fileName} {
+      allow read: if ownsOrder(orderId) || isStaffOrderReader();
+      allow create: if ownsOrder(orderId)
+        && fileName.matches('^[A-Za-z0-9_.-]{1,120}$')
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif)');
+      allow update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,244 @@
+/**
+ * Form model for the business settings stored in `settings/store`: seller (GST invoice) details,
+ * storefront contact fields, COD and lead-time settings. Field names match StoreSettingsDoc
+ * (src/types/settings.ts); the server parses the same document (api/_lib/storeConfig.ts) and its
+ * GSTIN pattern is mirrored here so a bad value is caught before it blocks every invoice.
+ */
+import { isPlaceholderSeller, isPlaceholderValue, type SellerSettings } from '@/types/settings';
+import type { StoreConfig } from '@/types/store';
+import { DEFAULT_CONSULTATION_SETTINGS } from '@/types/consultation';
+import { parseVolumeDiscounts, type VolumeDiscountTier } from '@/lib/pricing/volumeDiscount';
+import { DEFAULT_CUSTOM_FINISH_RATES, customPiecesSettingsProblem, resolveCustomFinishRates, type CustomFinishRate } from '@/lib/pricing/customPiece';
+
+import { GSTIN_PATTERN } from '@/types/gstStateCodes';
+
+export { GSTIN_PATTERN };
+
+export const SELLER_FIELDS = ['legalName', 'tradeName', 'gstin', 'address', 'city', 'state', 'stateCode', 'pincode', 'email', 'phone'] as const;
+/** Seller fields the server requires before it can issue a GST invoice (assertSellerConfigured). */
+export const SELLER_REQUIRED_FOR_INVOICE = ['legalName', 'gstin', 'address', 'state', 'stateCode', 'pincode'] as const;
+
+export interface BusinessDraft {
+  seller: Record<(typeof SELLER_FIELDS)[number], string>;
+  whatsappNumber: string;
+  supportPhone: string;
+  supportEmail: string;
+  supportHours: string;
+  workshopAddress: string;
+  grievanceOfficerName: string;
+  grievanceOfficerEmail: string;
+  codEnabled: boolean;
+  codOtpRequired: boolean;
+  codFee: string;
+  codMaxOrderValue: string;
+  defaultLeadTimeDays: string;
+  customLeadTimeDays: string;
+  returnWindowDays: string;
+  consultation: { enabled: boolean; priceInr: string; creditTowardsOrder: boolean; creditValidityDays: string; turnaroundDays: string; sacCode: string; gstRatePercent: string };
+  /** Bulk discount tiers as typed; an empty list switches the discount off. */
+  volumeDiscounts: Array<{ minUnits: string; percent: string }>;
+  /** Studio piece rates per finish, as typed (rupees, metres). Saved only once `customRatesConfirmed` is ticked. */
+  customRates: Record<string, Record<CustomRateField, string>>;
+  customRatesConfirmed: boolean;
+}
+
+/** Editable custom piece rates, in the units settings/store uses (src/types/settings.ts customPieces). */
+export const CUSTOM_RATE_FIELDS = [
+  { key: 'setupFee', label: 'Setup per piece (₹)' },
+  { key: 'ratePerCm2', label: 'Plate (₹ per cm²)' },
+  { key: 'minimum', label: 'Minimum price (₹)' },
+  { key: 'cutRatePerMetre', label: 'Cutting (₹ per m)' },
+  { key: 'includedCutMetres', label: 'Cutting included (m)' },
+  { key: 'includedCutMetresPerM2', label: 'Plus included per m² of plate (m)' },
+  { key: 'pierceRate', label: 'Each extra cut-out (₹)' },
+  { key: 'includedPierces', label: 'Cut-outs included' },
+  { key: 'scoreRatePerMetre', label: 'Engraving (₹ per m)' },
+] as const;
+export type CustomRateField = (typeof CUSTOM_RATE_FIELDS)[number]['key'];
+
+/** A resolved rate (paise, millimetres) in the settings units the form edits. */
+function rateToSettings(r: CustomFinishRate): Record<CustomRateField, number> {
+  return {
+    setupFee: r.setupFeePaise / 100, ratePerCm2: r.ratePaisePerCm2 / 100, minimum: r.minimumPaise / 100,
+    cutRatePerMetre: r.cutPaisePerMetre / 100, includedCutMetres: r.includedCutMm / 1000, includedCutMetresPerM2: r.includedCutMmPerM2 / 1000,
+    pierceRate: r.piercePaise / 100, includedPierces: r.includedPierces, scoreRatePerMetre: r.scorePaisePerMetre / 100,
+  };
+}
+
+export type BusinessErrors = Partial<Record<string, string>>;
+
+const str = (v: unknown): string => (v === undefined || v === null ? '' : String(v));
+
+export function draftFromConfig(config: StoreConfig): BusinessDraft {
+  const seller: Partial<SellerSettings> = config.seller ?? {};
+  return {
+    seller: Object.fromEntries(SELLER_FIELDS.map(f => [f, str(seller[f])])) as BusinessDraft['seller'],
+    whatsappNumber: str(config.whatsappNumber),
+    supportPhone: str(config.supportPhone),
+    supportEmail: str(config.supportEmail),
+    supportHours: str(config.supportHours),
+    workshopAddress: str(config.workshopAddress),
+    grievanceOfficerName: str(config.grievanceOfficerName),
+    grievanceOfficerEmail: str(config.grievanceOfficerEmail),
+    codEnabled: config.codEnabled === true,
+    codOtpRequired: config.codOtpRequired !== false,
+    codFee: str(config.codFee),
+    codMaxOrderValue: str(config.codMaxOrderValue),
+    defaultLeadTimeDays: str(config.defaultLeadTimeDays),
+    customLeadTimeDays: str(config.customLeadTimeDays),
+    returnWindowDays: str(config.returnWindowDays),
+    consultation: {
+      enabled: config.consultation?.enabled === true,
+      priceInr: str(config.consultation?.priceInr ?? DEFAULT_CONSULTATION_SETTINGS.priceInr),
+      creditTowardsOrder: config.consultation?.creditTowardsOrder ?? DEFAULT_CONSULTATION_SETTINGS.creditTowardsOrder,
+      creditValidityDays: str(config.consultation?.creditValidityDays ?? DEFAULT_CONSULTATION_SETTINGS.creditValidityDays),
+      turnaroundDays: str(config.consultation?.turnaroundDays ?? DEFAULT_CONSULTATION_SETTINGS.turnaroundDays),
+      sacCode: str(config.consultation?.sacCode ?? DEFAULT_CONSULTATION_SETTINGS.sacCode),
+      gstRatePercent: str(config.consultation?.gstRatePercent ?? DEFAULT_CONSULTATION_SETTINGS.gstRatePercent),
+    },
+    volumeDiscounts: (config.volumeDiscounts ?? []).map(t => ({ minUnits: str(t.minUnits), percent: str(t.percent) })),
+    customRates: Object.fromEntries(Object.entries(resolveCustomFinishRates(config.customPieces)).map(([id, rate]) => {
+      const values = rateToSettings(rate);
+      return [id, Object.fromEntries(CUSTOM_RATE_FIELDS.map(f => [f.key, str(Math.round(values[f.key] * 10000) / 10000)]))];
+    })) as BusinessDraft['customRates'],
+    customRatesConfirmed: Boolean(config.customPieces && Object.keys(config.customPieces).length > 0),
+  };
+}
+
+/** The typed rates as settings/store.customPieces, keeping each finish's label and thickness factors. */
+export function draftCustomPieces(d: BusinessDraft, config: StoreConfig): NonNullable<StoreConfig['customPieces']> {
+  const saved = config.customPieces ?? {};
+  return Object.fromEntries(Object.entries(d.customRates).map(([id, values]) => {
+    const base = DEFAULT_CUSTOM_FINISH_RATES[id];
+    const kept = saved[id] ?? {};
+    return [id, {
+      label: kept.label ?? base?.label ?? id,
+      ...Object.fromEntries(CUSTOM_RATE_FIELDS.map(f => [f.key, Number(values[f.key])])),
+      ...(kept.thicknessFactors ? { thicknessFactors: kept.thicknessFactors } : {}),
+    }];
+  }));
+}
+
+/** The typed tiers, checked by the server's own parser (api/_lib/catalogAdmin.ts saveSettings runs it again). */
+export function draftVolumeDiscounts(d: BusinessDraft): { tiers: VolumeDiscountTier[] } | { error: string } {
+  const parsed = parseVolumeDiscounts(d.volumeDiscounts.map(t => ({ minUnits: Number(t.minUnits), percent: Number(t.percent) })));
+  return 'tiers' in parsed ? { tiers: parsed.tiers } : { error: parsed.error };
+}
+
+/** Invoice-critical seller fields that are still empty (the Shipping console warns about these). */
+export function missingSellerFields(seller: Partial<SellerSettings> | undefined): string[] {
+  return SELLER_REQUIRED_FOR_INVOICE.filter(f => !seller?.[f]?.toString().trim());
+}
+
+const SELLER_LABELS: Record<string, string> = {
+  legalName: 'legal name', gstin: 'GSTIN', address: 'address', state: 'state', stateCode: 'GST state code', pincode: 'PIN code',
+};
+
+/** Staff-facing names for seller field keys, for example "GST state code". */
+export const describeSellerFields = (keys: readonly string[]): string => keys.map(k => SELLER_LABELS[k] ?? k).join(', ');
+
+const EMAIL =/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const digitsOnly = (v: string) => v.replace(/[\s()+-]/g, '');
+
+function checkNumber(errors: BusinessErrors, key: string, raw: string, label: string, { integer = false, max }: { integer?: boolean; max?: number } = {}) {
+  if (raw.trim() === '') return;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) errors[key] = `${label} must be zero or more.`;
+  else if (integer && !Number.isInteger(n)) errors[key] = `${label} must be a whole number.`;
+  else if (max !== undefined && n > max) errors[key] = `${label} must be at most ${max}.`;
+}
+
+export function validateBusiness(d: BusinessDraft): BusinessErrors {
+  const errors: BusinessErrors = {};
+  const s = d.seller;
+  const gstin = s.gstin.trim().toUpperCase();
+  if (gstin && !GSTIN_PATTERN.test(gstin)) errors.gstin = 'Enter a valid 15-character GSTIN, for example 29ABCDE1234F1Z5.';
+  if (s.stateCode.trim() && !/^\d{2}$/.test(s.stateCode.trim())) errors.stateCode = 'The GST state code is two digits, for example 29.';
+  else if (gstin && GSTIN_PATTERN.test(gstin) && s.stateCode.trim() && gstin.slice(0, 2) !== s.stateCode.trim()) {
+    errors.stateCode = 'The state code must equal the first two characters of the GSTIN.';
+  }
+  if (s.pincode.trim() && !/^[1-9]\d{5}$/.test(s.pincode.trim())) errors.pincode = 'Enter a 6-digit PIN code.';
+  if (s.email.trim() && !EMAIL.test(s.email.trim())) errors.sellerEmail = 'Enter a valid email address.';
+  if (d.supportEmail.trim() && !EMAIL.test(d.supportEmail.trim())) errors.supportEmail = 'Enter a valid email address.';
+  if (d.grievanceOfficerEmail.trim() && !EMAIL.test(d.grievanceOfficerEmail.trim())) errors.grievanceOfficerEmail = 'Enter a valid email address.';
+  for (const [key, value] of [['whatsappNumber', d.whatsappNumber], ['supportPhone', d.supportPhone], ['sellerPhone', s.phone]] as const) {
+    if (value.trim() && !/^\d{10,15}$/.test(digitsOnly(value))) errors[key] = 'Enter 10 to 15 digits, with the country code for WhatsApp.';
+  }
+  checkNumber(errors, 'codFee', d.codFee, 'The COD fee');
+  checkNumber(errors, 'codMaxOrderValue', d.codMaxOrderValue, 'The COD order limit');
+  checkNumber(errors, 'defaultLeadTimeDays', d.defaultLeadTimeDays, 'Lead time', { integer: true, max: 365 });
+  checkNumber(errors, 'customLeadTimeDays', d.customLeadTimeDays, 'Custom lead time', { integer: true, max: 365 });
+  checkNumber(errors, 'returnWindowDays', d.returnWindowDays, 'The return window', { integer: true, max: 90 });
+  const c = d.consultation;
+  if (c.priceInr.trim() === '' || !(Number(c.priceInr) >= 1) || Number(c.priceInr) > 100_000) errors.consultationPrice = 'Enter a fee between ₹1 and ₹1,00,000, including GST.';
+  checkNumber(errors, 'creditValidityDays', c.creditValidityDays, 'Credit validity', { integer: true, max: 365 });
+  checkNumber(errors, 'turnaroundDays', c.turnaroundDays, 'Turnaround', { integer: true, max: 30 });
+  if (c.sacCode.trim() && !/^\d{4,8}$/.test(c.sacCode.trim())) errors.sacCode = 'A SAC code is 4 to 8 digits, for example 998391.';
+  if (c.gstRatePercent.trim() !== '' && !(Number(c.gstRatePercent) >= 0 && Number(c.gstRatePercent) <= 100)) errors.consultationGst = 'Enter a GST rate between 0 and 100.';
+  const tiers = draftVolumeDiscounts(d);
+  if ('error' in tiers) errors.volumeDiscounts = tiers.error;
+  for (const [id, values] of Object.entries(d.customRates)) {
+    for (const f of CUSTOM_RATE_FIELDS) {
+      const v = values[f.key];
+      if (v.trim() === '' || !(Number(v) >= 0) || (f.key === 'includedPierces' && !Number.isInteger(Number(v)))) {
+        errors.customRates = `${DEFAULT_CUSTOM_FINISH_RATES[id]?.label ?? id}: ${f.label} must be ${f.key === 'includedPierces' ? 'a whole number' : 'a number'} of zero or more.`;
+      }
+    }
+  }
+  return errors;
+}
+
+const num = (raw: string): number | undefined => (raw.trim() === '' ? undefined : Number(raw));
+
+/** The fields to merge into `settings/store`. Empty numbers are omitted so the server default stays in force. */
+export function toStorePatch(d: BusinessDraft, config?: StoreConfig): Partial<StoreConfig> {
+  const patch: Partial<StoreConfig> = {
+    seller: {
+      ...Object.fromEntries(SELLER_FIELDS.map(f => [f, d.seller[f].trim()])),
+      gstin: d.seller.gstin.trim().toUpperCase(),
+    },
+    whatsappNumber: d.whatsappNumber.trim(),
+    supportPhone: d.supportPhone.trim(),
+    supportEmail: d.supportEmail.trim(),
+    supportHours: d.supportHours.trim(),
+    workshopAddress: d.workshopAddress.trim(),
+    grievanceOfficerName: d.grievanceOfficerName.trim(),
+    grievanceOfficerEmail: d.grievanceOfficerEmail.trim(),
+    codEnabled: d.codEnabled,
+    codOtpRequired: d.codOtpRequired,
+    consultation: {
+      enabled: d.consultation.enabled,
+      priceInr: Number(d.consultation.priceInr),
+      creditTowardsOrder: d.consultation.creditTowardsOrder,
+      ...(num(d.consultation.creditValidityDays) !== undefined ? { creditValidityDays: num(d.consultation.creditValidityDays) } : {}),
+      ...(num(d.consultation.turnaroundDays) !== undefined ? { turnaroundDays: num(d.consultation.turnaroundDays) } : {}),
+      ...(d.consultation.sacCode.trim() ? { sacCode: d.consultation.sacCode.trim() } : {}),
+      ...(num(d.consultation.gstRatePercent) !== undefined ? { gstRatePercent: num(d.consultation.gstRatePercent) } : {}),
+    },
+  };
+  const tiers = draftVolumeDiscounts(d);
+  if ('tiers' in tiers) patch.volumeDiscounts = tiers.tiers;
+  // Rates are written only once the owner confirms them, so the launch checklist cannot tick itself on another save.
+  if (d.customRatesConfirmed && config) {
+    const customPieces = draftCustomPieces(d, config);
+    if (!customPiecesSettingsProblem(customPieces)) patch.customPieces = customPieces;
+  }
+  const optional: Array<[keyof StoreConfig, number | undefined]> = [
+    ['codFee', num(d.codFee)], ['codMaxOrderValue', num(d.codMaxOrderValue)], ['defaultLeadTimeDays', num(d.defaultLeadTimeDays)],
+    ['customLeadTimeDays', num(d.customLeadTimeDays)], ['returnWindowDays', num(d.returnWindowDays)],
+  ];
+  for (const [key, value] of optional) if (value !== undefined) Object.assign(patch, { [key]: value });
+  return patch;
+}
+
+/** Business details still on seeded placeholders or empty: the owner's launch checklist (admin home, Settings). */
+export function launchChecklist(config: StoreConfig): string[] {
+  const c = config as StoreConfig & { grievanceOfficerName?: string; grievanceOfficerEmail?: string };
+  const pending = (value: string | undefined) => !value?.trim() || isPlaceholderValue(value);
+  const items: string[] = [];
+  if (isPlaceholderSeller(c.seller)) items.push('Seller legal name, GSTIN and registered address (invoices are specimens until then)');
+  else if (missingSellerFields(c.seller ?? {}).length > 0) items.push(`Seller details: ${describeSellerFields(missingSellerFields(c.seller ?? {}))}`);
+  if (pending(c.supportEmail) || pending(c.supportPhone)) items.push('Support email and phone');
+  if (pending(c.grievanceOfficerName) || pending(c.grievanceOfficerEmail)) items.push('Grievance officer name and email');
+  return items;
+}

@@ -1,0 +1,458 @@
+# Vernox: audit findings and launch roadmap
+
+Status as of 2026-11-05. This is the source of truth for what is broken, what is missing and the
+order we fix it in. Earlier docs (ARCHITECTURE, SECURITY, DATABASE, API, VERNOX_SYSTEM_DOSSIER)
+describe intended behaviour; where they disagree with this file, this file reflects the code.
+
+## Baseline health (measured)
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit -p tsconfig.app.json` | 4 errors (ProductCompareModal, AdminReviews, TrackOrder) |
+| `vitest run` | 7 of 36 tests fail (pricing engine vs catalog prices, image tracer, studio page crashes on storage) |
+| `eslint .` | 189 errors, 22 warnings |
+| `vite build` | succeeds; main chunk 709 kB, plus firebase 708 kB, jspdf 619 kB, recharts 536 kB |
+| Lockfiles | `package-lock.json`, `bun.lock` and `bun.lockb` all committed |
+
+## P0: blocks taking real money safely
+
+1. **The server has no privileged database access.** `firebase-admin` is not installed; every
+   `api/*` handler uses the browser Firebase SDK unauthenticated, so `firestore.rules` denies its
+   writes. Errors are swallowed: a paid order stays `Pending_Payment`, stock is never decremented,
+   coupon usage is never counted, admin API writes fail.
+2. **`api/create-order.ts` accepts a client-supplied amount** and is unused by the frontend;
+   combined with `verify-payment` writing client `orderData`, ₹1 can buy any order.
+3. **Client controls pricing inputs:** `taxRate`, `shippingFee`, `freeShippingThreshold` and
+   `unitPrice` (custom and non-catalog items) come from the request body. Server prices come from a
+   static table in `pricingEngine.ts`, ignoring admin price edits.
+4. **Firestore rules:** anyone can create `orders`, `coupon_usages`, `audit_logs`; any signed-in
+   user can write `coupons` and edit or delete any review; `isAdmin()` trusts a hardcoded email
+   list without `email_verified`, so registering `admin@vernox.com` grants admin.
+5. **Admin auth:** `/api/admin` uses a shared password and its own HMAC token (secret falls back to
+   the Razorpay secret); non-production accepts any 6-character password; the client mints a local
+   super-admin session (`catalogContext.tsx` fallback). Role permissions are displayed but never
+   enforced; every tab is shown to every role.
+6. **Dev payment bypasses** in `verify-payment.ts`, `checkout-intent.ts` and `Checkout.tsx`
+   (`pay_dev_*`) can confirm unpaid orders outside `NODE_ENV=production`.
+7. **Public storefront downloads all orders, users, coupons and admin users** into the browser
+   (`catalogContext.tsx`), a PII leak or a silent failure depending on rules.
+8. **Fabricated data presented as real:** ~530 lines of invented international orders and
+   customers seeded into admin, ~1,600 lines of hardcoded reviews marked `verified: true`
+   (Consumer Protection / ASCI fake-review exposure).
+9. **Catalog and pricing are not this business:** canvas, bronze and plaster pieces priced
+   ₹175–₹390 with a Belgian/Antwerp brand story; checkout defaults to United States and ZIP.
+10. **Webhook signature check** re-serialises the JSON body on Vercel, so genuine Razorpay
+    webhooks may be rejected.
+
+## P1: blocks operating at scale
+
+- Stock reservations never expire or release (abandoned checkout, failed payment, refund).
+- Coupon redemption is not atomic; rate limits are in-memory and keyed on a spoofable header.
+- Orders are written by both client and server with different shapes; localStorage is an order store.
+- Cancelling marks "Refunded" without calling Razorpay; no refund, cancellation or returns flow.
+- No order state machine (any status can jump to any other); no QC or packing stages.
+- Custom studio designs reach the order but production DXF export rebuilds a bare outline.
+- No courier integration, AWB, labels, pincode serviceability, delivery estimate or COD.
+- No GST invoice (GSTIN, HSN, CGST/SGST/IGST split).
+- No customer notifications (email, SMS, WhatsApp).
+- Product admin: image URL only (no upload), one stock number (no size × finish variants),
+  no SEO, weight, HSN fields. B2B enquiries are saved but no screen shows them.
+- No SEO foundation: single static title, no structured data, sitemap on the wrong domain.
+
+## P2: improvement
+
+- 15 unused components (three competing heroes, intro loader, custom cursor, smooth scroll,
+  room visualiser), page-curtain animation on every navigation, seven web-font families,
+  13 MB of unoptimised JPGs.
+- God files: `catalogContext.tsx` 2,525 lines, `AdminOverview.tsx` 2,089, `AdminOrders.tsx` 1,136.
+- Duplicate logic: `couponValidator.ts` vs `couponEngine.ts`; static price table vs Firestore.
+- Duplicate routes (`/trade` and `/b2b`, `/legal` and `/privacy`), `/shipping-returns` points to
+  Shipping, two toasters mounted, React Query installed but unused.
+
+## Role interfaces needed
+
+| Role | Interface | Today |
+|---|---|---|
+| Customer | browse, PDP, cart, checkout (UPI/card/COD), account, orders, tracking, returns, wishlist, studio | partial |
+| Super admin / owner | staff and roles, settings, dashboards | partial, unenforced |
+| Catalog manager | products with images, variants, pricing, SEO, categories, collections | partial |
+| Production (workshop) | job queue, real DXF of the customer design, stage updates | missing |
+| QC and packing | checklist, photos, packing slip | missing |
+| Shipping | courier booking, AWB, label, tracking sync, RTO | missing |
+| Finance | payments, refunds, reconciliation, GST invoices and reports | missing |
+| Support | order lookup, returns/replacements, customer notes, tickets | missing |
+| B2B / trade sales | enquiries, quotes, bulk orders | missing |
+| Marketing | coupons, banners, reviews moderation | partial |
+
+## Benchmark: wallmantra.com
+
+Strong: trust strip (Google rating, customer count, photo reviews), shop by room and by theme,
+WhatsApp support, clear dispatch times. Weak, where we can beat them: no filters/sort/ratings on
+listings; PDP has no MRP/discount, size or finish choice, room view, COD or EMI messaging; no
+track-order page; no corporate/bulk page; strict, vague returns; contradictory free-shipping copy.
+
+## Phases
+
+1. **Foundation (in progress):** server-authoritative orders, payments, stock and coupons via
+   `firebase-admin`; locked rules; Firebase-token admin auth with role claims; remove fake data and
+   bypasses; client data layer split; green type check, tests and lint.
+2. **India commerce (server and checkout done 2026-11-05):**
+   - Done: PIN serviceability + delivery estimate (`/api/serviceability`, `DeliveryEstimate` component, checkout check); COD
+     (catalogue-only, fee, limits, `Confirmed_COD`); GST invoices and credit notes (per-line tax, CGST/SGST vs IGST, FY numbering,
+     PDF); Shiprocket integration (AWB, pickup, label, manifest, tracking webhook, RTO) with a manual fallback; notification outbox
+     (Resend email, MSG91 SMS) with cron delivery; customer cancellation, staff refunds with webhook reconciliation, returns and
+     replacements; one shared order state machine (`src/types/orderStatus.ts`).
+   - Remaining: wire `DeliveryEstimate` into the PDP (storefront agent); customer UI for cancel / return / invoice download on
+     Account and Track Order; staff UIs for the new admin actions (Phase 3 consoles); WhatsApp channel;
+     storage-rules tests; real catalogue and prices; owner inputs below.
+3. **Operations consoles:** production queue with real DXF, QC/packing, shipping, finance,
+   support, B2B, with an enforced order state machine.
+   - **3a (done, branch `phase3a-consoles`):** role home dashboards; Production console (queue by stage, claim, stage moves,
+     production files, job sheet print); QC and packing console (checklist, rework, package data, packing slip); Support console
+     (search, timeline, notes, WhatsApp snippets); Trade enquiries; catalog manager (full product form, sizes preview, sample filter);
+     staff screen guidance; analytics reduced to real order metrics. QC and package data live in `orders.notes` (DATABASE.md).
+   - **3b (done, branch `phase3b-consoles`):** Shipping console (`orders.tracking`: queue of packed, in-transit and returning-to-sender orders; Shiprocket
+     or manual booking; cancel shipment before pickup; manual delivery-status buttons; RTO cancel-and-refund; per-order label links and a printable
+     label for manual shipments), Finance console (`orders.refund` / `reports.export`: payments, COD pending and collected, refunds with the refund
+     ceiling, invoices and credit notes as PDFs, reconciliation lists, CSV export with GST split), Returns console (`orders.update_status`: reason,
+     details and photos; approve as refund or replacement, reject with reason, mark received), business settings form (seller/GSTIN, contact, COD,
+     lead times, return window), `ADD_ORDER_NOTE` so support can add notes, one admin shell and shared UI components, COD orders in the production
+     queue, and the customer order summary reading the same API shape on every path.
+   - **Done since (3b):** courier rate list, charges and ETA at booking with a courier pick (`GET_COURIER_RATES`, `courierId` on `CREATE_SHIPMENT`; manual fallback keeps manual entry); bulk labels and manifest for ticked orders (`BULK_SHIPMENT_DOCUMENTS` merged Shiprocket PDFs in chunks, combined print sheet for manual shipments), both unverified against the live Shiprocket API until credentials exist; courier COD remittance CSV import
+     (`src/lib/orders/codRemittance.ts`, matched by AWB) and Razorpay settlement CSV import in Finance → Reconciliation (`src/lib/orders/settlement.ts`, read-only, matched by payment id); (hold and material shortage are done, below).
+4. **Storefront redesign:** simpler navigation, shop by room/theme, filters, PDP with MRP,
+   delivery estimate, room view and trust, SEO and performance.
+5. **UAT:** scripted end-to-end scenarios per role (see `UAT.md` once written) on a staging project.
+
+## Owner decisions (2026-11-05)
+
+- **Catalogue:** a placeholder laser-cut metal wall-art catalogue with India pricing for UAT,
+  clearly marked as sample data; the owner replaces it with real products, photos and prices
+  before launch.
+- **Brand story:** Made in India: Indian workshop, INR, GST, delivery across India. The
+  Belgian/Antwerp framing is removed.
+- **Courier:** Shiprocket (pincode serviceability, AWB, labels, tracking webhooks, COD remittance).
+- **COD:** offered on catalogue items only, with a COD fee; custom studio designs are prepaid only.
+
+## Business and tax decisions (2026-11-06)
+
+The owner delegated these decisions. Each one is a setting, so it can be changed in Settings or `settings/store` without
+a code change. A CA should review the tax rows once before the first invoice is issued.
+
+| Topic | Decision | Basis |
+| --- | --- | --- |
+| Prices include GST (2026-11-15) | Every amount the customer sees is GST-inclusive and is what they pay: catalogue price, size difference, MRP, custom-piece rates, shipping, COD fee, free-shipping threshold, coupon amounts and the consultation fee. The storefront shows one price "incl. GST" ("Inclusive of all taxes"); checkout shows "Includes ₹X GST". The server back-calculates GST per line (after the pro-rata discount): tax = round(inclusive × r / (100 + r)), taxable = inclusive − tax, in `splitInclusiveTax` (`api/_lib/pricing.ts`), the only implementation. Orders from before carry no `pricesIncludeTax` marker and keep their exclusive amounts; they are never rewritten | Consumer Protection (E-Commerce) Rules, 2020 (duties of sellers and inventory e-commerce entities): the total price, in a single figure, with the break-up of all compulsory charges and applicable tax, must be shown before purchase. Legal Metrology (Packaged Commodities) Rules, 2011, r.6(1)(e): the retail sale price (MRP) is inclusive of all taxes. Showing "₹2,499 + GST" and charging more is not acceptable for B2C. CGST Rules r.46: the invoice still states the taxable value and the tax on each line. Counsel or the CA to confirm the exact sub-rule citations once |
+| Goods GST | 5%, HSN 830629 (other ornaments of base metal) | Notification 13/2025-Central Tax (Rate): heading 8306 at 2.5% CGST + 2.5% SGST from 22 Sep 2025 (was 12%). Per-product `hsnCode` / `gstRatePercent` override it (for example 7326, 18%, for a functional steel article). |
+| Shipping and COD fee | Taxed at the goods rate on the same invoice | Composite supply: an ancillary charge follows the rate of the principal supply (CGST Act s.8). |
+| Consultation | SAC 998391, 18%, its own setting (`consultation.gstRatePercent`) | Specialty (interior) design services, unchanged by the GST 2.0 revision. Invoiced on payment (time of supply for services). |
+| Consultation credit | ₹999 fee (GST included) credited against the next order as a single-use coupon, 60 days | The coupon is a discount on the later goods supply, so it lowers that invoice's taxable value; the consultation invoice is unchanged. |
+| Free shipping | Above ₹1,499, which is every order (the minimum piece price) | Competitors such as Livingshapes ship free on all orders; ₹150 still applies if cheaper items are added later. |
+| COD | ₹49 fee, up to ₹10,000 order value, catalogue items only | The fee is within the usual ₹40–₹99 range for Indian D2C stores; the cap limits return-to-origin losses on high-value parcels. |
+| Returns | 7 days after delivery for catalogue pieces; damage reported with photos within 48 hours; studio pieces are made to order, so only damage or defects qualify | Matches the 7-day norm (Pepperfry, Exotic India) and the 48-hour damage window. |
+| Custom pieces | ₹750 setup + ₹1.10/cm² (steel finishes) or ₹1.40/cm² (copper alloys), minimum ₹1,499 | Finished-retail pricing anchored to the sample catalogue. Workshop cutting rates (about ₹120–₹1,200 per sq ft on IndiaMART) are the cost floor. |
+| Custom pieces: cutting work (2026-11-15, **owner to confirm the rates**) | On top of the plate price: ₹25 per metre of through-cut (₹30 for brass, gold and copper finishes) beyond an allowance of 3 m + 50 m per m² of plate; ₹3 per pierce (each closed cut: outline, hole or cut-out) beyond 40; engraved score lines ₹10 per metre; cutting, engraving and pierces × a thickness factor above the finish's standard gauge (mild steel 3/5/6 mm: 1.6/2.6/3.4; stainless 2/3 mm: 1.3/2.1; corten 3 mm: 1.6; brass 2/3 mm: 1.4/2; copper 2 mm: 1.4). The server measures the work from the frozen production contours of the design (never from client numbers); staff custom pieces and legacy designs without a snapshot keep the size-only price. All settings in `settings/store.customPieces` (DATABASE.md); GST-inclusive; volume discounts and coupons apply as before | A browser test showed a plate with a 147-hole jali fill priced like the plain plate (₹1,628), although laser time and hand finishing grow with cut length and the number of cut-outs; laser job shops quote per metre and per pierce. ₹25/m is about twice a job shop's 2 mm mild-steel rate (retail, GST-inclusive); ₹3/pierce covers the pierce and deburring each cut-out. The allowance covers every built-in template at its default size (table below: none moves more than 0.1%) and grows with the plate, so enlarging a design is charged by area only and density alone adds cost. Thickness factors are the fiber-laser feed ratio (`src/lib/studio/materials.ts`) to the standard gauge; thinner gauges are not discounted, and plate thickness does not yet change the area rate (follow-up for the owner) |
+
+| Policies | Terms, Privacy, Shipping and Returns rewritten to the Consumer Protection (E-Commerce) Rules, 2020 (seller identity, grievance officer: acknowledge in 48 hours, resolve in one month, country of origin) and the DPDP Act, 2023 / Rules, 2025 (what is collected, purpose, sharing, retention, rights, Data Protection Board). Seller and officer details render from Settings | Razorpay checks these pages before activating a live account. Counsel to review once. |
+| Consultation launch | Off until a staff member has the `designer` role | Customers must not pay for a service nobody is staffed to deliver. Switch it on in Settings. |
+| Volume discounts (2026-11-15) | Tiers by **pieces per order** (catalogue and studio lines together; the consultation does not count): 10+ 5%, 25+ 10%, 50+ 15% (`settings/store.volumeDiscounts`, Settings > Volume discounts; `[]` = off). The percent comes off the GST-inclusive merchandise subtotal, rounded half up to the paisa, and is allocated to lines before each line's GST split, like a coupon, so the invoice shows each line's share and a "Bulk discount 10% (25+ pieces)" note. Shipping and the COD fee are not discounted; free shipping is still judged before discount. **No stacking with promotional coupons: the larger of coupon and volume discount applies**; a tie goes to the volume discount and the coupon stays unspent. A consultation credit is added on top. One implementation: `volumeDiscountFor` / `resolveDiscounts` in `api/_lib/pricing.ts`; the browser shows the server's figures (`POST /api/cart-quote`) | Per order, not per line: a hotel ordering 30 different room plates expects the 30-piece price, which per-line tiers would deny (every batch design is its own line). Best-of rather than volume-then-coupon: stacking 15% + a 20% launch coupon gives 32% off, below margin on studio pieces, and a cap would be a second rule to explain; best-of is one sentence for buyers ("one discount per order, the bigger one"), keeps the GST invoice to one kind of discount per order, and never burns a single-use coupon the buyer did not benefit from. The credit is excluded because it is money already paid for the consultation, not a promotion. Indian B2B norms for quantity slabs (IndiaMART sellers, corporate-gifting sites) are 5–15% from 10–50 units; the owner can tune them in Settings |
+
+### Custom piece prices before and after cutting work (default rates, 2026-11-15)
+
+Generated by `src/lib/studio/__tests__/cutPricing.test.ts` (it prints this table and fails if a template moves more than 10%).
+"Before" is the size-only price; prices are GST-inclusive per piece.
+
+| Template | Size (mm) | Finish | Cut (m) | Pierces | Before | After | Change |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| house-name | 420 × 190 | black_patina | 3.54 | 19 | ₹1,627.80 | ₹1,627.80 | 0.0% |
+| house-name-hindi | 320 × 220 | antique_brass | 2.96 | 8 | ₹1,735.60 | ₹1,735.60 | 0.0% |
+| name-plate-round | 340 × 340 | antique_brass | 3.24 | 21 | ₹2,368.40 | ₹2,368.40 | 0.0% |
+| name-plate-oval | 420 × 230 | black_patina | 3.13 | 15 | ₹1,812.60 | ₹1,812.60 | 0.0% |
+| name-plate-arch-om | 320 × 420 | brass | 3.91 | 18 | ₹2,631.60 | ₹2,631.60 | 0.0% |
+| door-number | 240 × 140 | stainless | 1.82 | 12 | ₹1,499 | ₹1,499 | 0.0% |
+| om-mandala | 283 × 283 | brass | 2.43 | 5 | ₹1,871.25 | ₹1,871.25 | 0.0% |
+| swastik-shubh-labh | 339 × 339 | antique_brass | 3.29 | 7 | ₹2,358.89 | ₹2,358.89 | 0.0% |
+| cross-blessing | 400 × 470 | stainless | 3.85 | 19 | ₹2,818 | ₹2,818 | 0.0% |
+| islamic-star-panel | 339 × 339 | copper | 2.82 | 13 | ₹2,358.89 | ₹2,358.89 | 0.0% |
+| office-plaque | 480 × 220 | stainless | 5.27 | 38 | ₹1,911.60 | ₹1,911.60 | 0.0% |
+| office-door-sign | 440 × 150 | brass | 4.29 | 38 | ₹1,674 | ₹1,674 | 0.0% |
+| cafe-sign | 620 × 250 | corten_rust | 5.69 | 31 | ₹2,455 | ₹2,455 | 0.0% |
+| shop-sign | 760 × 260 | gold | 7.57 | 41 | ₹3,516.40 | ₹3,519.40 | 0.1% |
+| housewarming-gift | 420 × 360 | antique_brass | 4.38 | 23 | ₹2,866.80 | ₹2,866.80 | 0.0% |
+| wedding-gift | 440 × 300 | gold | 3.91 | 25 | ₹2,598 | ₹2,598 | 0.0% |
+| kids-room-cloud | 403 × 181 | copper | 2.29 | 7 | ₹1,771.20 | ₹1,771.20 | 0.0% |
+| family-tree | 400 × 540 | black_patina | 4.30 | 19 | ₹3,126 | ₹3,126 | 0.0% |
+| jali-panel | 440 × 440 | black_patina | 6.12 | 30 | ₹2,879.60 | ₹2,879.60 | 0.0% |
+| quote-panel | 640 × 300 | gold | 6.26 | 31 | ₹3,438 | ₹3,438 | 0.0% |
+| festive-diwali | 560 × 300 | copper | 3.93 | 6 | ₹3,102 | ₹3,102 | 0.0% |
+
+Plain plates are unchanged too (45 × 45 cm: 1.8 m, 1 pierce; the sample-catalogue anchor holds). Dense fills rise with the work:
+the house-name plate (420 × 190 mm, black) filled with the default hexagon jali (10.1 m of cutting, 152 pierces) goes from
+₹1,627.80 to ₹2,041.23 (+25%); with the triangle jali (14.9 m, 301 pierces) to ₹2,607.68 (+60%).
+
+## Decision: room scanning and interior planning (2026-11-05)
+
+The owner proposed scanning a whole home from a phone video (QR → camera) into a 3D model for
+interior planning with real materials. Decision: **do not build the full scanner now; earn it in
+stages, each gated on measured results.**
+
+Why: browser-only video-to-3D is not reliable on most phones; accurate scanning needs a native app
+(Apple RoomPlan, LiDAR iPhones only) or cloud reconstruction with per-scan GPU cost; an interior
+planner with a materials library is a separate product. For wall art, a true-scale preview on the
+customer's own wall answers the buying question at a fraction of the cost.
+
+| Stage | Scope | Gate to start the next stage |
+|---|---|---|
+| 1 (in progress) | View on your wall: calibrated room scenes, own-wall photo with scale calibration, true-scale AR (generated GLB/USDZ via model-viewer), fit recommendation; usage analytics | AR/preview users convert measurably better than non-users |
+| 2 (built, see "Stage 2 status") | "My Space": customers save walls (photos + measurements) to their account; paid design consultation (price and credit-against-purchase configurable); designer workspace to propose pieces | Consultations sell and lead to orders |
+| 3 (pilot) | Small iOS app/App Clip with RoomPlan (LiDAR) opened by QR; room model viewed on the web; place Vernox pieces on any wall, try paint colours. Android: guided photos + measurements or a licensed scanning SDK (pricing to verify) | Pilot lifts conversion or order value |
+| 4 (only if 3 succeeds) | Full interior planner with materials; license a platform rather than build | — |
+
+
+## Stage 2 status: My Space and paid design consultation (built, awaiting live payment test)
+
+Built on `/account/spaces`, `/account/consultations/:id` and the designer workspace (admin tab Consultations). It tests whether
+customers pay for design help before any room scanning is built. The gate for Stage 3 is the one above ("Consultations sell and
+lead to orders"); the numbers come from `consultations/` (count, `status`, `outcome`, `creditRedeemedAt`), the credited orders, and
+the browser events `space_created`, `wall_added`, `consultation_purchased`, `proposal_viewed`, `proposal_item_added_to_cart`,
+`consultation_credit_redeemed` (same tracker as the wall-preview events).
+
+Not yet verified live: the Razorpay payment step (test keys are not configured here; the purchase, confirmation, credit coupon and
+photo copy are covered by `src/test/consultations.test.ts` against the in-memory store and a fake gateway). Everything else was driven
+in the browser against the emulators.
+
+Price, credit, SAC and GST are decided in "Business and tax decisions" above. Seller settings being incomplete still confirms the
+payment and flags the order `INVOICE_PENDING_SELLER_SETTINGS`; Finance then issues the invoice from the order's finance panel
+(`ISSUE_SERVICE_INVOICE`) once the GSTIN is saved.
+- **Turnaround**: default 3 days (Settings); it is shown to customers and drives the designer queue's deadline.
+- Designers need the `designer` role (Team screen). Production needs the Storage bucket CORS entry for the site origin
+  (DEPLOYMENT.md) so wall photos can be read for the preview.
+
+Follow-ups noted, not built: the Razorpay webhook path does not copy the photos itself (the first claim
+retries it); one preview image per piece rather than several pieces composed on one wall image; no designer-to-customer chat beyond
+the one revision message.
+
+## Studio: CSV batch for business buyers (built on `phase1-foundation`, awaiting UAT)
+
+Hotels, offices and builders can turn one design into many personalised plates: mark text objects as `{field}`
+variables, paste or upload a CSV (max 500 rows, optional `qty`), see a validated table with lazy thumbnails and
+one `quoteCustomPiece` price per design plus the total, and add the batch to the cart as one custom line per
+distinct design (each with its own `customDesignRef`; the server still re-prices). Production gets "All lines (zip)"
+in the order detail. Details: `docs/studio.md` ("Batch"). UAT: `BT-*` and `PR-12` in `UAT.md`.
+
+Follow-up (2026-11-15, after a browser test): template texts now link to same-named CSV columns by themselves (House name plate +
+`name,number,qty` gives one design per row), each text says which column it uses, rows and totals show exact paise with the
+server's batch quote and bulk discount, and `/studio?batch=1` opens the batch screen directly (Trade page link).
+
+Known limits: one order takes at most 50 lines and 700,000 design characters (`src/lib/pricing/orderLimits.ts`), so a
+large batch is added in several rounds (the screen says how many did not fit); too-long text is flagged, not shrunk;
+previews are the flat metal shape, not the wall preview.
+
+## Bulk buyers: volume discounts and the Trade page (2026-11-15, awaiting UAT)
+
+Built: volume discount tiers (decision and reasons in "Business and tax decisions"), applied by the server everywhere an order is
+priced (checkout and its idempotent retries, Razorpay amount, COD, staff orders and advances, invoices and credit notes, refunds,
+finance CSV `volume_discount` column, receipts) and shown from server quotes in the cart (`POST /api/cart-quote`: "Bulk discount 10%
+(25+ pieces)" and "Add 3 more pieces to save 10%"), the mini cart, checkout and the studio batch. `/trade` now shows the tiers
+from the public catalogue settings, a "Personalise many plates at once" card to `/studio?batch=1`, and how bulk orders work
+(quote, proof before cutting, production days, GST invoice) above the unchanged enquiry form. UAT: `VD-*`, `BT-14`–`BT-18`.
+
+Not built, on purpose:
+- **Logo/artwork upload on the trade enquiry.** There is no public upload path today: every Storage rule requires a signed-in
+  user or staff, and the enquiry is a guest form. Allowing anonymous writes to the bucket invites abuse (storage cost, hosting
+  malware under our domain) and would need App Check or a signed-upload API with size/type checks and scanning. For now the page
+  asks buyers to attach the file to their reply to our email. Follow-up: an API-issued, single-use signed upload URL under
+  `trade-uploads/{enquiryId}/` (PDF/SVG/PNG/JPEG, ≤ 10 MB, staff-only read, rules tests), once App Check is on.
+- **Company GSTIN at checkout (B2B invoice): done.** Optional "Buying for a business?" at checkout takes the registered name and
+  GSTIN (`customer.companyName` / `customer.gstin`, GSTIN pattern shared in `src/types/gstStateCodes.ts`, name required with a GSTIN).
+  The invoice prints them with "Registered buyer (B2B)"; place of supply stays the delivery state (goods). The finance CSV's last
+  column `buyer_gstin` feeds the GSTR-1 B2B section. Staff-entered orders do not take a GSTIN yet.
+
+## Performance and scale plan (2026-11-07)
+
+Measured, not assumed. Harness: production build served gzip-compressed, cold load at Lighthouse mobile settings (4x CPU, 150 ms RTT,
+1.6 Mbps), median of 3, local emulators (so real Firestore latency from India comes on top).
+
+| Baseline | First paint | LCP | Content ready | JS (gzip) | Firestore calls from the browser |
+|---|---|---|---|---|---|
+| Home | 2.1 s | 3.2 s | 2.9 s | 326 KB | 2 |
+| Shop | 2.1 s | 3.4 s | 3.4 s | 327 KB | 4 |
+| Product | 2.1 s | 2.9 s | 3.9 s | 344 KB | 4 |
+
+Findings:
+1. Every visitor's browser reads the whole `products` and `categories` collections, up to 500 published reviews, `settings/store`,
+   `settings/homepage` and `topics` from Firestore. Billed reads grow as catalogue size × visitors, and every visit waits for the
+   Firestore connection.
+2. The Firebase SDK (auth + Firestore, 177 KB gzip) is on the critical path of every page: `src/lib/firebase.ts` creates Firestore
+   eagerly and the storefront data layer imports it. First paint waits for ~330 KB of JS; a common mobile budget is ~170 KB.
+
+Plan, in order (each step is measured against the table above and keeps behaviour):
+- **S1 Cached public catalogue.** `GET /api/catalog` builds the public storefront data on the server (products, categories,
+  public settings, homepage, topics, published reviews) and Vercel's CDN caches it (`s-maxage=60, stale-while-revalidate`).
+  Firestore reads become about one rebuild per minute per CDN region instead of one set per visit, and traffic spikes are served
+  from the CDN. Admin screens keep reading Firestore directly, so staff see their own saves at once; shoppers see catalogue edits
+  within a minute.
+- **S2 Firestore off the storefront's critical path.** Load the Firestore SDK lazily (like `appStorage()`), so the storefront entry
+  carries only what first paint needs; account, orders, wishlist and admin load it on demand.
+- **S3 Re-measure, then decide** on the next lever (deferring Auth start-up, image priority, route prefetch) from the new numbers.
+
+Results (same harness, interleaved runs; done 2026-11-07):
+
+| After S1-S3 | First paint | LCP | Content ready | JS (gzip) | Firestore calls from the browser |
+|---|---|---|---|---|---|
+| Home | 1.6 s | 2.2 s | 2.4 s | 189 KB | 0 |
+| Shop | 1.6 s | 2.1 s | 2.4 s | 190 KB | 0 |
+| Product | 1.6 s | 2.6 s | 2.4 s | 207 KB | 0 |
+
+- S1 done: `GET /api/catalog` (API.md). Guests make no Firestore reads; published reviews no longer expose the author's uid, order id or
+  private upload paths (firestore.rules closes the public read).
+- S2 done: Firestore has its own chunk (174 KB gzip) loaded only by signed-in and staff screens (`firestoreDb.ts`, `appFirestore.ts`);
+  first-load JS fell from ~330 KB to ~190 KB. Pure mapping moved to `catalogMappers.ts` and `orderModel.ts` so guest pages stay SDK-free.
+- S3 tried and measured: preloading `/api/catalog` at low priority (kept: content 0.3 s sooner, Home LCP 3.1 → 2.2 s, first paint
+  +0.15 s); preloading the hero image (dropped: delayed first paint 0.4 s on a JS-rendered page for no consistent LCP gain).
+- S4 done: the Trade enquiry posts to `/api/engage` (`TRADE_ENQUIRY`) instead of writing Firestore from the browser, so no guest page
+  loads the Firestore SDK; it also gained the honeypot, a rate limit, a collision-free reference and a support-inbox alert, and
+  `b2b_inquiries` no longer accepts client creates.
+- Next lever: prerendered HTML for Home and product pages if LCP must drop below ~2 s.
+- Storefront ease-of-use and speed pass (2026-11-07), measured with the same harness on a busy machine (load average 8 to 29, so
+  single runs swing by +-0.3 s; medians of 3 runs, interleaved, two rounds):
+  - PIN autofill (`src/lib/pincode.ts` prefix table with range overrides for Chandigarh/Mohali, Puducherry enclaves, Lakshadweep,
+    Roorkee, Daman/Diu; `/api/serviceability` now also returns the courier's `city` and `state`, unverified against the live
+    Shiprocket API because the field names come from its documented response). Checkout, Account and New order fill empty fields only.
+  - Save for later: separate `vernox-saved-for-later` list of full cart lines (a wishlist stores product ids only, so it could not
+    keep size, finish or Studio designs); localStorage for guests and signed-in users alike. Cross-device sync would need a
+    `savedForLater` document plus rules: not built.
+  - EMI widget: loaded after `load` + idle on product and cart only; renders nothing without `VITE_RAZORPAY_KEY_ID`.
+  - Self-hosted fonts: with a preload, first paint rose 1.6 to 1.8-2.3 s (Home) so the preload was dropped; without it first paint
+    equals the Google Fonts build (1.57-1.62 s vs 1.57-1.66 s) and the font requests fall from 4 (2 origins) to 3 (same origin).
+    LCP was not better: Home 2.45-2.52 s vs 2.24-2.38 s (baseline once hit 3.9 s from noise), Product 2.91-2.92 s vs 2.74-2.80 s, so it
+    is neutral to slightly worse here; kept for privacy, no third-party origin or CSP entry, and robustness, not for speed.
+  - Hero: 1200 px AVIF 67 KB (was WebP 101 KB), 960 px 47 KB, 640 px 25 KB with `srcset`; the harness phone (412 px at 2.6x) still
+    picks the 1200 px file, so Home LCP was within noise (2.35, 2.89 vs 2.61, 2.28 s). The saving is real bytes on slower/smaller phones.
+- Done: every `<label>` on `src/pages/Account.tsx` (sign-in, phone OTP, register, profile, address, password) is tied to its
+  input with `htmlFor`/`id` and carries the matching `autoComplete` token, so screen readers, password managers and autofill work.
+
+
+
+- Firebase projects for staging and production, created in `asia-south1` (Mumbai), plus a service account for the server.
+- A Vercel Pro team (Hobby does not allow commercial use); the API runs in `bom1`.
+- Shiprocket account API credentials; email and SMS/WhatsApp notification providers.
+- Business GSTIN, legal name, registered address and state, support contacts and the grievance officer (Admin → Settings). Seeded
+  placeholders keep every flow working meanwhile: invoices are specimens (`SP/…`), placeholders never reach the storefront, and the
+  admin home shows a launch checklist until they are replaced.
+- Resend account and verified sending domain; MSG91 account with DLT-registered sender ID and templates.
+- Shiprocket API user, pickup location nickname, COD enablement and webhook token.
+- Real catalogue, photographs and price list before launch.
+
+## Storefront redesign notes (phase 4, first pass)
+
+- Catalogue in `src/lib/catalog.ts` is SAMPLE data (`isSample: true`), seeded by `scripts/seed-firestore.ts`; the storefront reads Firestore. Replace products, prices and photography (`TODO(catalogue)`) before launch.
+- Shop filters are URL-driven (`src/lib/storefront/listing.ts`); contact details come from `settings/store` (`supportEmail`, `supportPhone`, `whatsappNumber`, `supportHours`, `workshopAddress`) via `src/lib/storefront/contact.ts`.
+- Light theme only (the old `.dark` block duplicated the light values). Legacy colour tokens remain as aliases for account, checkout and admin screens.
+- Built after this pass: contact form to support tickets, newsletter signup (list kept in Firestore, no ESP), and review submission by verified buyers (all through `POST /api/engage`).
+  Product cards crossfade to `lifestyleImage` on hover when a product has one; the cart drawer settles with a soft spring (`--ease-spring-soft`); shop filter changes already re-run the staggered reveal.
+- Done (2026-11-07): EMI message (Razorpay Affordability Widget), save-for-later and PIN autofill, see "Performance and scale plan". Not built: a welcome newsletter email and campaign sending (needs an ESP).
+- Done (2026-11-07): COD order confirmation. MSG91 OTP code at checkout when `MSG91_OTP_TEMPLATE_ID` is set (`api/_lib/codOtp.ts`, engage actions `COD_OTP_*`), automatic fallback otherwise: orders flagged `COD_UNVERIFIED` with a "Confirm by phone" prompt (Orders, Production) and the audited `CONFIRM_COD_ORDER`. Newsletter double opt-in: sign-ups are `pending` until the emailed link (`/newsletter/confirm`) is opened; export is confirmed-only; confirmation emails wait in the outbox while Resend is unset. Owner inputs: a DLT-approved MSG91 OTP template (`MSG91_OTP_TEMPLATE_ID`); live MSG91/Resend not yet exercised with real keys.
+- Done (2026-11-07): staff log email, WhatsApp and phone requests as tickets (`CREATE_TICKET`), linked to the order when the number
+  matches; replies are emailed only when the ticket has an email. Done (2026-11-07): WhatsApp end to end by configuration only (Meta Cloud API): order updates as a third outbox channel with approved templates, inbound messages as tickets via `/api/whatsapp-webhook` (STOP / START opt-out), and "Send on WhatsApp" replies in the Support console within the 24-hour window. Setup: DEPLOYMENT.md 4d. Not verified against live Meta (needs keys and approved templates).
+
+## Production packaging (2026-11-07)
+
+One image (`Dockerfile`) serves the SPA, the API, `/runtime-config.js` and the two crons in-process; `docker-compose.yml` adds Caddy for
+automatic HTTPS; `./install.sh` brings a VM up with one command (asks only domain, admin email, Firebase service account and web config;
+generates SECRETS_ENCRYPTION_KEY and CRON_SECRET); `./update.sh` upgrades. Third-party keys are entered in Admin > Settings > Integrations
+(encrypted, super admin only) and apply without a restart. Verified locally: image build and a read-only, cap-dropped container against
+the emulators (static caching, SPA fallback, product link previews, sitemap, CORS, `/healthz`, `/readyz`, crons, SIGTERM); the production
+server with runtime Firebase config; Integrations in the browser (super admin only, format errors, ••••last4, no plaintext in the page or
+the database, audit with names only, Check reaches Razorpay and reports a rejected key, the browser receives the key id at runtime,
+Launch setup turns Razorpay "set · test mode"). Not verified here: a full `./install.sh` on a fresh VM with a real domain and Firebase
+project (Let's Encrypt, rules deployment with the service account's roles), and `update.sh` against a running stack. Done (2026-11-14):
+the image installs only the server's runtime packages (scripts/server-package.mjs reads the esbuild metafile: firebase-admin, pdf-lib,
+razorpay, zod), 1.03 GB → 335 MB; checked read-only with all capabilities dropped (healthz, SPA, runtime config, CSP, admin script).
+
+Firebase project (2026-11-07): the old `vernox-1b5d5` is not reachable from any account on hand, so production moves to `vernox-shop`
+(owner Google account svm.singh.01, `.firebaserc` default). Done from the CLI: web app "Vernox Web", Firestore `(default)` in
+asia-south1 with delete protection, rules and all 12 composite indexes deployed. Left for the console (no CLI command exists): the Blaze
+plan and Storage "Get started" (Storage on new projects needs Blaze), Authentication "Get started" with the Email/Password and Google
+providers, the production domain under Authorized domains, and a service-account key for `install.sh`.
+
+## End-to-end audit (2026-11-14)
+
+Four read-only audits (API contracts, permissions and dead ends, data sync, validation and money) and their fixes, all on
+phase1-foundation with tests. Highlights:
+- Order writes: staff status moves rewrote `statusHistory` from a cached copy and skipped the in-production notification and the
+  hold/balance checks; they now go through `UPDATE_ORDER_STATUS`, tracking through `SET_ORDER_TRACKING` (http/https only), notes
+  through `ADD_ORDER_NOTE`. firestore.rules allow staff only `assignedTo` and `notes` on orders, product saves can no longer
+  overwrite `stock` (`ADJUST_STOCK` applies deltas), trade enquiries only change `status`.
+- Money: Razorpay refunds are capped at what that payment captured, the rest is `REFUND_MANUAL_DUE`; cancellation retires open
+  balance links; a failed refund retry no longer reads as recorded; refunds that never reached Razorpay are released by the cron;
+  courier booking takes a lease (no double booking); finance shows returns waiting for refund and the new flags; client collected
+  amounts, payment states and the IST revenue chart match the server.
+- Contracts and UX: Track order accepts the VX number; checkout retries get one key per distinct request and the address is in
+  the duplicate check; coupons, reviews and product fields can be cleared; friendly validation messages; password reset; a clear
+  message for staff with an unverified email; return to the page after sign-in; no dead-end palette, notification or CSV actions.
+- Verified in a browser on the emulators: empty checkout, password reset, sign-in return, staff order → In Design through the API
+  (in_production notification queued), Track order by lower-case VX number.
+- Done after the audit: read-only Discounts for finance and support (redemptions load again), `LOG_AUDIT` accepts only the
+  known client-reported events from roles with the matching permission, missing seller details are `SELLER_DETAILS_MISSING`.
+  Catalogue and settings writes moved to the API too (api/_lib/catalogAdmin.ts): validated, audited server-side, and closed
+  to browsers in firestore.rules; only order assignment/QC notes and trade-enquiry status remain client-written and reported.
+
+## Production readiness follow-ups (2026-11-14)
+
+- Dependencies: `npm audit fix` and moving `@vercel/node` (types only) to devDependencies took production advisories from 45 to 18;
+  firebase-admin 14 (image on Node 24: Node 20 reached end of life in April 2026; `engines` is now >=22) and React Router 7 took them
+  to 8. zod 3 → 4 (with @hookform/resolvers 5) is done. 2026-11-15: in-range
+  updates, `npm audit fix` and an `overrides` pin of `@grpc/grpc-js` ^1.14.7 under `@firebase/firestore` (the Node build the rules tests
+  use) leave `npm audit` at 0. Not done, each its own migration: React 19, Vite 8, Tailwind 4, firebase 13, eslint 10, TypeScript 7.
+- Content-Security-Policy: pages enforce `frame-ancestors 'self'; base-uri 'self'; object-src 'none'` and send the full allow-list
+  (Razorpay, Google sign-in, Firebase) as report-only, with violations logged by `/api/csp-report` (SECURITY.md). Enforce it after a
+  browser pass with live test payments leaves no `[csp]` log lines.
+- Error alerts (api/_lib/opsAlert.ts) and backups (deploy/firebase-backups.sh, needs Blaze) are in place; see INCIDENT_RECOVERY.md.
+- One VM is a single point of failure, and the in-process crons assume one app container: run a second replica only with
+  `DISABLE_INTERNAL_CRON=true` on all but one.
+
+## End-to-end check (2026-11-07, local emulators, headless Chromium at 390 px and 1280 px)
+
+Verified in the browser or against the running API: guest product page (EMI widget hidden without a key), add to cart, save for
+later (survives reload) and back; checkout empty and invalid input errors; PIN 560038 fills Karnataka; WhatsApp consent recorded;
+COD order placed and flagged `COD_UNVERIFIED`; staff "Confirm by phone" clears it; newsletter pending, confirmation email queued,
+the emailed link confirms (button press), a forged link is refused; signed WhatsApp webhook opens a ticket linked to the order (forged
+signature 400, repeat delivery not duplicated, handshake and wrong verify token 403) and it shows in Support; New order fills a returning
+customer from the mobile and the state follows a new PIN (fixed: an old autofilled state used to stay); GSTIN fills state code and state;
+Launch setup lists 9 required items on a fresh stack; production staff have no New order tab; a customer account has no admin access;
+API refusals: production and customer 403, no token 401, invalid handover / missing UPI reference / quantity 0 / unknown product 400.
+No page errors, no Google Fonts requests. Not verifiable without keys: Razorpay (payments, links, EMI widget), Shiprocket, Resend,
+MSG91 and Meta WhatsApp delivery.
+
+## Phase 3a follow-ups (status after 3b)
+
+- Done (2026-11-07): staff-entered orders (Admin > New order; `CREATE_STAFF_ORDER`, permission `orders.create` for order manager,
+  support and admins): counter sale with handover and on-the-spot GST invoice, phone / WhatsApp / email / trade orders paid in person
+  (cash, UPI, card, bank transfer), by Razorpay payment link, or COD. Custom (Studio) pieces can be added from the staff screen (width x height in mm, finish, quantity; server-priced; a
+  typed design reference replaces the Studio design, shown on the job sheet; not handed over at the counter, no COD). Staff can also attach design files
+  (SVG, DXF, PDF, PNG, JPEG, WebP; up to 5 per line, 10 MB each) to a custom line: uploaded to `staff-designs/{draftId}/` (storage.rules) before
+  the order exists, stored as `designFiles` on the line and downloaded from the production job detail. Not built: picking a saved Studio
+  design from admin (no design id exists for it); a server-side check that each uploaded object exists.
+- Done: thermal receipt (80 mm, or 58 mm remembered per browser) printed with `window.print()` from the New order success screen and the
+  Finance order panel (`PrintReceiptButton`, mapping in `src/lib/orders/receipt.ts`). It shows seller GSTIN, "Tax invoice" or "Order
+  receipt", masked phone, lines, CGST/SGST or IGST (from the invoice when issued), payment mode and reference, and any balance due. No PDF
+  and no new dependency. Not verified on a physical printer.
+- Done: advance (partial) payments on staff orders (`advancePaise` on offline or payment-link orders, api/_lib/orderBalance.ts). The
+  advance starts production; the balance is taken in person (`RECORD_ORDER_PAYMENT`) or by a Razorpay link for exactly what is owed
+  (`SEND_BALANCE_LINK`), from the balance panel in Admin > Orders. Shipment creation and dispatch/delivery statuses are refused until
+  it is 0, so the GST invoice (issued at dispatch) always follows full payment; goods advances carry no GST of their own. The customer's
+  order page shows the balance and a Pay balance link. Not built: advances in the storefront checkout (staff orders only).
+
+- Done: catalogue photo upload in the product form (`src/lib/data/productImages.ts`): resized in the browser to 2000 px WebP, stored at
+  `products/{productId}/` (public read, catalogue staff write, storage.rules).
+- Done (2026-11-07): QC photos. The QC checklist uploads 1-4 photos per item to `qc/{orderId}/` (camera on phones); "Photo taken"
+  follows the uploads, a pass needs one, and the Returns console shows them beside the customer's photos (DATABASE.md, `orders.notes`).
+- Done: `tickets/{id}` with `tickets.read` / `tickets.write` (support, order manager, admins) in `src/types/admin.ts`, mirrored in `firestore.rules`.
+  The contact form creates tickets through `POST /api/engage`; the Support console has a Tickets view (status filter, thread, reply log, internal note,
+  status change). Support notes on orders still go through `ADD_ORDER_NOTE` (3b), which keeps the `#vernox:v1` block.
+  Replies are emailed to the customer through the outbox. Done (2026-11-07): staff log email, WhatsApp and phone requests as tickets
+  (`CREATE_TICKET`), linked to the order by its number; contact-form tickets still store the order number as free text.
+- Done in 3b: `defaultLeadTimeDays` and `customLeadTimeDays` are in the settings form and the `StoreConfig` type.
+- Workshop queues load up to 200 orders per status group; move to counters or a dedicated `workshop` index if volume exceeds that.
+- Done: hold and material shortage (UAT OM-06, PR-06) as an `OrderHold` flag beside the status, not new statuses: the order keeps its stage
+  and resumes from it, the customer sees no change, and the state machine is untouched (`SET_ORDER_HOLD` / `RELEASE_ORDER_HOLD`).

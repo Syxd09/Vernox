@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { safeLocal } from './safeStorage';
+import { addLine, moveSavedToCart, saveLineForLater, clampLineQuantity } from './cartLines';
 
 export interface CartItem {
   id: string; // uuid per line
@@ -13,7 +15,7 @@ export interface CartItem {
   unitPrice: number;
   quantity: number;
   customDesignThumb?: string; // dataURL preview from customizer
-  customDesignRef?: string;   // project id in localStorage
+  customDesignRef?: string;   // full Crafting Studio design JSON (layers, material, dimensions); the server stores it on the order for production
   userUploadedImage?: string; // Client reference artwork uploaded in Crafting Studio
   uploadedArtworkName?: string;
 }
@@ -31,6 +33,11 @@ interface CartCtx {
   add: (item: Omit<CartItem, 'id' | 'quantity'> & { quantity?: number }) => void;
   updateQty: (id: string, qty: number) => void;
   remove: (id: string) => void;
+  /** Items moved out of the cart to buy later (kept in this browser; see src/lib/cartLines.ts). */
+  saved: CartItem[];
+  saveForLater: (id: string) => void;
+  moveToCart: (id: string) => void;
+  removeSaved: (id: string) => void;
   clear: () => void;
   count: number;
   subtotal: number;
@@ -43,91 +50,73 @@ interface CartCtx {
 
 const Ctx = createContext<CartCtx | null>(null);
 const KEY = 'vernox-cart';
+const SAVED_KEY = 'vernox-saved-for-later';
 const COUPON_KEY = 'vernox-applied-coupon';
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
-    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+    return safeLocal.getJson<CartItem[]>(KEY, []);
   });
+  const [saved, setSaved] = useState<CartItem[]>(() => safeLocal.getJson<CartItem[]>(SAVED_KEY, []));
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(() => {
-    try {
-      const saved = localStorage.getItem(COUPON_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
+    return safeLocal.getJson<AppliedCoupon | null>(COUPON_KEY, null);
   });
   const [isDrawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      // Sanitize items: strip or compress any oversize base64 data URLs > 15KB
-      const sanitized = items.map(item => {
-        if (item.customDesignThumb && item.customDesignThumb.length > 15000) {
-          return { ...item, customDesignThumb: undefined };
-        }
-        return item;
-      });
-      localStorage.setItem(KEY, JSON.stringify(sanitized));
-    } catch (err: any) {
-      if (err?.name === 'QuotaExceededError' || err?.code === 22) {
-        console.warn('LocalStorage quota exceeded. Stripping preview thumbnails to preserve cart state.');
-        try {
-          const stripped = items.map(item => ({ ...item, customDesignThumb: undefined }));
-          localStorage.setItem(KEY, JSON.stringify(stripped));
-        } catch (innerErr) {
-          console.error('Failed to save even stripped cart to localStorage:', innerErr);
-        }
-      }
+    // Strip oversize base64 previews (>15KB) so the cart fits in storage.
+    const sanitized = items.map(item =>
+      item.customDesignThumb && item.customDesignThumb.length > 15000 ? { ...item, customDesignThumb: undefined } : item,
+    );
+    if (safeLocal.setJson(KEY, sanitized)) return;
+    // Quota exceeded or storage unavailable: retry without any previews.
+    const stripped = items.map(item => ({ ...item, customDesignThumb: undefined }));
+    if (!safeLocal.setJson(KEY, stripped)) {
+      console.warn('[cart] could not persist cart to local storage; it will not survive a reload.');
     }
   }, [items]);
 
+  useEffect(() => {
+    // Same quota handling as the cart: drop oversize previews, then all previews, before giving up.
+    const light = saved.map(item => (item.customDesignThumb && item.customDesignThumb.length > 15000 ? { ...item, customDesignThumb: undefined } : item));
+    if (safeLocal.setJson(SAVED_KEY, light)) return;
+    if (!safeLocal.setJson(SAVED_KEY, saved.map(item => ({ ...item, customDesignThumb: undefined })))) {
+      console.warn('[cart] could not persist saved-for-later items; they will not survive a reload.');
+    }
+  }, [saved]);
+
   const add: CartCtx['add'] = (item) => {
-    setItems(prev => {
-      // If it is a standard non-custom item, coalesce matching attributes
-      if (!item.customDesignThumb && !item.customDesignRef) {
-        const existingIndex = prev.findIndex(
-          i => i.productId === item.productId &&
-               i.shapeId === item.shapeId &&
-               i.sizeLabel === item.sizeLabel &&
-               i.finish === item.finish &&
-               !i.customDesignRef &&
-               !i.customDesignThumb
-        );
-        if (existingIndex > -1) {
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: updated[existingIndex].quantity + (item.quantity ?? 1)
-          };
-          return updated;
-        }
-      }
-      return [
-        ...prev,
-        { ...item, id: crypto.randomUUID(), quantity: item.quantity ?? 1 },
-      ];
-    });
+    setItems(prev => addLine(prev, item, () => crypto.randomUUID()));
     setDrawerOpen(true); // Auto open cart drawer when item is added!
   };
-  
+
+  const saveForLater = (id: string) => {
+    const next = saveLineForLater({ items, saved }, id, () => crypto.randomUUID());
+    setItems(next.items);
+    setSaved(next.saved);
+  };
+
+  const moveToCart = (id: string) => {
+    const next = moveSavedToCart({ items, saved }, id, () => crypto.randomUUID());
+    setItems(next.items);
+    setSaved(next.saved);
+  };
+
+  const removeSaved = (id: string) => setSaved(prev => prev.filter(i => i.id !== id));
+
   const updateQty = (id: string, qty: number) =>
-    setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, qty) } : i));
+    setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: clampLineQuantity(qty) } : i));
 
   const remove = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
 
   const applyCoupon = (coupon: AppliedCoupon) => {
     setAppliedCoupon(coupon);
-    try {
-      localStorage.setItem(COUPON_KEY, JSON.stringify(coupon));
-    } catch {}
+    safeLocal.setJson(COUPON_KEY, coupon);
   };
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
-    try {
-      localStorage.removeItem(COUPON_KEY);
-    } catch {}
+    safeLocal.remove(COUPON_KEY);
   };
 
   const clear = () => {
@@ -146,7 +135,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{ 
-      items, add, updateQty, remove, clear, count, subtotal, 
+      items, add, updateQty, remove, saved, saveForLater, moveToCart, removeSaved, clear, count, subtotal, 
       isDrawerOpen, setDrawerOpen,
       appliedCoupon, applyCoupon, removeCoupon 
     }}>

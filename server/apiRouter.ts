@@ -1,0 +1,206 @@
+/**
+ * Routes /api/* requests to the Vercel-style handlers in api/, mimicking @vercel/node: parsed
+ * JSON on `req.body`, the exact bytes on `req.rawBody` (webhook signatures) and `req.query`.
+ * Shared by the Node server (server/index.ts) and the Vite dev server, so local development
+ * and Docker exercise the same routing.
+ */
+import http from 'http';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { parse } from 'url';
+import checkoutIntentHandler from '../api/checkout-intent';
+import verifyPaymentHandler from '../api/verify-payment';
+import validateCouponHandler from '../api/validate-coupon';
+import cartQuoteHandler from '../api/cart-quote';
+import orderStatusHandler from '../api/order-status';
+import adminHandler from '../api/admin';
+import razorpayWebhookHandler from '../api/razorpay-webhook';
+import releaseReservationsHandler from '../api/cron/release-reservations';
+import sendNotificationsHandler from '../api/cron/send-notifications';
+import serviceabilityHandler from '../api/serviceability';
+import courierWebhookHandler from '../api/courier-webhook';
+import invoiceHandler from '../api/invoice';
+import orderCancelHandler from '../api/order-cancel';
+import returnRequestHandler from '../api/return-request';
+import consultationHandler from '../api/consultation';
+import engageHandler from '../api/engage';
+import seoHandler from '../api/seo';
+import runtimeConfigHandler from '../api/runtime-config';
+import catalogHandler from '../api/catalog';
+import whatsappWebhookHandler from '../api/whatsapp-webhook';
+import cspReportHandler from '../api/csp-report';
+
+const MAX_BODY_BYTES = 1024 * 1024;
+
+type Handler = (req: VercelRequest, res: VercelResponse) => unknown;
+const ROUTES: Record<string, Handler> = {
+  '/api/checkout-intent': checkoutIntentHandler,
+  '/api/csp-report': cspReportHandler,
+  '/api/verify-payment': verifyPaymentHandler,
+  '/api/validate-coupon': validateCouponHandler,
+  '/api/cart-quote': cartQuoteHandler,
+  '/api/order-status': orderStatusHandler,
+  '/api/admin': adminHandler,
+  '/api/razorpay-webhook': razorpayWebhookHandler,
+  '/api/cron/release-reservations': releaseReservationsHandler,
+  '/api/cron/send-notifications': sendNotificationsHandler,
+  '/api/serviceability': serviceabilityHandler,
+  '/api/courier-webhook': courierWebhookHandler,
+  '/api/invoice': invoiceHandler,
+  '/api/order-cancel': orderCancelHandler,
+  '/api/return-request': returnRequestHandler,
+  '/api/consultation': consultationHandler,
+  '/api/engage': engageHandler,
+  '/api/seo': seoHandler,
+  '/api/runtime-config': runtimeConfigHandler,
+  '/runtime-config.js': runtimeConfigHandler,
+  '/api/catalog': catalogHandler,
+  '/api/whatsapp-webhook': whatsappWebhookHandler,
+};
+
+/** Public origins allowed to call the API from a browser: the configured site URL and its www / apex twin. */
+export function allowedOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
+  const raw = env.VITE_SITE_URL?.trim();
+  if (!raw) return [];
+  try {
+    const { protocol, host } = new URL(raw);
+    const twin = host.startsWith('www.') ? host.slice(4) : `www.${host}`;
+    return [`${protocol}//${host}`, `${protocol}//${twin}`];
+  } catch {
+    return [];
+  }
+}
+
+/** Baseline security headers; also used for the static site (server/production.ts). */
+export function setSecurityHeaders(res: http.ServerResponse) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // Enforced: only directives that cannot break Razorpay Checkout or Google sign-in pop-ups.
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
+  // The full allow-list is report-only until a browser pass with live test payments shows no violations
+  // (/api/csp-report logs them); then it moves into the enforced header (ROADMAP, production readiness).
+  res.setHeader('Content-Security-Policy-Report-Only', CSP_REPORT_ONLY);
+}
+
+export const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' https://checkout.razorpay.com https://cdn.razorpay.com https://apis.google.com https://www.gstatic.com",
+  // Inline styles: chart theming (src/components/ui/chart.tsx), motion and Razorpay Checkout set style attributes.
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.razorpay.com",
+  "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://*.firebaseapp.com https://accounts.google.com",
+  "worker-src 'self' blob:",
+  "form-action 'self' https://api.razorpay.com",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  'report-uri /api/csp-report',
+].join('; ');
+
+function setSecurityAndCorsHeaders(req: http.IncomingMessage, res: http.ServerResponse) {
+  const origin = (req.headers.origin as string) || '';
+  const production = process.env.NODE_ENV === 'production';
+
+  // Outside production any origin may call (local dev servers); in production only the configured site.
+  if (!origin || !production || allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    if (origin) res.setHeader('Vary', 'Origin');
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  setSecurityHeaders(res);
+}
+
+function sendJson(res: http.ServerResponse, status: number, body: unknown) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(body));
+}
+
+export async function handleApiRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  setSecurityAndCorsHeaders(req, res);
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
+  const { pathname } = parse(req.url || '', true);
+
+  if (pathname === '/api/health' || pathname === '/health') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() }));
+    return;
+  }
+
+  const route = pathname ? ROUTES[pathname] : undefined;
+  if (route) {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let aborted = false;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES && !aborted) {
+        aborted = true;
+        sendJson(res, 413, { success: false, code: 'VALIDATION_ERROR', message: 'Request body too large' });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on('end', async () => {
+      if (aborted) return;
+      const rawBody = Buffer.concat(chunks);
+      let parsedBody: unknown = {};
+      if (rawBody.length > 0 && (req.headers['content-type'] || '').includes('application/json')) {
+        try {
+          parsedBody = JSON.parse(rawBody.toString('utf8'));
+        } catch {
+          sendJson(res, 400, { success: false, code: 'VALIDATION_ERROR', message: 'Body is not valid JSON' });
+          return;
+        }
+      }
+
+      const vercelReq = Object.assign(req, {
+        body: parsedBody,
+        rawBody,
+        query: parse(req.url || '', true).query,
+      });
+
+      const vercelRes = Object.assign(res, {
+        status(statusCode: number) {
+          res.statusCode = statusCode;
+          return vercelRes;
+        },
+        json(data: unknown) {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+          return vercelRes;
+        },
+      });
+
+      try {
+        await route(vercelReq as unknown as VercelRequest, vercelRes as unknown as VercelResponse);
+      } catch (err) {
+        console.error('Server Handler Error:', err);
+        if (!res.headersSent) sendJson(res, 500, { success: false, code: 'INTERNAL_ERROR', message: 'Internal server error' });
+      }
+    });
+    return;
+  }
+
+  if (pathname?.startsWith('/api/')) {
+    sendJson(res, 404, { success: false, code: 'NOT_FOUND', message: `Endpoint ${pathname} not found` });
+    return;
+  }
+
+  res.statusCode = 404;
+  res.end('Not Found');
+}

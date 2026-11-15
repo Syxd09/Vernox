@@ -1,0 +1,85 @@
+services:
+  # 1. Vernox Database: Cloud Firestore Emulator
+  database:
+    image: mtlynch/firestore-emulator:latest
+    container_name: vernox-database
+    restart: unless-stopped
+    environment:
+      - FIRESTORE_PROJECT_ID=vernox-shop
+      - PORT=8085
+    ports:
+      - "8085:8085"
+    volumes:
+      - firestore_data:/opt/data
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks:
+      - vernox-network
+
+  # 2. Vernox Backend: Node.js API Server with Live tsx watch
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend.dev
+    container_name: vernox-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app/api
+      - ./server:/app/server
+      - ./src:/app/src
+    command: ["npx", "tsx", "watch", "server/index.ts"]
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - FIRESTORE_EMULATOR_HOST=database:8085
+      - FIREBASE_PROJECT_ID=vernox-shop
+      # Razorpay test keys from your shell / .env (see .env.example)
+      - RAZORPAY_KEY_ID
+      - RAZORPAY_KEY_SECRET
+      - RAZORPAY_WEBHOOK_SECRET
+      - CRON_SECRET
+    depends_on:
+      - database
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    networks:
+      - vernox-network
+
+  # 3. Vernox Frontend: Live Vite Dev Server with HMR (Instant Updates)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: vernox-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - BACKEND_URL=http://backend:3001
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - vernox-network
+
+networks:
+  vernox-network:
+    driver: bridge
+
+volumes:
+  firestore_data:

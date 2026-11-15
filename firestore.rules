@@ -1,120 +1,284 @@
 rules_version = '2';
+
+// Vernox Firestore security rules.
+//
+// Trust model:
+//  - The serverless API (api/) uses the Firebase Admin SDK, which bypasses these
+//    rules. It is the only writer of orders, stock reservations, coupons usage,
+//    idempotency keys, webhook events, rate limits, audit logs and staff roles.
+//  - Design consultations (consultations/*) are likewise written only by the API.
+//  - Staff roles are the `role` custom claim, set only via the Admin SDK.
+//    The role -> permission mapping below MIRRORS STAFF_ROLE_PERMISSIONS in
+//    src/types/admin.ts; change both together (and src/test/firestore.rules.test.ts).
+//  - Everything not matched below is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Admin Verification Helper
-    function isAdmin() {
-      return request.auth != null && (
-        request.auth.token.email in ['admin@vernox.com', 'concierge@vernoxatelier.com'] ||
-        request.auth.token.role == 'admin' ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'customer') == 'admin')
-      );
+
+    // ---------- identity helpers ----------
+
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // Authenticated user helper
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
     }
 
-    // 1. Products Catalog: Publicly readable; Admin editable
+    // Password accounts must verify their email before a staff role counts.
+    function emailTrusted() {
+      return request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'password'
+        || request.auth.token.get('email_verified', false) == true;
+    }
+
+    function role() {
+      return signedIn() && emailTrusted() ? request.auth.token.get('role', '') : '';
+    }
+
+    function hasRole(roles) {
+      return role() in roles;
+    }
+
+    // ---------- permission helpers (mirror src/types/admin.ts) ----------
+
+    function canReadOrders()      { return hasRole(['super_admin', 'admin', 'order_manager', 'production', 'shipping', 'finance', 'support']); }
+    function canUpdateOrders()    { return hasRole(['super_admin', 'admin', 'order_manager', 'production', 'shipping']); }
+    function canReadCoupons()     { return hasRole(['super_admin', 'admin', 'finance', 'support']); }
+    function canWriteCoupons()    { return hasRole(['super_admin', 'admin']); }
+    function canModerateReviews() { return hasRole(['super_admin', 'admin', 'catalog_manager', 'support']); }
+    function canReadCustomers()   { return hasRole(['super_admin', 'admin', 'order_manager', 'support']); }
+    function canReadB2b()         { return hasRole(['super_admin', 'admin', 'order_manager', 'support']); }
+    function canReadTickets()     { return hasRole(['super_admin', 'admin', 'order_manager', 'support']); }
+    function canReadConsultations() { return hasRole(['super_admin', 'admin', 'designer']); }
+    function canReadStaff()       { return hasRole(['super_admin', 'admin']); }
+    function canReadAudit()       { return hasRole(['super_admin']); }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ---------- public catalog ----------
+
+    // `stock` is moved by order reservations on the server, so a client save (a stale absolute value)
+    // must never change it: staff adjust stock with the ADJUST_STOCK admin action. Creating a product
+    // may still set its initial stock.
+    // Catalogue and settings are public reads; every write goes through the admin API (api/_lib/catalogAdmin.ts:
+    // SAVE_PRODUCT, SAVE_CATEGORY, SAVE_TOPIC, SAVE_STORE_SETTINGS, SAVE_HOMEPAGE, ADJUST_STOCK), which validates
+    // prices, seller GST details and stock and audits each change.
     match /products/{productId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
-    // 2. Categories: Publicly readable; Admin editable
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
-    // 3. Educational Topics / Journal: Public read; Admin write
     match /topics/{topicId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
-    // 4. Store Configuration & Homepage Settings: Public read; Admin write
     match /config/{configDoc} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
+
+    // settings/store holds tax, shipping, COD, seller (GSTIN) and contact details
+    // read by the API and storefront. It is public: never store secrets here
+    // (provider keys and webhook tokens are server environment variables).
     match /settings/{settingDoc} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
-    // 5. Customer Profiles: Users can read/write their own; Admins can read all
-    // Invariant: Non-admin users cannot grant themselves 'admin' role
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && (
-        !('role' in request.resource.data) || 
-        request.resource.data.role == 'customer'
-      );
-      allow update: if isAdmin() || (
-        isOwner(userId) && (
-          !('role' in request.resource.data) || 
-          request.resource.data.role == resource.data.get('role', 'customer')
-        )
-      );
-      allow delete: if isAdmin();
+    // ---------- customers ----------
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || canReadCustomers();
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(['role', 'isAdmin']);
+      allow update: if isOwner(uid)
+        && !changedKeys().hasAny(['role', 'isAdmin']);
+      allow delete: if false;
+
+      // My Space: private to the customer (staff, designers included, never read it; a paid
+      // consultation carries its own snapshot, see /consultations below). The server re-validates the
+      // walls when it snapshots them, so these rules only bound size and shape.
+      match /spaces/{spaceId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validSpace(request.resource.data);
+      }
     }
 
-    // 6. Customer Wishlists: Strictly isolated to owner
-    match /wishlists/{userId} {
-      allow read, write: if isOwner(userId);
+    match /wishlists/{uid} {
+      allow read, write: if isOwner(uid);
     }
 
-    // 7. Reviews: Public read; verified authenticated creation; Admin or authenticated management
+    function validSpace(d) {
+      return d.keys().hasOnly(['id', 'name', 'roomType', 'budgetBand', 'notes', 'walls', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 80
+        && d.roomType in ['living', 'bedroom', 'pooja', 'entrance', 'office', 'outdoor', 'kids']
+        && (d.get('budgetBand', null) == null || d.budgetBand in ['under_10k', '10k_25k', '25k_50k', 'over_50k'])
+        && d.get('notes', '') is string && d.get('notes', '').size() <= 2000
+        && d.walls is list && d.walls.size() <= 8;
+    }
+
+    // ---------- design consultations (created and changed only by the API) ----------
+
+    // The id equals the paid order's id. Customers read their own; designers and admins read all.
+    // Wall photos and previews are snapshotted under consultations/{id}/ in Storage (storage.rules),
+    // so a designer never needs access to a customer's private space.
+    match /consultations/{consultationId} {
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || canReadConsultations();
+      allow write: if false;
+
+      // Proposal draft: staff only, invisible to the customer until it is sent.
+      match /private/{docId} {
+        allow read: if canReadConsultations();
+        allow write: if false;
+      }
+    }
+
+    // ---------- reviews ----------
+
     match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if isAdmin() || request.auth != null;
+      // No public read: a review document holds the author's uid, order id and private upload paths.
+      // Shoppers get published reviews, reduced to public fields, from GET /api/catalog.
+      allow read: if canModerateReviews()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      // Submissions go through POST /api/engage (SUBMIT_REVIEW), which verifies a delivered purchase.
+      allow create: if false;
+      allow update, delete: if canModerateReviews();
     }
 
-    // 8. Orders: Customer can read only their own orders by email matching; Admin full access
+    // ---------- orders (created and paid only by the API) ----------
+
     match /orders/{orderId} {
-      allow read: if isAdmin() || (
-        request.auth != null && 
-        (resource.data.email == request.auth.token.email || resource.data.userId == request.auth.uid)
-      );
-      // Order creation & updates are governed by serverless endpoints (checkout-intent & verify-payment)
-      // or authenticated matching customer for client fallback
-      allow create: if true;
-      allow update, delete: if isAdmin();
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || canReadOrders();
+      allow create, delete: if false;
+      // Staff may only assign and annotate here. Status (with its history, notification, hold and balance
+      // checks) and tracking change through the API (UPDATE_ORDER_STATUS, SET_ORDER_TRACKING); money, items,
+      // customer, payment, shipment and invoice fields are immutable from clients.
+      allow update: if canUpdateOrders()
+        && changedKeys().hasOnly(['assignedTo', 'notes', 'updatedAt'])
+        // QC / packing records are stored in `notes` by the staff consoles.
+        && request.resource.data.get('notes', '') is string
+        && request.resource.data.get('notes', '').size() <= 20000;
     }
 
-    // 9. B2B Inquiries: Public submission allowed; Admin read/manage
+    // ---------- B2B inquiries ----------
+
     match /b2b_inquiries/{inquiryId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
+      // Created only by the API (POST /api/engage TRADE_ENQUIRY), which validates and rate-limits it.
+      allow create: if false;
+      allow read: if canReadB2b();
+      // The pipeline only moves the status; contact details stay as the customer sent them.
+      allow update: if canReadB2b() && changedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if false;
     }
 
-    // 10. Coupons & Promotions: Publicly readable; Admin or authenticated management
+    // ---------- support tickets (contact form; created and changed only by the API) ----------
+
+    match /tickets/{ticketId} {
+      allow read: if canReadTickets();
+      allow write: if false;
+    }
+
+    // ---------- newsletter (server-only: holds subscriber emails and unsubscribe tokens) ----------
+
+    match /newsletter_subscribers/{emailHash} {
+      allow read, write: if false;
+    }
+
+    // ---------- coupons (staff only; evaluation happens in the API) ----------
+
     match /coupons/{couponId} {
-      allow read: if true;
-      allow write: if isAdmin() || request.auth != null;
+      allow read: if canReadCoupons();
+      allow write: if canWriteCoupons()
+        && (!('usedCount' in request.resource.data)
+            || (resource != null && request.resource.data.usedCount == resource.data.get('usedCount', 0))
+            || (resource == null && request.resource.data.usedCount == 0));
+
+      match /customer_usage/{customerKey} {
+        allow read, write: if false;
+      }
     }
 
-    // 11. Coupon Redemptions / Usages: Admin read/write; users can view their own
-    match /coupon_usages/{usageId} {
-      allow read: if isAdmin() || (request.auth != null && resource.data.customerEmail == request.auth.token.email);
-      allow create: if true;
-      allow update, delete: if isAdmin();
+    // ---------- staff & audit ----------
+
+    match /staff/{uid} {
+      allow read: if isOwner(uid) || canReadStaff();
+      allow write: if false;
     }
 
-    // 12. Admin Users & Permissions: Strictly Admin restricted
-    match /admin_users/{adminId} {
-      allow read, write: if isAdmin();
-    }
-
-    // 13. System Audit Logs: Strictly Admin readable; creation permitted by system/admin
     match /audit_logs/{logId} {
-      allow read: if isAdmin();
-      allow create: if true;
-      allow update, delete: if false; // Immutable audit records
+      allow read: if canReadAudit();
+      allow write: if false;
+    }
+
+    // ---------- server-only collections ----------
+
+    // One redemption per paid order, written by the API; staff who may read coupons see the history.
+    match /coupon_usages/{usageId} {
+      allow read: if canReadCoupons();
+      allow write: if false;
+    }
+    match /idempotency/{key} {
+      allow read, write: if false;
+    }
+    match /webhook_events/{eventId} {
+      allow read, write: if false;
+    }
+    // COD SMS confirmation: hashed one-time codes and single-use verification tokens, server-only.
+    match /cod_otps/{phone} {
+      allow read, write: if false;
+    }
+
+    // Third-party keys entered in the admin, encrypted by the API (api/_lib/integrationSecrets.ts). Server only.
+    match /integration_secrets/{docId} {
+      allow read, write: if false;
+    }
+    // WhatsApp opt-out per customer phone (STOP / START replies), server-only.
+    match /whatsapp_contacts/{phone} {
+      allow read, write: if false;
+    }
+    match /rate_limits/{key} {
+      allow read, write: if false;
+    }
+    // Phase 2 (India commerce). Customers reach their invoices, cancellations and
+    // returns only through the API (/api/invoice, /api/order-cancel, /api/return-request).
+    match /invoices/{invoiceId} {
+      allow read, write: if false;
+    }
+    match /credit_notes/{creditNoteId} {
+      allow read, write: if false;
+    }
+    match /counters/{counterId} {
+      allow read, write: if false;
+    }
+    match /refunds/{refundId} {
+      allow read, write: if false;
+    }
+    match /returns/{orderId} {
+      allow read, write: if false;
+    }
+    match /notifications_outbox/{notificationId} {
+      allow read, write: if false;
+    }
+    match /courier_events/{eventId} {
+      allow read, write: if false;
+    }
+    match /serviceability_cache/{pincode} {
+      allow read, write: if false;
+    }
+    // Shiprocket API token cache.
+    match /integrations/{integrationId} {
+      allow read, write: if false;
+    }
+    // Legacy collection from the removed shared-password admin login.
+    match /admin_users/{adminId} {
+      allow read, write: if false;
     }
   }
 }

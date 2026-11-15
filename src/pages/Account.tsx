@@ -1,32 +1,37 @@
+import { usePincodeAutofill } from '@/lib/shipping/usePincodeAutofill';
+import { safeReturnPath } from '@/lib/auth/returnTo';
+import { useSeo } from '@/lib/seo';
 import { useState, useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { SiteHeader } from '@/components/shop/SiteHeader';
 import { SiteFooter } from '@/components/shop/SiteFooter';
 import { useCatalog } from '@/lib/catalogContext';
+import { ForgotPasswordButton } from '@/components/auth/ForgotPasswordButton';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { useMyOrders } from '@/lib/data/orders';
+import { OrderDetails } from '@/components/shop/OrderDetails';
+import { EmptyState, ErrorState, LoadingBlock } from '@/components/shop/StateViews';
+import { toPublicSummary } from '@/lib/data/orderLookup';
+import { INDIAN_STATES_AND_UTS, isValidPincode, normalizeIndianMobile } from '@/lib/checkout/validation';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
-import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronUp, MapPin, Truck, Calendar, Package, AlertCircle, Layers, Sun, Moon, User, Lock, Settings, History, ShieldCheck, Mail, Phone, ArrowRight, Eye, EyeOff, X, PhoneCall, Heart, Activity, Check } from 'lucide-react';
+import { User, Lock, Settings, History, ShieldCheck, Phone, ArrowRight, Eye, EyeOff, X, PhoneCall, Heart, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTheme } from 'next-themes';
 import { auth, googleProvider } from '@/lib/firebase';
-import { signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { signInWithPopup, RecaptchaVerifier, type ConfirmationResult, signInWithPhoneNumber, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 export default function Account() {
-  const { 
-    orders, 
-    storeConfig, 
-    currentCustomer, 
-    loginCustomer, 
-    registerCustomer, 
-    logoutCustomer, 
-    updateCustomerProfile,
-    wishlist,
-    toggleWishlist,
-    products
-  } = useCatalog();
+  useSeo({ title: 'My account', noindex: true });
+  const { storeConfig, wishlist, toggleWishlist, products } = useCatalog();
+  const { user, profile: currentCustomer, signIn, register, signOut: logoutCustomer, updateProfile } = useAuth();
+  const { data: customerOrders = [], isLoading: ordersLoading, error: ordersError } = useMyOrders(user?.uid);
   
-  const { theme, setTheme } = useTheme();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Sent here to sign in from another page (/account?next=...): go back once signed in.
+  const returnTo = safeReturnPath(searchParams.get('next'));
+  useEffect(() => {
+    if (user && returnTo) navigate(returnTo, { replace: true });
+  }, [user, returnTo, navigate]);
   
   // Navigation tabs inside dashboard
   const [activeTab, setActiveTab] = useState<'orders' | 'profile' | 'security' | 'wishlist'>('orders');
@@ -34,13 +39,15 @@ export default function Account() {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab === 'wishlist' || tab === 'orders' || tab === 'profile' || tab === 'security') {
-      setActiveTab(tab as any);
+      setActiveTab(tab);
     }
   }, [searchParams]);
+  // Google accounts have no password to change: a ?tab=security link falls back to orders instead of a blank pane.
+  const googleOnly = Boolean(currentCustomer?.isGoogleUser);
+  useEffect(() => {
+    if (activeTab === 'security' && googleOnly) setActiveTab('orders');
+  }, [activeTab, googleOnly]);
   
-  // Expandable orders
-  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-
   // Auth Modes: 'login' | 'register' | 'phone'
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'phone'>('login');
   
@@ -53,7 +60,7 @@ export default function Account() {
   // Phone Auth Inputs
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
@@ -63,7 +70,9 @@ export default function Account() {
       if (recaptchaVerifierRef.current) {
         try {
           recaptchaVerifierRef.current.clear();
-        } catch (_) {}
+        } catch {
+          // Nothing to clear: the verifier was never rendered or is already disposed.
+        }
       }
     };
   }, []);
@@ -74,9 +83,11 @@ export default function Account() {
     phone: '',
     address: '',
     city: '',
-    zip: '',
-    country: 'United States',
+    state: '',
+    pincode: '',
   });
+  // Typing the PIN fills an empty city/state (never overwrites typed values).
+  usePincodeAutofill(profileForm.pincode, profileForm, patch => setProfileForm(prev => ({ ...prev, ...patch })));
 
   // Password Update form states
   const [passwordForm, setPasswordForm] = useState({
@@ -93,27 +104,11 @@ export default function Account() {
         phone: currentCustomer.phone || '',
         address: currentCustomer.address || '',
         city: currentCustomer.city || '',
-        zip: currentCustomer.zip || '',
-        country: currentCustomer.country || 'United States',
+        state: currentCustomer.state || '',
+        pincode: currentCustomer.pincode || '',
       });
     }
   }, [currentCustomer]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending': return 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20';
-      case 'Designing': return 'text-purple-600 bg-purple-500/10 border-purple-500/20';
-      case 'Cutting': return 'text-blue-600 bg-blue-500/10 border-blue-500/20';
-      case 'Finished': return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
-      case 'Shipped': return 'text-indigo-600 bg-indigo-500/10 border-indigo-500/20';
-      case 'Delivered': return 'text-green-600 bg-green-500/10 border-green-500/20';
-      default: return 'text-zinc-600 bg-zinc-500/10 border-zinc-500/20';
-    }
-  };
-
-  const handleToggleExpand = (orderId: string) => {
-    setExpandedOrderId(prev => prev === orderId ? null : orderId);
-  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,14 +117,19 @@ export default function Account() {
       toast.error('Please enter both email and password.');
       return;
     }
+    if (!emailOrPhone.includes('@')) {
+      toast.error('Please sign in with the email address on your account.');
+      return;
+    }
 
     setAuthLoading(true);
-    const success = await loginCustomer(emailOrPhone, password);
-    setAuthLoading(false);
-    if (success) {
-      toast.success(`Authenticated successfully!`);
-    } else {
-      toast.error('Invalid email or password credentials. Please verify your entries.');
+    try {
+      await signIn(emailOrPhone, password);
+      toast.success('Signed in.');
+    } catch {
+      toast.error('Invalid email or password. Please verify your entries.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -141,19 +141,21 @@ export default function Account() {
       return;
     }
 
-    setAuthLoading(true);
-    const success = await registerCustomer({
-      email,
-      phone,
-      name,
-      password
-    });
-    setAuthLoading(false);
+    if (phone && !normalizeIndianMobile(phone)) {
+      toast.error('Enter a valid 10-digit Indian mobile number or leave it blank.');
+      return;
+    }
 
-    if (success) {
-      toast.success('Account registered on Cloud Firestore!');
-    } else {
-      toast.error('Registration failed. This email may already be registered.');
+    setAuthLoading(true);
+    try {
+      await register({ email, phone: phone ? normalizeIndianMobile(phone) ?? phone : undefined, name, password });
+      toast.success('Account created.');
+    } catch (err) {
+      toast.error(err instanceof Error && /email-already-in-use/.test(err.message)
+        ? 'This email is already registered. Try signing in.'
+        : 'Registration failed. Please check your details and try again.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -162,8 +164,8 @@ export default function Account() {
     try {
       await signInWithPopup(auth, googleProvider);
       toast.success("Logged in via Google Authentication!");
-    } catch (e: any) {
-      toast.error(e.message || "Google sign-in was cancelled or failed.");
+    } catch (e: unknown) {
+      toast.error((e instanceof Error && e.message) || "Google sign-in was cancelled or failed.");
       console.error(e);
     }
   };
@@ -182,7 +184,9 @@ export default function Account() {
       if (recaptchaVerifierRef.current) {
         try {
           recaptchaVerifierRef.current.clear();
-        } catch (_) {}
+        } catch {
+          // Nothing to clear: the verifier was never rendered or is already disposed.
+        }
         recaptchaVerifierRef.current = null;
       }
 
@@ -199,14 +203,16 @@ export default function Account() {
       setConfirmationResult(confirmation);
       setShowOtpInput(true);
       toast.success("SMS confirmation code sent successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (recaptchaVerifierRef.current) {
         try {
           recaptchaVerifierRef.current.clear();
-        } catch (_) {}
+        } catch {
+          // Nothing to clear: the verifier was never rendered or is already disposed.
+        }
         recaptchaVerifierRef.current = null;
       }
-      toast.error(err.message || "SMS send failed. Confirm number formatting.");
+      toast.error((err instanceof Error && err.message) || "SMS send failed. Confirm number formatting.");
       console.error(err);
     } finally {
       setSendingOtp(false);
@@ -227,7 +233,7 @@ export default function Account() {
       toast.success("Phone authenticated successfully!");
       setShowOtpInput(false);
       setConfirmationResult(null);
-    } catch (err: any) {
+    } catch {
       toast.error("Invalid verification code. Please request a new one.");
     } finally {
       setAuthLoading(false);
@@ -236,8 +242,24 @@ export default function Account() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateCustomerProfile(profileForm);
-    toast.success('Shipping address & profile updated on Cloud Firestore.');
+    if (profileForm.phone && !normalizeIndianMobile(profileForm.phone)) {
+      toast.error('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    if (profileForm.pincode && !isValidPincode(profileForm.pincode)) {
+      toast.error('Enter a valid 6-digit pincode.');
+      return;
+    }
+    try {
+      await updateProfile({
+        ...profileForm,
+        phone: profileForm.phone ? normalizeIndianMobile(profileForm.phone) ?? profileForm.phone : '',
+        country: 'India',
+      });
+      toast.success('Profile saved.');
+    } catch (err) {
+      toast.error(`Profile was not saved: ${err instanceof Error ? err.message : 'please try again.'}`);
+    }
   };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -265,16 +287,11 @@ export default function Account() {
         toast.success('Account password updated successfully.');
         setPasswordForm({ currentPass: '', newPass: '', confirmPass: '' });
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update password. Verify current credentials.");
+    } catch (err: unknown) {
+      toast.error((err instanceof Error && err.message) || "Failed to update password. Verify current credentials.");
       console.error(err);
     }
   };
-
-  // Filter orders by active customer's email
-  const customerOrders = orders.filter(
-    o => o.email.trim().toLowerCase() === (currentCustomer?.email || '').trim().toLowerCase()
-  );
 
   // AUTHENTICATION LOGIN / SIGN-UP CARD INTERFACE
   if (!currentCustomer) {
@@ -285,27 +302,21 @@ export default function Account() {
         <section className="max-w-md mx-auto px-6 py-16 flex-1 w-full flex flex-col justify-center">
 
           <div className="bg-card border border-border shadow-luxe rounded p-6 sm:p-8 space-y-6 noise-overlay relative">
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="absolute top-4 right-4 p-2 rounded-full border border-border bg-background text-muted-foreground hover:text-foreground transition"
-              title="Toggle Theme Mode"
-            >
-              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-brass" /> : <Moon className="w-3.5 h-3.5 text-oxblood" />}
-            </button>
 
             {authMode === 'login' && (
               <div className="space-y-5 animate-fade-in">
                 <div className="text-left space-y-1">
-                  <span className="text-[10px] uppercase tracking-[0.35em] text-brass font-bold">Atelier Accounts</span>
                   <h1 className="font-display text-2xl text-oxblood-deep font-semibold">Sign In</h1>
-                  <p className="text-xs text-muted-foreground">Access your custom commission orders, shipping settings, and design backups.</p>
+                  <p className="text-xs text-muted-foreground">Orders, addresses and saved designs.</p>
                 </div>
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Email or User ID</label>
+                    <label htmlFor="login-email" className="text-xs font-medium text-muted-foreground">Email or User ID</label>
                     <input 
+                      id="login-email"
                       type="text" 
+                      autoComplete="username"
                       placeholder="name@example.com"
                       value={loginForm.emailOrPhone}
                       onChange={e => setLoginForm({ ...loginForm, emailOrPhone: e.target.value })}
@@ -315,10 +326,12 @@ export default function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Password</label>
+                    <label htmlFor="login-password" className="text-xs font-medium text-muted-foreground">Password</label>
                     <div className="relative">
                       <input 
+                        id="login-password"
                         type={showPassword ? 'text' : 'password'} 
+                        autoComplete="current-password"
                         placeholder="••••••••"
                         value={loginForm.password}
                         onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
@@ -328,11 +341,13 @@ export default function Account() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    <div className="text-right"><ForgotPasswordButton email={loginForm.emailOrPhone} /></div>
                   </div>
 
                   <button
@@ -346,7 +361,7 @@ export default function Account() {
 
                 <div className="relative flex py-1 items-center text-xs text-muted-foreground/60">
                   <div className="flex-grow border-t border-border/50"></div>
-                  <span className="flex-shrink mx-4 uppercase tracking-widest text-[9px]">or authenticate with</span>
+                  <span className="flex-shrink mx-4 text-xs">or authenticate with</span>
                   <div className="flex-grow border-t border-border/50"></div>
                 </div>
 
@@ -385,7 +400,7 @@ export default function Account() {
             {authMode === 'phone' && (
               <div className="space-y-5 animate-fade-in">
                 <div className="text-left space-y-1">
-                  <span className="text-[10px] uppercase tracking-[0.35em] text-brass font-bold">SMS Gateways</span>
+                  <span className="text-xs uppercase tracking-[0.35em] text-brass font-bold">SMS Gateways</span>
                   <h1 className="font-display text-2xl text-oxblood-deep font-semibold">Phone Sign In</h1>
                   <p className="text-xs text-muted-foreground">Secure mobile phone numbers with SMS verification codes.</p>
                 </div>
@@ -393,8 +408,8 @@ export default function Account() {
                 {!showOtpInput ? (
                   <form onSubmit={handleSendOtp} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Mobile Phone Number</label>
-                      <input 
+                      <label htmlFor="phone-number" className="text-xs font-medium text-muted-foreground">Mobile Phone Number</label>
+                      <input id="phone-number" autoComplete="tel" 
                         type="tel" 
                         placeholder="+32 470 00 00 00"
                         value={phoneNumber}
@@ -402,7 +417,7 @@ export default function Account() {
                         className="w-full bg-background border border-border rounded px-3 py-2.5 text-sm outline-none focus:border-oxblood font-mono font-medium"
                         required
                       />
-                      <span className="text-[9px] text-muted-foreground/80 block mt-1 leading-normal">Requires international country code prefix.</span>
+                      <span className="text-xs text-muted-foreground/80 block mt-1 leading-normal">Requires international country code prefix.</span>
                     </div>
 
                     <button
@@ -417,8 +432,8 @@ export default function Account() {
                 ) : (
                   <form onSubmit={handleVerifyOtp} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">6-Digit Verification Code</label>
-                      <input 
+                      <label htmlFor="otp-code" className="text-xs font-medium text-muted-foreground">6-Digit Verification Code</label>
+                      <input id="otp-code" autoComplete="one-time-code" 
                         type="text" 
                         maxLength={6}
                         placeholder="123456"
@@ -457,15 +472,14 @@ export default function Account() {
             {authMode === 'register' && (
               <div className="space-y-5 animate-fade-in">
                 <div className="text-left space-y-1">
-                  <span className="text-[10px] uppercase tracking-[0.35em] text-brass font-bold">Atelier Accounts</span>
                   <h1 className="font-display text-2xl text-oxblood-deep font-semibold">Create Account</h1>
                   <p className="text-xs text-muted-foreground">Sign up to prefill checkout addresses and browse order status updates.</p>
                 </div>
 
                 <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Full Name</label>
-                    <input 
+                    <label htmlFor="register-name" className="text-xs font-medium text-muted-foreground">Full Name</label>
+                    <input id="register-name" autoComplete="name" 
                       type="text" 
                       placeholder="Jane Doe"
                       value={registerForm.name}
@@ -476,8 +490,8 @@ export default function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Email Address</label>
-                    <input 
+                    <label htmlFor="register-email" className="text-xs font-medium text-muted-foreground">Email Address</label>
+                    <input id="register-email" autoComplete="email" 
                       type="email" 
                       placeholder="name@example.com"
                       value={registerForm.email}
@@ -488,8 +502,8 @@ export default function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Phone Number (Optional)</label>
-                    <input 
+                    <label htmlFor="register-phone" className="text-xs font-medium text-muted-foreground">Phone Number (Optional)</label>
+                    <input id="register-phone" autoComplete="tel" 
                       type="text" 
                       placeholder="+32 470 00 00 00"
                       value={registerForm.phone}
@@ -499,8 +513,8 @@ export default function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Create Password</label>
-                    <input 
+                    <label htmlFor="register-password" className="text-xs font-medium text-muted-foreground">Create Password</label>
+                    <input id="register-password" autoComplete="new-password" 
                       type="password" 
                       placeholder="••••••••"
                       value={registerForm.password}
@@ -521,7 +535,7 @@ export default function Account() {
 
                 <div className="relative flex py-1 items-center text-xs text-muted-foreground/60">
                   <div className="flex-grow border-t border-border/50"></div>
-                  <span className="flex-shrink mx-4 uppercase tracking-widest text-[9px]">or</span>
+                  <span className="flex-shrink mx-4 text-xs">or</span>
                   <div className="flex-grow border-t border-border/50"></div>
                 </div>
 
@@ -575,7 +589,7 @@ export default function Account() {
             </div>
             <div>
               <h3 className="font-display font-semibold text-oxblood-deep leading-tight truncate">{currentCustomer.name}</h3>
-              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{currentCustomer.email || currentCustomer.phone}</p>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{currentCustomer.email || currentCustomer.phone}</p>
             </div>
           </div>
 
@@ -595,7 +609,7 @@ export default function Account() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   className={`w-full p-3 rounded text-xs uppercase tracking-wider font-semibold flex items-center gap-3 transition-all ${
                     isSelected
                       ? 'bg-oxblood/5 text-oxblood border-l-2 border-oxblood'
@@ -610,13 +624,13 @@ export default function Account() {
           </nav>
 
           <div className="border-t border-border/50 pt-4 flex flex-col gap-2">
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="w-full border border-border bg-card p-2.5 rounded text-xs font-semibold flex items-center justify-center gap-2 hover:bg-muted text-muted-foreground hover:text-foreground transition"
+            <Link
+              to="/account/spaces"
+              className="w-full p-3 rounded text-xs uppercase tracking-wider font-semibold flex items-center gap-3 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all"
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4 text-brass" /> : <Moon className="w-4 h-4 text-oxblood" />}
-              <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
+              <LayoutGrid className="w-4 h-4 shrink-0" />
+              <span>My Space</span>
+            </Link>
 
             <button
               onClick={logoutCustomer}
@@ -630,251 +644,21 @@ export default function Account() {
         {/* Right Hand Context Panels */}
         <main className="space-y-6">
           {activeTab === 'orders' && (
-            <div className="space-y-6 animate-fade-in">
-              <div>
-                <h1 className="font-display text-3xl text-oxblood-deep font-semibold">Atelier Orders</h1>
-                <p className="text-xs text-muted-foreground">Inspect tracking details, receipts, and custom commission canvas designs.</p>
-              </div>
-
-              {customerOrders.length === 0 ? (
-                <div className="text-center py-20 border border-dashed border-border rounded bg-card/40 noise-overlay">
-                  <Package className="w-10 h-10 mx-auto mb-4 text-muted-foreground/40" />
-                  <p className="text-muted-foreground mb-6 font-serif-italic text-sm">No orders recorded under this account yet.</p>
-                  <Link to="/shop" className="inline-flex bg-gradient-oxblood text-primary-foreground font-semibold px-6 py-3 rounded-full hover:shadow-soft transition text-xs uppercase tracking-widest">
-                    Explore the Shop
-                  </Link>
-                </div>
+            <div className="space-y-5 animate-fade-in">
+              <h1 className="font-display text-3xl">My orders</h1>
+              {ordersLoading ? (
+                <LoadingBlock className="h-40" />
+              ) : ordersError ? (
+                <ErrorState>We could not load your orders: {ordersError.message}</ErrorState>
+              ) : customerOrders.length === 0 ? (
+                <EmptyState title="No orders yet" action={{ label: 'Shop designs', to: '/shop' }} />
               ) : (
                 <div className="space-y-4">
-                  {customerOrders.slice().reverse().map(o => {
-                    const isExpanded = expandedOrderId === o.id;
-                    const totalItemsCount = o.items.reduce((sum, i) => sum + i.quantity, 0);
-                    
-                    return (
-                      <div 
-                        key={o.id} 
-                        className={`bg-card border rounded transition-all shadow-soft overflow-hidden ${
-                          isExpanded ? 'border-oxblood/30 ring-1 ring-oxblood/10' : 'border-border/60 hover:border-oxblood/20'
-                        }`}
-                      >
-                        {/* CARD SUMMARY HEADER */}
-                        <div 
-                          onClick={() => handleToggleExpand(o.id)}
-                          className="p-5 flex flex-wrap items-center justify-between gap-4 cursor-pointer select-none"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                              <span className="font-mono text-sm font-semibold text-brass">{o.id}</span>
-                              <span className={`px-2.5 py-0.5 text-[10px] uppercase tracking-wider font-semibold rounded-full border ${getStatusColor(o.status)}`}>
-                                {o.status}
-                              </span>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Placed: {new Date(o.placedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="font-semibold text-oxblood-deep font-mono">{storeConfig.currency}{o.total.toFixed(2)}</div>
-                              <span className="text-[9px] uppercase tracking-widest text-brass font-bold">Secure Account Receipt</span>
-                            </div>
-                            <div className="p-1 hover:bg-muted rounded text-muted-foreground">
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* EXPANDED DETAILED BODY */}
-                        {isExpanded && (
-                          <div className="border-t border-border/50 bg-background-warm/30 p-5 space-y-6 animate-fade-in">
-                            {/* Order Status Stepper */}
-                            <div className="space-y-4 bg-muted/20 border border-border/40 p-5 rounded-md noise-overlay">
-                              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 border-b border-border/20 pb-2">
-                                <History className="w-3.5 h-3.5" /> Workshop Pipeline Status
-                              </h4>
-                              
-                              <div className="hidden sm:flex items-center justify-between relative mt-4">
-                                {/* Back line */}
-                                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-border/60 z-0" />
-                                
-                                {(() => {
-                                  const statusList = ['Pending', 'Designing', 'Cutting', 'Finished', 'Shipped', 'Delivered'];
-                                  const currentIdx = statusList.indexOf(o.status);
-                                  
-                                  return statusList.map((stepStatus, idx) => {
-                                    const stepLabel = stepStatus === 'Pending' ? 'Received' : stepStatus;
-                                    const isCompleted = idx <= currentIdx;
-                                    const isActive = idx === currentIdx;
-                                    
-                                    return (
-                                      <div key={stepStatus} className="flex flex-col items-center relative z-10 text-center space-y-1">
-                                        <div 
-                                          className={cn(
-                                            "w-7 h-7 rounded-full flex items-center justify-center border text-[10px] font-bold font-mono transition-all duration-300",
-                                            isCompleted 
-                                              ? "bg-oxblood border-oxblood text-ivory shadow-soft scale-110" 
-                                              : "bg-background border-border text-muted-foreground"
-                                          )}
-                                        >
-                                          {isCompleted && !isActive ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : idx + 1}
-                                        </div>
-                                        <span className={cn("text-[9px] uppercase tracking-wider font-semibold", isCompleted ? "text-oxblood" : "text-muted-foreground")}>
-                                          {stepLabel}
-                                        </span>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-
-                              {/* Mobile Stepper View */}
-                              <div className="flex sm:hidden flex-col gap-4 relative pl-4 mt-2 border-l border-border/60">
-                                {(() => {
-                                  const statusList = ['Pending', 'Designing', 'Cutting', 'Finished', 'Shipped', 'Delivered'];
-                                  const currentIdx = statusList.indexOf(o.status);
-                                  
-                                  return statusList.map((stepStatus, idx) => {
-                                    const stepLabel = stepStatus === 'Pending' ? 'Order Received' : stepStatus;
-                                    const isCompleted = idx <= currentIdx;
-                                    const isActive = idx === currentIdx;
-                                    
-                                    return (
-                                      <div key={stepStatus} className="flex items-center gap-3 relative">
-                                        <div 
-                                          className={cn(
-                                            "absolute -left-[23px] w-4.5 h-4.5 rounded-full flex items-center justify-center border text-[8px] font-bold font-mono bg-background",
-                                            isCompleted 
-                                              ? "border-oxblood text-oxblood bg-oxblood/10 scale-105" 
-                                              : "border-border text-muted-foreground"
-                                          )}
-                                        >
-                                          {isCompleted && !isActive ? <Check className="w-2.5 h-2.5 stroke-[2.5]" /> : idx + 1}
-                                        </div>
-                                        <span className={cn("text-xs uppercase tracking-widest font-semibold", isCompleted ? "text-oxblood font-bold" : "text-muted-foreground")}>
-                                          {stepLabel}
-                                        </span>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            </div>
-
-                            {/* 1. Itemized List */}
-                            <div className="space-y-3">
-                              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 border-b border-border/30 pb-2">
-                                <Package className="w-3.5 h-3.5" /> Order details
-                              </h4>
-                              <div className="divide-y divide-border/40">
-                                {o.items.map(item => (
-                                  <div key={item.id} className="flex gap-4 py-4 first:pt-0 last:pb-0 items-center">
-                                    <div className="w-16 h-16 shrink-0 bg-card border border-border/50 rounded p-2 flex items-center justify-center">
-                                      {item.customDesignThumb ? (
-                                        <img 
-                                          src={item.customDesignThumb} 
-                                          alt="" 
-                                          className="w-full h-full object-contain" 
-                                        />
-                                      ) : (
-                                        <ShapeThumb shapeId={item.shapeId} finish={item.finish} className="w-full h-full" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-display text-sm font-semibold text-oxblood-deep truncate">{item.productName}</div>
-                                      <div className="text-xs text-muted-foreground capitalize font-medium">
-                                        {item.finish} · {item.sizeLabel}
-                                      </div>
-                                      {item.customDesignRef && item.customDesignRef.startsWith('{') && (
-                                        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider text-brass font-bold mt-1">
-                                          <Layers className="w-2.5 h-2.5" /> Custom Design
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-right text-sm">
-                                      <div className="font-semibold font-mono text-oxblood-deep">{storeConfig.currency}{(item.unitPrice * item.quantity).toFixed(2)}</div>
-                                      <div className="text-xs text-muted-foreground">{storeConfig.currency}{item.unitPrice.toFixed(2)} x {item.quantity}</div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* 2. Tracking details & Shipping details */}
-                            <div className="grid md:grid-cols-2 gap-6 pt-2 border-t border-border/40">
-                              {/* Shipping Coordinate Card */}
-                              <div className="space-y-2 text-xs">
-                                <h5 className="font-semibold text-oxblood flex items-center gap-1.5">
-                                  <MapPin className="w-3.5 h-3.5" /> Shipping Address
-                                </h5>
-                                <div className="text-muted-foreground leading-relaxed pl-5">
-                                  <p className="font-semibold text-foreground">{o.shippingName}</p>
-                                  <p>{o.shippingAddress}</p>
-                                  <p>{o.shippingCity}, {o.shippingZip}</p>
-                                  <p>{o.shippingCountry}</p>
-                                </div>
-                              </div>
-
-                              {/* Order Tracking Card */}
-                              <div className="space-y-2 text-xs">
-                                <div className="flex items-center justify-between">
-                                  <h5 className="font-semibold text-oxblood flex items-center gap-1.5">
-                                    <Truck className="w-3.5 h-3.5" /> Order Tracking
-                                  </h5>
-                                  <Link 
-                                    to={`/track-order?id=${o.id}`}
-                                    className="text-[10px] text-brass hover:text-oxblood font-semibold tracking-wider uppercase inline-flex items-center gap-1 transition"
-                                  >
-                                    Live Telemetry &rarr;
-                                  </Link>
-                                </div>
-                                {o.trackingNumber ? (
-                                  <div className="text-muted-foreground leading-relaxed pl-5 space-y-1">
-                                    <p>Carrier: <span className="font-semibold text-foreground capitalize">{o.trackingCarrier || 'Local Post'}</span></p>
-                                    <p>Code: <span className="font-mono text-foreground font-semibold">{o.trackingNumber}</span></p>
-                                    {o.estimatedDelivery && (
-                                      <p className="flex items-center gap-1 text-emerald-600 mt-1">
-                                        <Calendar className="w-3 h-3" /> Delivery: {o.estimatedDelivery}
-                                      </p>
-                                    )}
-                                    <div className="pt-2">
-                                      <Link
-                                        to={`/track-order?id=${o.id}`}
-                                        className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-oxblood border border-oxblood/20 bg-oxblood/5 hover:bg-oxblood hover:text-white px-3 py-1.5 rounded transition uppercase tracking-wider"
-                                      >
-                                        <Activity className="w-3 h-3" /> Dedicated Tracking Portal
-                                      </Link>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-muted-foreground leading-relaxed pl-5 space-y-2">
-                                    <div className="flex items-start gap-1.5 bg-yellow-500/5 border border-yellow-500/10 p-2.5 rounded">
-                                      <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
-                                      <div>
-                                        <p className="font-semibold text-foreground text-[11px]">Production in Queue</p>
-                                        <p className="text-[10px] text-muted-foreground/80 mt-0.5">We are preparing your custom commission layout. Once laser cut and patinated, tracking codes will activate here.</p>
-                                      </div>
-                                    </div>
-                                    <Link
-                                      to={`/track-order?id=${o.id}`}
-                                      className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-oxblood border border-oxblood/20 bg-oxblood/5 hover:bg-oxblood hover:text-white px-3 py-1.5 rounded transition uppercase tracking-wider"
-                                    >
-                                      <Activity className="w-3 h-3" /> Track Atelier Milestones &rarr;
-                                    </Link>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {customerOrders.map(o => <OrderDetails key={o.id} order={toPublicSummary(o)} email={currentCustomer.email} />)}
                 </div>
               )}
             </div>
           )}
-
           {activeTab === 'profile' && (
             <div className="space-y-6 animate-fade-in max-w-2xl">
               <div>
@@ -885,8 +669,8 @@ export default function Account() {
               <form onSubmit={handleUpdateProfile} className="bg-card border border-border/60 rounded p-6 space-y-5 noise-overlay">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Full Name</label>
-                    <input 
+                    <label htmlFor="profile-name" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Full Name</label>
+                    <input id="profile-name" autoComplete="name" 
                       type="text" 
                       value={profileForm.name}
                       onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
@@ -896,19 +680,19 @@ export default function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Phone Number</label>
-                    <input 
+                    <label htmlFor="profile-phone" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Phone Number</label>
+                    <input id="profile-phone" autoComplete="tel" 
                       type="text" 
                       value={profileForm.phone}
                       onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      placeholder="+32..."
+                      placeholder="10-digit mobile"
                       className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono"
                     />
                   </div>
 
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Default Shipping Street Address</label>
-                    <input 
+                    <label htmlFor="profile-address" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Default Shipping Street Address</label>
+                    <input id="profile-address" autoComplete="street-address" 
                       type="text" 
                       value={profileForm.address}
                       onChange={e => setProfileForm({ ...profileForm, address: e.target.value })}
@@ -917,8 +701,20 @@ export default function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">City</label>
-                    <input 
+                    <label htmlFor="profile-pincode" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Pincode</label>
+                    <input id="profile-pincode" autoComplete="postal-code" 
+                      type="text" 
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={profileForm.pincode}
+                      onChange={e => setProfileForm({ ...profileForm, pincode: e.target.value })}
+                      className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="profile-city" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">City</label>
+                    <input id="profile-city" autoComplete="address-level2" 
                       type="text" 
                       value={profileForm.city}
                       onChange={e => setProfileForm({ ...profileForm, city: e.target.value })}
@@ -926,24 +722,16 @@ export default function Account() {
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">ZIP / Postal Code</label>
-                    <input 
-                      type="text" 
-                      value={profileForm.zip}
-                      onChange={e => setProfileForm({ ...profileForm, zip: e.target.value })}
-                      className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood font-mono"
-                    />
-                  </div>
-
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Country</label>
-                    <input 
-                      type="text" 
-                      value={profileForm.country}
-                      onChange={e => setProfileForm({ ...profileForm, country: e.target.value })}
+                    <label htmlFor="profile-state" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">State / UT</label>
+                    <select id="profile-state" autoComplete="address-level1"
+                      value={profileForm.state}
+                      onChange={e => setProfileForm({ ...profileForm, state: e.target.value })}
                       className="w-full bg-background border border-border rounded px-3 py-2 text-sm outline-none focus:border-oxblood"
-                    />
+                    >
+                      <option value="">Select state</option>
+                      {INDIAN_STATES_AND_UTS.map(st => <option key={st} value={st}>{st}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -968,8 +756,8 @@ export default function Account() {
 
               <form onSubmit={handleUpdatePassword} className="bg-card border border-border/60 rounded p-6 space-y-4 noise-overlay">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Current Password</label>
-                  <input 
+                  <label htmlFor="current-password" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Current Password</label>
+                  <input id="current-password" autoComplete="current-password" 
                     type="password" 
                     placeholder="••••••••"
                     value={passwordForm.currentPass}
@@ -980,8 +768,8 @@ export default function Account() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">New Password</label>
-                  <input 
+                  <label htmlFor="new-password" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">New Password</label>
+                  <input id="new-password" autoComplete="new-password" 
                     type="password" 
                     placeholder="••••••••"
                     value={passwordForm.newPass}
@@ -992,8 +780,8 @@ export default function Account() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Confirm New Password</label>
-                  <input 
+                  <label htmlFor="confirm-password" className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Confirm New Password</label>
+                  <input id="confirm-password" autoComplete="new-password" 
                     type="password" 
                     placeholder="••••••••"
                     value={passwordForm.confirmPass}
@@ -1041,13 +829,13 @@ export default function Account() {
                           <Link to={`/product/${p.slug}`} className="font-display text-lg text-oxblood-deep hover:underline truncate block font-semibold">
                             {p.name}
                           </Link>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest truncate">{p.tagline}</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-widest truncate">{p.tagline}</p>
                           <p className="text-sm font-semibold font-mono text-oxblood mt-1">{storeConfig.currency}{p.price}</p>
                         </div>
                         <div className="flex items-center gap-3 mt-3">
                           <Link
                             to={`/product/${p.slug}`}
-                            className="bg-oxblood text-ivory text-[10px] uppercase tracking-widest font-semibold px-4 py-2 rounded hover:bg-oxblood-deep transition"
+                            className="bg-oxblood text-ivory text-xs uppercase tracking-widest font-semibold px-4 py-2 rounded hover:bg-oxblood-deep transition"
                           >
                             Configure
                           </Link>

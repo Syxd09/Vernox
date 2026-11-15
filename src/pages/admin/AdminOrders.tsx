@@ -5,48 +5,64 @@
  * - Tab row: All Orders, Open, Unfulfilled, Unpaid, From Canada (and Country selector), Paid Orders, Customers
  * - Search bar, interactive Filters popover, Download CSV export, and Pagination
  * - Multi-select checkbox column with floating bulk action bar
- * - Real table columns: ORDER (#195867), DATE, CUSTOMER, PAYMENT STATUS, FULFILLMENT STATUS, TOTAL
+ * - Table columns: ORDER, DATE, CUSTOMER, STATUS, TOTAL
  * - Full Order Inspector modal with items, 1-Click CAM production downloads (DXF, SVG, PDF), and shipping tracking.
  */
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { useCatalog, Order, OrderStatus, PaymentStatus, FulfillmentStatus } from '@/lib/catalogContext';
-import { exportDocumentAsSVG, exportDocumentAsDXF, exportDocumentAsPDF } from '@/lib/exportCAM';
-import { getShapeById } from '@/lib/shapes';
-import { FIBER_LASER_3KW_PROFILE, getGaugeParameters, type VectorDocument } from '@/lib/cadEngineTypes';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { useAdminData } from '@/lib/data/adminData';
+import { useOrderMutations } from '@/lib/data/orders';
+import { hasCustomDesign } from '@/lib/orders/camDocument';
+import { downloadProductionFile } from '@/lib/orders/camDownload';
+import { freeText, withFreeText } from '@/lib/orders/orderNotes';
+import {
+  ORDER_STATUS_LABELS, isRevenueStatus, nextClientStatuses, type OrderStatus,
+} from '@/lib/orders/orderStateMachine';
+import type { Order } from '@/types/store';
 import { 
   Search, Filter as FilterIcon, Download, ChevronLeft, ChevronRight, 
   Check, CheckSquare, Square, X, MoreHorizontal, ArrowUpRight,
   Eye, Trash2, Printer, FileCode, FileText, ExternalLink,
   MapPin, Phone, Mail, Clock, Package, AlertCircle, ShoppingCart,
   Scissors, Truck, ShieldCheck, Tag, ZoomIn, Image as ImageIcon,
-  Gift, Percent, ShoppingBag, Leaf, Sparkles
+  Gift, Percent, ShoppingBag, Leaf
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AdminPageHeader } from '@/components/admin/AdminUi';
+import { StatusBadge } from './shared/badges';
+import { BalancePanel } from './shared/BalancePanel';
+import { CodConfirmPanel } from './shared/CodConfirmPanel';
+import { HoldPanel } from './shared/HoldPanel';
 
 export interface AdminOrdersProps {
-  initialFilter?: 'all' | 'open' | 'unfulfilled' | 'unpaid' | 'canada' | 'paid' | 'customers' | 'custom';
-  onSelectTab?: (tab: any) => void;
+  initialFilter?: 'all' | 'open' | 'unfulfilled' | 'unpaid' | 'paid' | 'customers' | 'custom';
+  onSelectTab?: (tab: string) => void;
 }
 
 export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersProps) {
-  const { orders, updateOrderStatus, updateOrder, deleteOrder, storeConfig } = useCatalog();
+  const { orders, storeConfig, ordersLoading, ordersError, hasMoreOrders, loadMoreOrders, isLoadingMoreOrders } = useAdminData();
+  const { permissions, staffRole, user } = useAuth();
+  const { updateOrder: saveOrderUpdate } = useOrderMutations();
+  const actor = { email: user?.email ?? 'unknown', role: staffRole ?? 'support' };
+  const canEdit = Boolean(permissions && (permissions.canManageOrders || permissions.canManageProduction || permissions.canManageShipping));
+  const canSetTracking = Boolean(permissions?.canTrackShipments);
+  // The CSV carries customer names, emails and cities: reports.export only.
+  const canExport = Boolean(permissions?.canExportReports);
   const navigate = useNavigate();
 
   // Active Tab Filter (Matching Image 1)
-  const [activeTab, setActiveTab] = useState<'all' | 'open' | 'unfulfilled' | 'unpaid' | 'canada' | 'paid' | 'customers' | 'custom'>(
+  const [activeTab, setActiveTab] = useState<'all' | 'open' | 'unfulfilled' | 'unpaid' | 'paid' | 'customers' | 'custom'>(
     initialFilter || 'all'
   );
 
   // Search & Detailed Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [welcomeSearch, setWelcomeSearch] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('Canada');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('all');
-  const [filterFulfillmentStatus, setFilterFulfillmentStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<'all' | 'today' | 'last7' | 'last30'>('all');
   const [minTotal, setMinTotal] = useState<string>('');
 
@@ -63,6 +79,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
 
   // Inspector Form State
   const [trackingCarrier, setTrackingCarrier] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
   const [estimatedDelivery, setEstimatedDelivery] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
@@ -70,10 +87,12 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
   // Sync initial inspecting order fields when opened
   useEffect(() => {
     if (inspectingOrder) {
-      setTrackingCarrier(inspectingOrder.trackingCarrier || '');
-      setTrackingNumber(inspectingOrder.trackingNumber || '');
-      setEstimatedDelivery(inspectingOrder.estimatedDelivery || '');
-      setAdminNotes(inspectingOrder.adminNotes || '');
+      setTrackingCarrier(inspectingOrder.tracking?.carrier || '');
+      setTrackingNumber(inspectingOrder.tracking?.trackingNumber || '');
+      setEstimatedDelivery(inspectingOrder.tracking?.estimatedDelivery || '');
+      setAssignedTo(inspectingOrder.assignedTo || '');
+      // The structured QC/package block in `notes` is edited only by the QC console.
+      setAdminNotes(freeText(inspectingOrder.adminNotes));
     }
   }, [inspectingOrder]);
 
@@ -117,7 +136,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
       // 1. Text Search across Order ID, Customer name, Email, City
       if (query) {
         const idMatch = order.id.toLowerCase().includes(query);
-        const nameMatch = order.shippingName?.toLowerCase().includes(query);
+        const nameMatch = order.customerName?.toLowerCase().includes(query) || order.orderNumber?.toLowerCase().includes(query);
         const emailMatch = order.email.toLowerCase().includes(query);
         const cityMatch = order.shippingCity?.toLowerCase().includes(query);
         const itemMatch = order.items?.some(i => i.productName.toLowerCase().includes(query));
@@ -128,47 +147,26 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
 
       // 2. Tab Filter
       if (activeTab === 'open') {
-        if (order.status === 'Delivered' || order.status === 'Cancelled' || order.status === 'Finished') {
-          return false;
-        }
+        if (['Delivered', 'Cancelled', 'Refunded', 'Expired', 'Payment_Failed', 'Returned'].includes(order.status)) return false;
       } else if (activeTab === 'unfulfilled') {
-        if (order.fulfillmentStatus !== 'Unfulfilled') {
-          return false;
-        }
+        if (!['Paid', 'In_Design', 'Cutting', 'Finishing', 'Quality_Check', 'Packed'].includes(order.status)) return false;
       } else if (activeTab === 'unpaid') {
-        if (order.paymentStatus !== 'Pending' && order.paymentStatus !== 'Authorized') {
-          return false;
-        }
-      } else if (activeTab === 'canada') {
-        const country = (order.shippingCountry || '').toLowerCase();
-        if (!country.includes(selectedCountry.toLowerCase())) {
-          return false;
-        }
+        if (!['Pending_Payment', 'Payment_Failed', 'Expired'].includes(order.status)) return false;
       } else if (activeTab === 'paid') {
-        if (order.paymentStatus !== 'Paid') {
-          return false;
-        }
+        if (!isRevenueStatus(order.status)) return false;
       } else if (activeTab === 'custom') {
-        const isCustom = order.items?.some(i => i.customDesignRef || i.userUploadedImage || i.productId === 'custom-bespoke');
+        const isCustom = order.items?.some(i => hasCustomDesign(i) || i.userUploadedImage || i.productId === 'custom-bespoke');
         if (!isCustom) return false;
       }
 
       // 3. Dropdown Popover Filters
-      if (filterPaymentStatus !== 'all' && order.paymentStatus !== filterPaymentStatus) {
-        return false;
-      }
-      if (filterFulfillmentStatus !== 'all' && order.fulfillmentStatus !== filterFulfillmentStatus) {
-        return false;
-      }
+      if (filterStatus !== 'all' && order.status !== filterStatus) return false;
       if (filterDateRange === 'today') {
-        const orderTime = order.placedAt || new Date(order.createdAt || 0).getTime();
-        if (now - orderTime > dayMs) return false;
+        if (now - order.placedAt > dayMs) return false;
       } else if (filterDateRange === 'last7') {
-        const orderTime = order.placedAt || new Date(order.createdAt || 0).getTime();
-        if (now - orderTime > 7 * dayMs) return false;
+        if (now - order.placedAt > 7 * dayMs) return false;
       } else if (filterDateRange === 'last30') {
-        const orderTime = order.placedAt || new Date(order.createdAt || 0).getTime();
-        if (now - orderTime > 30 * dayMs) return false;
+        if (now - order.placedAt > 30 * dayMs) return false;
       }
 
       if (minTotal && Number(minTotal) > 0) {
@@ -176,14 +174,9 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
       }
 
       return true;
-    }).sort((a, b) => {
-      const timeA = a.placedAt || new Date(a.createdAt || 0).getTime() || 0;
-      const timeB = b.placedAt || new Date(b.createdAt || 0).getTime() || 0;
-      return timeB - timeA;
-    });
+    }).sort((a, b) => b.placedAt - a.placedAt);
   }, [
-    orders, searchQuery, welcomeSearch, activeTab, selectedCountry, 
-    filterPaymentStatus, filterFulfillmentStatus, filterDateRange, minTotal
+    orders, searchQuery, welcomeSearch, activeTab, filterStatus, filterDateRange, minTotal
   ]);
 
   // Pagination calculation
@@ -196,7 +189,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, welcomeSearch, activeTab, selectedCountry, filterPaymentStatus, filterFulfillmentStatus, filterDateRange, minTotal]);
+  }, [searchQuery, welcomeSearch, activeTab, filterStatus, filterDateRange, minTotal]);
 
   // Bulk Selection Handlers
   const isAllCurrentPageSelected = paginatedOrders.length > 0 && paginatedOrders.every(o => selectedOrderIds.has(o.id));
@@ -217,35 +210,6 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
     setSelectedOrderIds(next);
   };
 
-  // Bulk Actions
-  const handleBulkMarkPaid = async () => {
-    if (selectedOrderIds.size === 0) return;
-    for (const id of selectedOrderIds) {
-      await updateOrder(id, { paymentStatus: 'Paid', status: 'Paid' });
-    }
-    toast.success(`Marked ${selectedOrderIds.size} orders as Paid`);
-    setSelectedOrderIds(new Set());
-  };
-
-  const handleBulkMarkFulfilled = async () => {
-    if (selectedOrderIds.size === 0) return;
-    for (const id of selectedOrderIds) {
-      await updateOrder(id, { fulfillmentStatus: 'Fulfilled', status: 'Delivered' });
-    }
-    toast.success(`Marked ${selectedOrderIds.size} orders as Fulfilled`);
-    setSelectedOrderIds(new Set());
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedOrderIds.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete ${selectedOrderIds.size} selected orders?`)) return;
-    for (const id of selectedOrderIds) {
-      await deleteOrder(id);
-    }
-    toast.success(`Deleted ${selectedOrderIds.size} orders`);
-    setSelectedOrderIds(new Set());
-  };
-
   // Instant CSV Export
   const handleExportCSV = (ordersToExport = filteredOrders) => {
     if (ordersToExport.length === 0) {
@@ -255,24 +219,23 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
 
     const headers = [
       'Order ID', 'Date', 'Customer Name', 'Email', 
-      'Payment Status', 'Fulfillment Status', 'Total', 
-      'Items Count', 'Shipping City', 'Shipping Country', 
+      'Status', 'Total', 
+      'Items Count', 'Shipping City', 'Shipping State', 
       'Tracking Carrier', 'Tracking Number'
     ];
 
     const rows = ordersToExport.map(o => [
-      `"${o.id}"`,
-      `"${formatOrderDate(o.placedAt || o.createdAt)}"`,
-      `"${o.shippingName || ''}"`,
+      `"${o.orderNumber || o.id}"`,
+      `"${formatOrderDate(o.placedAt)}"`,
+      `"${o.customerName || ''}"`,
       `"${o.email}"`,
-      `"${o.paymentStatus || 'Authorized'}"`,
-      `"${o.fulfillmentStatus || 'Unfulfilled'}"`,
+      `"${ORDER_STATUS_LABELS[o.status]}"`,
       o.total,
       o.items?.length || 0,
       `"${o.shippingCity || ''}"`,
-      `"${o.shippingCountry || ''}"`,
-      `"${o.trackingCarrier || ''}"`,
-      `"${o.trackingNumber || ''}"`
+      `"${o.shippingState || ''}"`,
+      `"${o.tracking?.carrier || ''}"`,
+      `"${o.tracking?.trackingNumber || ''}"`
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -287,179 +250,56 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
     toast.success(`Exported ${ordersToExport.length} orders to CSV`);
   };
 
-  // 1-Click CAM Production Vector Document Generator
-  const generateVectorDoc = (order: Order, item: Order['items'][0]): VectorDocument => {
-    const shape = getShapeById(item.shapeId || 'arch_monolith');
-    const width = item.widthMm || 400;
-    const height = item.heightMm || 600;
-    const path = shape?.getPath ? shape.getPath(width, height) : 'M 0 0 L 400 0 L 400 600 L 0 600 Z';
-    const substrate: any = item.finish?.includes('copper') 
-      ? 'copper_c101' 
-      : item.finish?.includes('steel') 
-      ? 'steel_dc01' 
-      : item.finish?.includes('corten') 
-      ? 'corten_weathering' 
-      : 'brass_cz108';
-
-    return {
-      version: '3.0.0',
-      documentId: `cam-${order.id}-${item.id}`,
-      unit: 'mm',
-      boundary: {
-        widthMm: width,
-        heightMm: height,
-        cornerRadiusMm: 0,
-        shapeTemplateId: item.shapeId || 'arch_monolith',
-        pathData: path,
-      },
-      material: {
-        substrate,
-        thicknessMm: 3.0,
-        finish: (item.finish as any) || 'antique_brass',
-        activeGaugeParams: getGaugeParameters(FIBER_LASER_3KW_PROFILE, substrate, 3.0),
-      },
-      layers: [],
-      manufacturingAnalytics: {
-        totalCutLengthMm: (width + height) * 2,
-        totalPierceCount: 1,
-        sheetAreaSqMm: width * height,
-        estimatedCutTimeSec: 24,
-        partWeightKg: 4.8,
-        isManufacturable: true,
-      },
-      uploadedArtworkName: `${order.id} - ${item.productName}`,
-    };
-  };
-
+  // 1-Click CAM export: customer designs are exported as designed; catalog items use their outline.
   const handleDownloadCAM = (order: Order, item: Order['items'][0], format: 'svg' | 'dxf' | 'pdf') => {
     try {
-      const doc = generateVectorDoc(order, item);
-      if (format === 'svg') exportDocumentAsSVG(doc);
-      else if (format === 'dxf') exportDocumentAsDXF(doc);
-      else exportDocumentAsPDF(doc);
-      toast.success(`CAM ${format.toUpperCase()} generated for ${item.productName}`);
+      const source = downloadProductionFile(order, item, format);
+      toast.success(
+        `${format.toUpperCase()} generated for ${item.productName}` +
+          (source === 'customer-design' ? ' from the customer design' : ' from the catalog outline'),
+      );
     } catch (err) {
-      toast.error(`Failed to generate ${format.toUpperCase()} CAM file`);
+      toast.error(err instanceof Error ? err.message : `Failed to generate ${format.toUpperCase()} CAM file`);
     }
   };
 
-  // Render Payment Status Tag with Vernox Luxury Palette
-  const renderPaymentStatusTag = (status?: PaymentStatus) => {
-    switch (status) {
-      case 'Paid':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#EEF5F0] text-[#1D5E37] border border-[#1D5E37]/20">
-            Paid
-          </span>
-        );
-      case 'Authorized':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FAF3E8] text-[#8C6219] border border-[#C6A15B]/30">
-            Authorized
-          </span>
-        );
-      case 'Pending':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF4F0] text-[#9A3412] border border-[#9A3412]/20">
-            Pending
-          </span>
-        );
-      case 'Refunded':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
-            Refunded
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-muted text-muted-foreground border border-border">
-            {status || 'Unknown'}
-          </span>
-        );
-    }
-  };
+  const renderStatusTag = (status: OrderStatus) => <StatusBadge status={status} />;
 
-  // Render Fulfillment Status Tag with Vernox Luxury Palette
-  const renderFulfillmentStatusTag = (status?: FulfillmentStatus) => {
-    switch (status) {
-      case 'Fulfilled':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#EEF5F0] text-[#1D5E37] border border-[#1D5E37]/20">
-            Fulfilled
-          </span>
-        );
-      case 'Partially Fulfilled':
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF4F0] text-[#9A3412] border border-[#9A3412]/20">
-            Partially Fulfilled
-          </span>
-        );
-      case 'Unfulfilled':
-      default:
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FAF3E8] text-[#8C6219] border border-[#C6A15B]/30">
-            Unfulfilled
-          </span>
-        );
+  const persist = async (order: Order, update: Parameters<typeof saveOrderUpdate>[0]['update']) => {
+    const ok = await saveOrderUpdate({ order, update, actor });
+    if (ok) {
+      setInspectingOrder(prev => (prev && prev.id === order.id ? {
+        ...prev,
+        status: update.status ?? prev.status,
+        tracking: update.tracking ?? prev.tracking,
+        assignedTo: update.assignedTo ?? prev.assignedTo,
+        adminNotes: update.notes ?? prev.adminNotes,
+      } : prev));
     }
+    return ok;
   };
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in max-w-[1440px] mx-auto">
-      
-      {/* 1. ATELIER COMMISSIONS BANNER (Vernox Luxury Aesthetic) */}
-      <div className="bg-gradient-to-r from-card via-card to-[#FAF6EE] border border-[#E3DACB] rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xs">
-        {/* Architectural Guilloche & Laser Vector Motif in Background */}
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none hidden md:block">
-          <svg width="220" height="180" viewBox="0 0 220 180" fill="none" className="text-brass">
-            <rect x="10" y="10" width="200" height="160" rx="4" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
-            <circle cx="110" cy="90" r="60" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="110" cy="90" r="40" stroke="#5B262C" strokeWidth="1" />
-            <path d="M50 90 L170 90 M110 30 L110 150" stroke="currentColor" strokeWidth="0.8" strokeDasharray="2 2" />
-            <path d="M70 50 L150 130 M150 50 L70 130" stroke="currentColor" strokeWidth="0.5" />
-          </svg>
-        </div>
-
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-oxblood/10 border border-oxblood/20 text-oxblood text-[10px] font-bold tracking-widest uppercase">
-              <Sparkles className="w-3 h-3 text-brass" /> Vernox Atelier Console
-            </span>
-            <span className="text-xs text-muted-foreground font-serif italic">Bespoke Architectural Craft</span>
+      <AdminPageHeader
+        title={initialFilter === 'custom' ? 'Custom designs' : 'Orders'}
+        line="Find an order, check its payment, move it forward and keep notes."
+        actions={(
+          <div className="relative w-full sm:w-80">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input type="text" value={welcomeSearch} aria-label="Search orders" onChange={e => { setWelcomeSearch(e.target.value); setSearchQuery(''); }}
+              placeholder="Order, name, email or place" className="field pl-9" />
           </div>
+        )}
+      />
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-foreground tracking-tight">
-            Atelier Commissions & Orders
-          </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm mt-1.5 mb-5 font-sans">
-            Manage custom architectural steel and brass commissions, CAM laser production routing, patron ledger, and global fulfillment.
-          </p>
-
-          {/* Banner Search Input */}
-          <div className="relative max-w-md">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text"
-              value={welcomeSearch}
-              onChange={(e) => {
-                setWelcomeSearch(e.target.value);
-                setSearchQuery('');
-              }}
-              placeholder="Search commissions, patron name, email, or destination..."
-              className="w-full bg-background border border-border rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm outline-none focus:border-oxblood focus:ring-1 focus:ring-oxblood shadow-2xs transition"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 2. TABS BAR (Vernox Luxury Aesthetic) */}
+      {/* Queue tabs */}
       <div className="flex items-center gap-1 sm:gap-6 border-b border-border/70 overflow-x-auto text-xs sm:text-sm font-semibold tracking-tight scrollbar-none px-1">
         {[
           { id: 'all', label: 'All Orders' },
           { id: 'open', label: 'Open' },
-          { id: 'unfulfilled', label: 'Unfulfilled' },
-          { id: 'unpaid', label: 'Unpaid' },
-          { id: 'canada', label: `From ${selectedCountry}` },
+          { id: 'unfulfilled', label: 'In production' },
+          { id: 'unpaid', label: 'Awaiting payment' },
           { id: 'paid', label: 'Paid Orders' },
           { id: 'customers', label: 'Customers' },
         ].map(tab => {
@@ -472,7 +312,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                   if (onSelectTab) onSelectTab('customers');
                   else setActiveTab('customers');
                 } else {
-                  setActiveTab(tab.id as any);
+                  setActiveTab(tab.id as typeof activeTab);
                 }
               }}
               className={`pb-3 px-2 sm:px-3 relative whitespace-nowrap transition-colors flex items-center gap-1.5 font-display ${
@@ -482,28 +322,6 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
               }`}
             >
               <span>{tab.label}</span>
-              {tab.id === 'canada' && (
-                <select
-                  value={selectedCountry}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setSelectedCountry(e.target.value);
-                    setActiveTab('canada');
-                  }}
-                  className="bg-transparent text-[11px] font-sans font-normal text-muted-foreground hover:text-foreground cursor-pointer outline-none border-b border-muted-foreground/30 ml-1"
-                >
-                  <option value="Canada">Canada</option>
-                  <option value="United States">USA</option>
-                  <option value="Germany">Germany</option>
-                  <option value="Belgium">Belgium</option>
-                  <option value="United Kingdom">UK</option>
-                  <option value="India">India</option>
-                  <option value="France">France</option>
-                </select>
-              )}
-              {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-oxblood rounded-full" />
-              )}
             </button>
           );
         })}
@@ -540,7 +358,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
               <button 
                 onClick={() => setIsFilterOpen(prev => !prev)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
-                  isFilterOpen || filterPaymentStatus !== 'all' || filterFulfillmentStatus !== 'all' || filterDateRange !== 'all'
+                  isFilterOpen || filterStatus !== 'all' || filterDateRange !== 'all'
                     ? 'border-oxblood text-oxblood bg-oxblood/10'
                     : 'border-border text-foreground hover:bg-muted'
                 }`}
@@ -560,31 +378,16 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Payment Status</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Status</label>
                     <select
-                      value={filterPaymentStatus}
-                      onChange={(e) => setFilterPaymentStatus(e.target.value)}
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
                       className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs outline-none"
                     >
-                      <option value="all">All Payment Statuses</option>
-                      <option value="Authorized">Authorized</option>
-                      <option value="Paid">Paid</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Refunded">Refunded</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Fulfillment Status</label>
-                    <select
-                      value={filterFulfillmentStatus}
-                      onChange={(e) => setFilterFulfillmentStatus(e.target.value)}
-                      className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs outline-none"
-                    >
-                      <option value="all">All Fulfillment Statuses</option>
-                      <option value="Unfulfilled">Unfulfilled</option>
-                      <option value="Partially Fulfilled">Partially Fulfilled</option>
-                      <option value="Fulfilled">Fulfilled</option>
+                      <option value="all">All statuses</option>
+                      {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map(st => (
+                        <option key={st} value={st}>{ORDER_STATUS_LABELS[st]}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -592,7 +395,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                     <label className="text-[11px] font-semibold text-muted-foreground uppercase">Date Placed</label>
                     <select
                       value={filterDateRange}
-                      onChange={(e) => setFilterDateRange(e.target.value as any)}
+                      onChange={(e) => setFilterDateRange(e.target.value as typeof filterDateRange)}
                       className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs outline-none"
                     >
                       <option value="all">All Time</option>
@@ -606,8 +409,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                     <button
                       type="button"
                       onClick={() => {
-                        setFilterPaymentStatus('all');
-                        setFilterFulfillmentStatus('all');
+                        setFilterStatus('all');
                         setFilterDateRange('all');
                         setMinTotal('');
                       }}
@@ -628,14 +430,14 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
             </div>
 
             {/* Download CSV Button */}
-            <button 
+            {canExport && <button 
               onClick={() => handleExportCSV()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-medium text-foreground transition"
               title="Download Orders CSV"
             >
               <Download className="w-3.5 h-3.5 text-brass" />
               <span>Download</span>
-            </button>
+            </button>}
 
             {/* Pagination Controls (< Page 1 of 2 >) */}
             <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-1 text-xs bg-background">
@@ -662,39 +464,21 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
 
         {/* Floating Bulk Actions Dock (Vernox Obsidian & Brass) */}
         {selectedOrderIds.size > 0 && (
-          <div className="bg-[#1C1615] border-b border-brass/40 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 animate-fade-in text-xs text-[#F8F4E7]">
+          <div className="bg-toolbar border-b border-brass/40 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 animate-fade-in text-xs text-toolbar-foreground">
             <div className="flex items-center gap-2 font-semibold">
               <CheckSquare className="w-4 h-4 text-brass" />
               <span>{selectedOrderIds.size} orders selected</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleBulkMarkPaid}
-                className="bg-oxblood hover:bg-oxblood-deep text-ivory px-3 py-1 rounded-md text-xs font-semibold transition border border-oxblood/50"
-              >
-                Mark as Paid
-              </button>
-              <button
-                onClick={handleBulkMarkFulfilled}
-                className="bg-[#2A211E] hover:bg-[#382D29] text-brass border border-brass/30 px-3 py-1 rounded-md text-xs font-semibold transition"
-              >
-                Mark as Fulfilled
-              </button>
-              <button
+              {canExport && <button
                 onClick={() => handleExportCSV(orders.filter(o => selectedOrderIds.has(o.id)))}
-                className="bg-[#120D0C] border border-[#2E2421] text-[#E8DFD3] hover:text-white px-3 py-1 rounded-md text-xs font-semibold transition"
+                className="bg-toolbar-foreground/10 border border-toolbar-foreground/20 text-toolbar-foreground px-3 py-1 rounded-md text-xs font-semibold transition"
               >
                 Export Selected
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                className="bg-red-900/80 hover:bg-red-800 text-white px-3 py-1 rounded-md text-xs font-semibold transition"
-              >
-                Delete
-              </button>
+              </button>}
               <button
                 onClick={() => setSelectedOrderIds(new Set())}
-                className="text-[#A8988E] hover:text-[#F8F4E7] text-xs underline ml-1"
+                className="text-toolbar-foreground/70 hover:text-toolbar-foreground text-xs underline ml-1"
               >
                 Deselect
               </button>
@@ -706,7 +490,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-border/70 text-[11px] font-display font-bold text-muted-foreground uppercase tracking-wider bg-[#FAF8F5]/80">
+              <tr className="border-b border-border/70 text-[11px] font-display font-bold text-muted-foreground uppercase tracking-wider bg-muted/40">
                 <th className="py-3 px-4 w-10">
                   <button 
                     onClick={toggleSelectAllPage} 
@@ -723,8 +507,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                 <th className="py-3 px-4">Order</th>
                 <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Payment Status</th>
-                <th className="py-3 px-4">Fulfillment Status</th>
+                <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Total</th>
               </tr>
             </thead>
@@ -743,7 +526,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                   return (
                     <tr 
                       key={order.id} 
-                      className={`hover:bg-[#FBF9F5] transition group cursor-pointer ${
+                      className={`hover:bg-muted/40 transition group cursor-pointer ${
                         isSelected ? 'bg-oxblood/[0.04]' : ''
                       }`}
                       onClick={() => setInspectingOrder(order)}
@@ -762,34 +545,29 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                         </button>
                       </td>
 
-                      {/* ORDER (#195867) */}
+                      {/* ORDER */}
                       <td className="py-3.5 px-4 font-mono font-semibold text-oxblood hover:text-oxblood-deep hover:underline">
-                        {order.id}
+                        {order.orderNumber || order.id}
                       </td>
 
                       {/* DATE (04/05/2026 10:08AM) */}
                       <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                        {formatOrderDate(order.placedAt || order.createdAt)}
+                        {formatOrderDate(order.placedAt)}
                       </td>
 
                       {/* CUSTOMER */}
                       <td className="py-3.5 px-4">
                         <div className="font-medium text-foreground truncate max-w-[180px]">
-                          {order.shippingName || order.email.split('@')[0]}
+                          {order.customerName || order.email.split('@')[0]}
                         </div>
                         <div className="text-[11px] text-muted-foreground truncate max-w-[180px]">
                           {order.email}
                         </div>
                       </td>
 
-                      {/* PAYMENT STATUS */}
+                      {/* STATUS */}
                       <td className="py-3.5 px-4">
-                        {renderPaymentStatusTag(order.paymentStatus)}
-                      </td>
-
-                      {/* FULFILLMENT STATUS */}
-                      <td className="py-3.5 px-4">
-                        {renderFulfillmentStatusTag(order.fulfillmentStatus)}
+                        {renderStatusTag(order.status)}
                       </td>
 
                       {/* TOTAL */}
@@ -814,20 +592,14 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-display font-bold text-foreground">
-                    Order {inspectingOrder.id}
+                    Order {inspectingOrder.orderNumber || inspectingOrder.id}
                   </h2>
                   <span className="text-xs text-muted-foreground">
-                    · {formatOrderDate(inspectingOrder.placedAt || inspectingOrder.createdAt)}
+                    · {formatOrderDate(inspectingOrder.placedAt)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  {renderPaymentStatusTag(inspectingOrder.paymentStatus)}
-                  <span className="text-muted-foreground">·</span>
-                  {renderFulfillmentStatusTag(inspectingOrder.fulfillmentStatus)}
-                  <span className="text-muted-foreground">·</span>
-                  <span className="text-xs text-oxblood font-semibold">
-                    Pipeline: {inspectingOrder.status}
-                  </span>
+                  {renderStatusTag(inspectingOrder.status)}
                 </div>
               </div>
 
@@ -842,78 +614,65 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
               
-              {/* Status Update Quick Toggles */}
+              <CodConfirmPanel order={orders.find(o => o.id === inspectingOrder.id) ?? inspectingOrder} canWrite={canEdit} />
+              <HoldPanel order={orders.find(o => o.id === inspectingOrder.id) ?? inspectingOrder} canWrite={canEdit} />
+              <BalancePanel order={orders.find(o => o.id === inspectingOrder.id) ?? inspectingOrder} canCollect={Boolean(permissions?.canCreateOrders)} />
+
+              {/* Status update: only transitions the state machine allows for this role */}
               <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
                 <span className="text-[11px] font-bold text-foreground uppercase tracking-wider block">
-                  Quick Status Adjustments
+                  Order status
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
-                      Payment Status
-                    </label>
-                    <select
-                      value={inspectingOrder.paymentStatus || 'Authorized'}
-                      onChange={(e) => {
-                        const val = e.target.value as PaymentStatus;
-                        updateOrder(inspectingOrder.id, { paymentStatus: val });
-                        setInspectingOrder(prev => prev ? { ...prev, paymentStatus: val } : null);
-                        toast.success(`Payment updated to ${val}`);
-                      }}
-                      className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-medium"
-                    >
-                      <option value="Authorized">Authorized</option>
-                      <option value="Paid">Paid</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Refunded">Refunded</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
-                      Fulfillment Status
-                    </label>
-                    <select
-                      value={inspectingOrder.fulfillmentStatus || 'Unfulfilled'}
-                      onChange={(e) => {
-                        const val = e.target.value as FulfillmentStatus;
-                        updateOrder(inspectingOrder.id, { fulfillmentStatus: val });
-                        setInspectingOrder(prev => prev ? { ...prev, fulfillmentStatus: val } : null);
-                        toast.success(`Fulfillment updated to ${val}`);
-                      }}
-                      className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-medium"
-                    >
-                      <option value="Unfulfilled">Unfulfilled</option>
-                      <option value="Partially Fulfilled">Partially Fulfilled</option>
-                      <option value="Fulfilled">Fulfilled</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
-                      Production Pipeline
-                    </label>
-                    <select
-                      value={inspectingOrder.status}
-                      onChange={(e) => {
-                        const val = e.target.value as OrderStatus;
-                        updateOrderStatus(inspectingOrder.id, val);
-                        setInspectingOrder(prev => prev ? { ...prev, status: val } : null);
-                        toast.success(`Status updated to ${val}`);
-                      }}
-                      className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-medium"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Paid">Paid</option>
-                      <option value="Designing">Designing</option>
-                      <option value="Cutting">Cutting</option>
-                      <option value="Finished">Finished</option>
-                      <option value="Shipped">Shipped</option>
-                      <option value="Delivered">Delivered</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
+                {(() => {
+                  const held = Boolean((orders.find(o => o.id === inspectingOrder.id) ?? inspectingOrder).hold);
+                  const next = permissions && !held ? nextClientStatuses(inspectingOrder.status, permissions) : [];
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
+                          Move to
+                        </label>
+                        <select
+                          value=""
+                          disabled={!canEdit || next.length === 0}
+                          onChange={async (e) => {
+                            const val = e.target.value as OrderStatus;
+                            if (!val) return;
+                            if (await persist(inspectingOrder, { status: val })) {
+                              toast.success(`Status updated to ${ORDER_STATUS_LABELS[val]}`);
+                            }
+                          }}
+                          className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
+                        >
+                          <option value="">{next.length === 0 ? 'No further steps available' : `Current: ${ORDER_STATUS_LABELS[inspectingOrder.status]}`}</option>
+                          {next.map(st => <option key={st} value={st}>{ORDER_STATUS_LABELS[st]}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
+                          Assigned to
+                        </label>
+                        <input
+                          type="text"
+                          value={assignedTo}
+                          disabled={!canEdit}
+                          onChange={(e) => setAssignedTo(e.target.value)}
+                          placeholder="Operator email or name"
+                          className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-oxblood"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+                {inspectingOrder.statusHistory.length > 0 && (
+                  <ol className="text-[11px] text-muted-foreground space-y-0.5 pt-1 border-t border-border/50">
+                    {inspectingOrder.statusHistory.slice(-6).reverse().map((h, i) => (
+                      <li key={`${h.status}-${h.at}-${i}`}>
+                        {ORDER_STATUS_LABELS[h.status]} · {formatOrderDate(h.at)} · {h.by}
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </div>
 
               {/* Customer & Shipping Summary */}
@@ -924,8 +683,9 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                     <span className="font-display">Patron Dossier</span>
                   </div>
                   <div className="text-muted-foreground space-y-1">
-                    <div className="font-medium text-foreground">{inspectingOrder.shippingName || 'Patron'}</div>
+                    <div className="font-medium text-foreground">{inspectingOrder.customerName || 'Customer'}</div>
                     <div className="font-mono text-[11px]">{inspectingOrder.email}</div>
+                    {inspectingOrder.phone && <div className="font-mono text-[11px]">{inspectingOrder.phone}</div>}
                   </div>
                 </div>
 
@@ -935,9 +695,9 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                     <span className="font-display">Destination</span>
                   </div>
                   <div className="text-muted-foreground space-y-0.5">
-                    <div>{inspectingOrder.shippingAddress || 'Standard Delivery'}</div>
+                    <div>{inspectingOrder.shippingAddress || 'No address recorded'}</div>
                     <div>
-                      {[inspectingOrder.shippingCity, inspectingOrder.shippingZip, inspectingOrder.shippingCountry]
+                      {[inspectingOrder.shippingCity, inspectingOrder.shippingState, inspectingOrder.shippingPincode, inspectingOrder.shippingCountry]
                         .filter(Boolean)
                         .join(', ')}
                     </div>
@@ -1023,7 +783,8 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                 <span className="text-[11px] font-bold text-foreground uppercase tracking-wider block font-display">
                   Atelier Logistics & Global Tracking
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {!canSetTracking && <p className="text-[11px] text-muted-foreground">Tracking is set by shipping or order managers.</p>}
+                <fieldset disabled={!canSetTracking} className="grid grid-cols-1 sm:grid-cols-2 gap-3 disabled:opacity-60">
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
                       Carrier
@@ -1032,7 +793,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                       type="text"
                       value={trackingCarrier}
                       onChange={(e) => setTrackingCarrier(e.target.value)}
-                      placeholder="e.g. FedEx International, DHL Express, Antwerp Freight"
+                      placeholder="e.g. Delhivery, Blue Dart, DTDC"
                       className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:border-oxblood focus:ring-1 focus:ring-oxblood"
                     />
                   </div>
@@ -1049,7 +810,7 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                       className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:border-oxblood focus:ring-1 focus:ring-oxblood font-mono"
                     />
                   </div>
-                </div>
+                </fieldset>
 
                 <div>
                   <label className="text-[10px] text-muted-foreground uppercase font-semibold block mb-1">
@@ -1066,13 +827,20 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
 
                 <div className="flex justify-end pt-1">
                   <button
-                    onClick={() => {
-                      updateOrder(inspectingOrder.id, {
-                        trackingCarrier,
-                        trackingNumber,
-                        adminNotes
+                    disabled={!canEdit}
+                    onClick={async () => {
+                      const tracking = { carrier: trackingCarrier, trackingNumber, estimatedDelivery };
+                      const trackingChanged = JSON.stringify(tracking) !== JSON.stringify({
+                        carrier: inspectingOrder.tracking?.carrier ?? '', trackingNumber: inspectingOrder.tracking?.trackingNumber ?? '',
+                        estimatedDelivery: inspectingOrder.tracking?.estimatedDelivery ?? '',
                       });
-                      toast.success('Logistics & notes saved successfully');
+                      const saved = await persist(inspectingOrder, {
+                        // Tracking is set through SET_ORDER_TRACKING (orders.tracking); other roles save notes only.
+                        ...(canSetTracking && trackingChanged ? { tracking } : {}),
+                        assignedTo,
+                        notes: withFreeText(inspectingOrder.adminNotes, adminNotes),
+                      });
+                      if (saved) toast.success('Logistics and notes saved');
                     }}
                     className="bg-oxblood hover:bg-oxblood-deep text-ivory px-4 py-1.5 rounded-lg text-xs font-semibold transition shadow-soft border border-oxblood/40"
                   >
@@ -1089,14 +857,14 @@ export function AdminOrders({ initialFilter = 'all', onSelectTab }: AdminOrdersP
                 Total: {currency}{inspectingOrder.total.toFixed(2)}
               </div>
               <div className="flex items-center gap-2">
-                <button
+                {canExport && <button
                   onClick={() => {
                     handleExportCSV([inspectingOrder]);
                   }}
                   className="bg-background border border-border text-foreground hover:bg-muted px-3 py-1.5 rounded-lg text-xs font-medium transition"
                 >
                   Export Order CSV
-                </button>
+                </button>}
                 <button
                   onClick={() => setInspectingOrder(null)}
                   className="bg-foreground text-background px-4 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90 transition"

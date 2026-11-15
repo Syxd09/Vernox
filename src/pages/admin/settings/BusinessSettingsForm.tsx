@@ -1,0 +1,222 @@
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { AdminNotice, Field } from '@/components/admin/AdminUi';
+import { useSettingsMutations } from '@/lib/data/settings';
+import type { StoreConfig } from '@/types/store';
+import { stateForGstCode } from '@/types/gstStateCodes';
+import { isPlaceholderSeller } from '@/types/settings';
+import { VOLUME_DISCOUNT_LIMITS } from '@/lib/pricing/volumeDiscount';
+import { CUSTOM_RATE_FIELDS, describeSellerFields, draftFromConfig, missingSellerFields, toStorePatch, validateBusiness, type BusinessDraft, type CustomRateField } from './settingsForm';
+import { DEFAULT_CUSTOM_FINISH_RATES } from '@/lib/pricing/customPiece';
+
+const SELLER_TEXT: Array<{ key: keyof BusinessDraft['seller']; label: string; error?: string; hint?: string; mono?: boolean }> = [
+  { key: 'legalName', label: 'Legal name' },
+  { key: 'tradeName', label: 'Trade name' },
+  { key: 'gstin', label: 'GSTIN', error: 'gstin', hint: '15 characters, for example 29ABCDE1234F1Z5.', mono: true },
+  { key: 'stateCode', label: 'GST state code', error: 'stateCode', hint: 'Filled in from the GSTIN.', mono: true },
+  { key: 'address', label: 'Address' },
+  { key: 'city', label: 'City' },
+  { key: 'state', label: 'State' },
+  { key: 'pincode', label: 'PIN code', error: 'pincode', mono: true },
+  { key: 'email', label: 'Billing email', error: 'sellerEmail' },
+  { key: 'phone', label: 'Billing phone', error: 'sellerPhone' },
+];
+
+const Section = ({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) => (
+  <fieldset className="space-y-3">
+    <legend className="font-display text-xl">{title}</legend>
+    {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+    <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+  </fieldset>
+);
+
+/** Seller (GST invoice), contact, COD, lead-time and return-window settings of `settings/store`. */
+export function BusinessSettingsForm({ config }: { config: StoreConfig }) {
+  const { updateStoreConfig } = useSettingsMutations();
+  const [draft, setDraft] = useState<BusinessDraft>(() => draftFromConfig(config));
+  const [saving, setSaving] = useState(false);
+  const errors = validateBusiness(draft);
+  const hasErrors = Object.keys(errors).length > 0;
+  const missing = missingSellerFields(toStorePatch(draft).seller);
+
+  // Re-sync when the stored document loads or changes elsewhere.
+  useEffect(() => { setDraft(draftFromConfig(config)); }, [config]);
+
+  const set = <K extends keyof BusinessDraft>(key: K, value: BusinessDraft[K]) => setDraft(d => ({ ...d, [key]: value }));
+  const setConsultation = <K extends keyof BusinessDraft['consultation']>(key: K, value: BusinessDraft['consultation'][K]) =>
+    setDraft(d => ({ ...d, consultation: { ...d.consultation, [key]: value } }));
+  const setTier = (index: number, key: 'minUnits' | 'percent', value: string) =>
+    setDraft(d => ({ ...d, volumeDiscounts: d.volumeDiscounts.map((t, i) => (i === index ? { ...t, [key]: value } : t)) }));
+  const setRate = (finishId: string, key: CustomRateField, value: string) =>
+    setDraft(d => ({ ...d, customRates: { ...d.customRates, [finishId]: { ...d.customRates[finishId], [key]: value } } }));
+  const setSeller = (key: keyof BusinessDraft['seller'], value: string) =>
+    setDraft(d => {
+      const seller = { ...d.seller, [key]: value };
+      // The GSTIN starts with the GST state code, so the code and state follow it instead of being typed twice.
+      if (key === 'gstin') {
+        const state = stateForGstCode(value.slice(0, 2));
+        if (state) Object.assign(seller, { stateCode: value.slice(0, 2), state });
+      }
+      return { ...d, seller };
+    });
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hasErrors) return;
+    setSaving(true);
+    const ok = await updateStoreConfig(toStorePatch(draft, config));
+    setSaving(false);
+    if (ok) toast.success('Business settings saved.');
+  };
+
+  return (
+    <form onSubmit={save} className="space-y-8 rounded-lg border border-border bg-card p-5 shadow-soft">
+      <Section title="Seller details" hint="Printed on every GST invoice. Shipments cannot be booked until legal name, GSTIN, address, state, state code and PIN are set.">
+        {missing.length > 0 && <div className="sm:col-span-2"><AdminNotice>Still missing for invoices: {describeSellerFields(missing)}.</AdminNotice></div>}
+        {missing.length === 0 && isPlaceholderSeller(draft.seller) && <div className="sm:col-span-2"><AdminNotice>These are placeholder details. Invoices are issued as specimens (SP/…) and nothing here is shown on the storefront until you enter your real GSTIN.</AdminNotice></div>}
+        {SELLER_TEXT.map(f => (
+          <Field key={f.key} label={f.label} hint={f.hint} error={f.error ? errors[f.error] : undefined}>
+            <input value={draft.seller[f.key]} onChange={e => setSeller(f.key, f.key === 'gstin' ? e.target.value.toUpperCase() : e.target.value)}
+              className={`field${f.mono ? ' font-mono' : ''}`} />
+          </Field>
+        ))}
+      </Section>
+
+      <Section title="Contact details" hint="Shown on the storefront. A field left empty is hidden from customers.">
+        <Field label="WhatsApp number" hint="With country code, for example 919876543210." error={errors.whatsappNumber}>
+          <input value={draft.whatsappNumber} onChange={e => set('whatsappNumber', e.target.value)} className="field font-mono" />
+        </Field>
+        <Field label="Support phone" error={errors.supportPhone}>
+          <input value={draft.supportPhone} onChange={e => set('supportPhone', e.target.value)} className="field font-mono" />
+        </Field>
+        <Field label="Support email" error={errors.supportEmail}>
+          <input type="email" value={draft.supportEmail} onChange={e => set('supportEmail', e.target.value)} className="field" />
+        </Field>
+        <Field label="Support hours"><input value={draft.supportHours} onChange={e => set('supportHours', e.target.value)} placeholder="Mon to Sat, 10 am to 6 pm IST" className="field" /></Field>
+        <div className="sm:col-span-2">
+          <Field label="Workshop address"><input value={draft.workshopAddress} onChange={e => set('workshopAddress', e.target.value)} className="field" /></Field>
+        </div>
+        <Field label="Grievance officer" hint="Named on the policy pages (Consumer Protection (E-Commerce) Rules and DPDP Act).">
+          <input value={draft.grievanceOfficerName} onChange={e => set('grievanceOfficerName', e.target.value)} className="field" />
+        </Field>
+        <Field label="Grievance officer email" error={errors.grievanceOfficerEmail}>
+          <input type="email" value={draft.grievanceOfficerEmail} onChange={e => set('grievanceOfficerEmail', e.target.value)} className="field" />
+        </Field>
+      </Section>
+
+      <Section title="Cash on delivery" hint="Custom studio pieces are always prepaid.">
+        <label className="flex min-h-11 items-center gap-3 text-sm sm:col-span-2">
+          <input type="checkbox" checked={draft.codEnabled} onChange={e => set('codEnabled', e.target.checked)} className="h-5 w-5 accent-primary" />
+          <span className="font-semibold">Offer cash on delivery</span>
+        </label>
+        <label className="flex min-h-11 items-start gap-3 text-sm sm:col-span-2">
+          <input type="checkbox" checked={draft.codOtpRequired} onChange={e => set('codOtpRequired', e.target.checked)} className="mt-0.5 h-5 w-5 accent-primary" />
+          <span>
+            <span className="font-semibold">Confirm COD orders with an SMS code</span>
+            <span className="block text-muted-foreground">Customers must enter a one-time code sent to their mobile. Works once MSG91_AUTH_KEY and MSG91_OTP_TEMPLATE_ID are set (see Launch setup); until then COD orders are flagged for you to confirm by phone.</span>
+          </span>
+        </label>
+        <Field label="COD fee (₹)" error={errors.codFee}><input inputMode="decimal" value={draft.codFee} onChange={e => set('codFee', e.target.value)} className="field font-mono" /></Field>
+        <Field label="Largest COD order (₹)" error={errors.codMaxOrderValue}><input inputMode="decimal" value={draft.codMaxOrderValue} onChange={e => set('codMaxOrderValue', e.target.value)} className="field font-mono" /></Field>
+      </Section>
+
+      <Section title="Design consultation" hint="A paid service: a designer proposes pieces on the customer's own walls. The fee includes GST, like catalogue prices.">
+        <label className="flex min-h-11 items-center gap-3 text-sm sm:col-span-2">
+          <input type="checkbox" checked={draft.consultation.enabled} onChange={e => setConsultation('enabled', e.target.checked)} className="h-5 w-5 accent-primary" />
+          <span className="font-semibold">Offer design consultations</span>
+        </label>
+        <Field label="Fee (₹, incl. GST)" error={errors.consultationPrice}><input inputMode="decimal" value={draft.consultation.priceInr} onChange={e => setConsultation('priceInr', e.target.value)} className="field font-mono" /></Field>
+        <Field label="Turnaround (days)" hint="Shown to customers and used as the designer queue's deadline." error={errors.turnaroundDays}>
+          <input inputMode="numeric" value={draft.consultation.turnaroundDays} onChange={e => setConsultation('turnaroundDays', e.target.value)} className="field font-mono" />
+        </Field>
+        <label className="flex min-h-11 items-center gap-3 text-sm sm:col-span-2">
+          <input type="checkbox" checked={draft.consultation.creditTowardsOrder} onChange={e => setConsultation('creditTowardsOrder', e.target.checked)} className="h-5 w-5 accent-primary" />
+          <span className="font-semibold">Credit the fee towards the customer's next order</span>
+        </label>
+        <Field label="Credit valid for (days)" error={errors.creditValidityDays}>
+          <input inputMode="numeric" value={draft.consultation.creditValidityDays} onChange={e => setConsultation('creditValidityDays', e.target.value)} className="field font-mono" />
+        </Field>
+        <Field label="SAC code" hint="998391: specialty (interior) design services." error={errors.sacCode}>
+          <input value={draft.consultation.sacCode} onChange={e => setConsultation('sacCode', e.target.value)} className="field font-mono" />
+        </Field>
+        <Field label="GST on the consultation (%)" hint="Services are taxed apart from products: 18% for SAC 998391." error={errors.consultationGst}>
+          <input inputMode="decimal" value={draft.consultation.gstRatePercent} onChange={e => setConsultation('gstRatePercent', e.target.value)} className="field font-mono" />
+        </Field>
+      </Section>
+
+      <Section title="Volume discounts" hint="Taken off the order automatically by the number of pieces in it (catalogue and studio together), before GST is worked out. A coupon is not added on top: the order gets whichever is larger (a consultation credit still applies). Remove every tier to switch volume discounts off.">
+        {draft.volumeDiscounts.map((tier, i) => (
+          <div key={i} className="flex items-end gap-2 sm:col-span-2">
+            <Field label={`From (pieces) – tier ${i + 1}`}>
+              <input inputMode="numeric" value={tier.minUnits} onChange={e => setTier(i, 'minUnits', e.target.value)} className="field font-mono" />
+            </Field>
+            <Field label="Discount (%)">
+              <input inputMode="decimal" value={tier.percent} onChange={e => setTier(i, 'percent', e.target.value)} className="field font-mono" />
+            </Field>
+            <button type="button" onClick={() => set('volumeDiscounts', draft.volumeDiscounts.filter((_, j) => j !== i))} className="btn-secondary mb-0.5" aria-label={`Remove tier ${i + 1}`}>Remove</button>
+          </div>
+        ))}
+        {draft.volumeDiscounts.length === 0 && <p className="text-sm text-muted-foreground sm:col-span-2">Volume discounts are off.</p>}
+        {errors.volumeDiscounts && <p role="alert" className="text-sm text-destructive sm:col-span-2">{errors.volumeDiscounts}</p>}
+        {draft.volumeDiscounts.length < VOLUME_DISCOUNT_LIMITS.maxTiers && (
+          <div className="sm:col-span-2">
+            <button type="button" onClick={() => set('volumeDiscounts', [...draft.volumeDiscounts, { minUnits: '', percent: '' }])} className="btn-secondary">Add a tier</button>
+          </div>
+        )}
+      </Section>
+
+      <fieldset className="space-y-3">
+        <legend className="font-display text-xl">Custom piece rates (Studio)</legend>
+        <p className="text-sm text-muted-foreground">
+          What the Studio charges per finish, including GST: setup and plate area, plus cutting beyond the included length and
+          cut-outs beyond the included count (so detailed and jali designs cost more), and engraving. Thicker sheets multiply
+          the cutting part. These start as placeholders: check them with your workshop.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[56rem] text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground">
+                <th className="py-1 pr-2 font-medium">Finish</th>
+                {CUSTOM_RATE_FIELDS.map(f => <th key={f.key} className="py-1 pr-2 font-medium">{f.label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(draft.customRates).map(([id, values]) => (
+                <tr key={id} className="border-t border-border">
+                  <td className="py-1 pr-2">{DEFAULT_CUSTOM_FINISH_RATES[id]?.label ?? id}</td>
+                  {CUSTOM_RATE_FIELDS.map(f => (
+                    <td key={f.key} className="py-1 pr-2">
+                      <input inputMode="decimal" aria-label={`${DEFAULT_CUSTOM_FINISH_RATES[id]?.label ?? id}: ${f.label}`} value={values[f.key]}
+                        onChange={e => setRate(id, f.key, e.target.value)} className="field w-24 font-mono" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {errors.customRates && <p role="alert" className="text-sm text-destructive">{errors.customRates}</p>}
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={draft.customRatesConfirmed} onChange={e => set('customRatesConfirmed', e.target.checked)} className="h-4 w-4" />
+          I have checked these rates with the workshop (saves them and clears the launch checklist item)
+        </label>
+      </fieldset>
+
+      <Section title="Lead times and returns">
+        <Field label="Standard lead time (days)" hint="Production days for catalogue items without their own." error={errors.defaultLeadTimeDays}>
+          <input inputMode="numeric" value={draft.defaultLeadTimeDays} onChange={e => set('defaultLeadTimeDays', e.target.value)} className="field font-mono" />
+        </Field>
+        <Field label="Custom design lead time (days)" error={errors.customLeadTimeDays}>
+          <input inputMode="numeric" value={draft.customLeadTimeDays} onChange={e => set('customLeadTimeDays', e.target.value)} className="field font-mono" />
+        </Field>
+        <Field label="Return window (days after delivery)" error={errors.returnWindowDays}>
+          <input inputMode="numeric" value={draft.returnWindowDays} onChange={e => set('returnWindowDays', e.target.value)} className="field font-mono" />
+        </Field>
+      </Section>
+
+      <div className="flex justify-end border-t border-border pt-4">
+        <button type="submit" disabled={saving || hasErrors} className="btn-primary">{saving ? 'Saving…' : 'Save business settings'}</button>
+      </div>
+    </form>
+  );
+}

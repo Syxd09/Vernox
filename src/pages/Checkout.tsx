@@ -1,793 +1,578 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useSeo } from '@/lib/seo';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Phone, Tag, ShieldCheck, Truck } from 'lucide-react';
 import { SiteHeader } from '@/components/shop/SiteHeader';
+import { PageHeader } from '@/components/shop/PageHeader';
 import { SiteFooter } from '@/components/shop/SiteFooter';
+import { EmptyState } from '@/components/shop/StateViews';
+import { CodOtpStep, type CodOtpState } from '@/components/shop/CodOtpStep';
 import { ShapeThumb } from '@/components/shop/ShapeThumb';
 import { useCart } from '@/lib/cartContext';
 import { useCatalog } from '@/lib/catalogContext';
-import { toast } from 'sonner';
-import { CreditCard, Landmark, QrCode, Smartphone, X, Phone, Tag } from 'lucide-react';
-import { calculateCouponDiscount } from '@/lib/couponValidator';
+import { finishName } from '@/lib/catalog';
+import { GSTIN_PATTERN } from '@/types/gstStateCodes';
+import { rememberConfirmationEmail } from '@/lib/orders/confirmationEmail';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { trackStoreEvent } from '@/lib/storeAnalytics';
+import { previewCoupon } from '@/lib/data/couponPreview';
+import {
+  CheckoutError, cartHasCustomItem, createCheckoutIntent, openRazorpay, verifyPayment,
+  type CheckoutCustomer, type CheckoutIntent, type PaymentMethod,
+} from '@/lib/checkout/checkoutApi';
+import { volumeDiscountLabel } from '@/lib/pricing/volumeDiscount';
+import { formatDeliveryDate } from '@/lib/shipping/deliveryEstimate';
+import { useDeliveryEstimate } from '@/lib/shipping/useDeliveryEstimate';
+import { usePincodeAutofill } from '@/lib/shipping/usePincodeAutofill';
+import { CUSTOM_PRODUCT_ID } from '@/types/products';
+import { isCreditCode } from '@/lib/consultations/consultationModel';
+import { useAutoApplyConsultationCredit } from '@/lib/consultations/useCreditAutoApply';
+import { trackSpaceEvent } from '@/lib/spaces/analytics';
+import {
+  ADDRESS_LIMITS, INDIAN_STATES_AND_UTS, normalizeIndianMobile, validateAddress, type AddressErrors, type AddressForm,
+} from '@/lib/checkout/validation';
+
+const inputClass =
+  'w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition';
+const labelClass = 'text-sm font-medium text-foreground block mb-1';
+
+type Phase = 'details' | 'creating' | 'ready' | 'paying' | 'verifying';
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="text-xs text-destructive mt-1" role="alert">{message}</p> : null;
+}
 
 export default function Checkout() {
-  const { 
-    items, subtotal, clear, 
-    appliedCoupon: cartAppliedCoupon, 
-    applyCoupon: cartApplyCoupon, 
-    removeCoupon: cartRemoveCoupon 
+  useSeo({ title: 'Checkout', noindex: true });
+  const {
+    items, subtotal, clear,
+    appliedCoupon: cartCoupon, applyCoupon: cartApplyCoupon, removeCoupon: cartRemoveCoupon,
   } = useCart();
-  const { addOrder, storeConfig, currentCustomer, coupons } = useCatalog();
-  const [placing, setPlacing] = useState(false);
+  const { storeConfig } = useCatalog();
+  const { profile } = useAuth();
+  useAutoApplyConsultationCredit();
   const navigate = useNavigate();
+  const currency = storeConfig.currency;
 
-  // Coupon State
-  const [couponInput, setCouponInput] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number; description?: string } | null>(
-    () => cartAppliedCoupon || null
-  );
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
-
-  // Track checkout visit
-  useEffect(() => {
-    trackStoreEvent('checkout');
-  }, []);
-
-  // Sync if cartAppliedCoupon was set from the Cart page
-  useEffect(() => {
-    if (cartAppliedCoupon && !appliedCoupon) {
-      setAppliedCoupon(cartAppliedCoupon);
-    }
-  }, [cartAppliedCoupon]);
-
-  // Real-time recalculation of coupon discount against current cart items
-  const discount = useMemo(() => {
-    if (!appliedCoupon) return 0;
-    const reval = calculateCouponDiscount({
-      code: appliedCoupon.code,
-      cartSubtotal: subtotal,
-      cartItems: items.map(i => ({
-        productId: i.productId,
-        productSlug: i.productSlug,
-        unitPrice: i.unitPrice,
-        quantity: i.quantity,
-      })),
-      currency: storeConfig.currency || '₹',
-    }, coupons);
-    return reval.isValid ? reval.discountAmount : appliedCoupon.discountAmount;
-  }, [appliedCoupon, subtotal, items, coupons, storeConfig.currency]);
-
-  const discountedSubtotal = Math.max(0, subtotal - discount);
-  const shipping = subtotal > storeConfig.freeShippingThreshold ? 0 : storeConfig.shippingFee;
-  const tax = discountedSubtotal * (storeConfig.taxRate / 100);
-  const total = discountedSubtotal + shipping + tax;
-
-  const [form, setForm] = useState({
-    email: currentCustomer?.email || '',
-    name: currentCustomer?.name || '',
-    address: currentCustomer?.address || '',
-    city: currentCustomer?.city || '',
-    zip: currentCustomer?.zip || '',
-    country: currentCustomer?.country || 'United States',
+  const [form, setForm] = useState<AddressForm>({
+    name: '', email: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India',
   });
+  const [errors, setErrors] = useState<AddressErrors>({});
+  // Optional business purchase: the server validates the GSTIN and prints both on the tax invoice.
+  const [business, setBusiness] = useState({ open: false, companyName: '', gstin: '' });
+  const [businessErrors, setBusinessErrors] = useState<{ companyName?: string; gstin?: string }>({});
+  const prefilled = useRef(false);
 
-  // Prefill details if current customer loads asynchronously
+  // Prefill once from the signed-in customer's profile; never overwrite what they have typed.
   useEffect(() => {
-    if (currentCustomer) {
-      setForm({
-        email: currentCustomer.email,
-        name: currentCustomer.name,
-        address: currentCustomer.address || '',
-        city: currentCustomer.city || '',
-        zip: currentCustomer.zip || '',
-        country: currentCustomer.country || 'United States',
-      });
-    }
-  }, [currentCustomer]);
+    if (!profile || prefilled.current) return;
+    prefilled.current = true;
+    setForm(prev => ({
+      name: prev.name || profile.name || '',
+      email: prev.email || profile.email || '',
+      phone: prev.phone || profile.phone || '',
+      address: prev.address || profile.address || '',
+      city: prev.city || profile.city || '',
+      state: prev.state || profile.state || '',
+      pincode: prev.pincode || profile.pincode || '',
+      country: 'India',
+    }));
+  }, [profile]);
 
-  // Multiple Payment Methods state
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'razorpay'>('card');
-  
-  // UPI Inputs
-  const [upiId, setUpiId] = useState('');
+  useEffect(() => { trackStoreEvent('checkout'); }, []);
 
-  // Razorpay script verification / dynamic loading
-  useEffect(() => {
-    if (typeof (window as any).Razorpay !== 'undefined') return;
-    if (document.querySelector('script[src*="checkout.razorpay.com"]')) return;
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-  }, []);
+  // Coupon (validated by the server; the discount shown after "Continue" is the server's)
+  const [couponInput, setCouponInput] = useState('');
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const couponCode = cartCoupon?.code;
 
-  const getCurrencyCode = (symbol: string) => {
-    switch (symbol) {
-      case '₹': return 'INR';
-      case '€': return 'EUR';
-      case '£': return 'GBP';
-      case '¥': return 'JPY';
-      case '$': return 'INR';
-      default: return 'INR';
-    }
-  };
-
-  const [idempotencyKey, setIdempotencyKey] = useState<string>(() => crypto.randomUUID());
-
-  const triggerRazorpayCheckout = async (preferredMethod?: 'card' | 'upi' | 'netbanking') => {
-    if (placing) return;
-    const currencyCode = getCurrencyCode(storeConfig.currency);
-    setPlacing(true);
+  const applyCouponCode = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCheckingCoupon(true);
     try {
-      // 1. Authoritative Server Order Intent Creation with Inventory Reservation & Idempotency Key
-      const res = await fetch('/api/checkout-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: items.map(item => ({
-            productId: item.productId,
-            productSlug: item.productSlug,
-            productName: item.productName,
-            sizeLabel: item.sizeLabel,
-            widthMm: item.widthMm,
-            heightMm: item.heightMm,
-            finish: item.finish,
-            unitPrice: item.unitPrice,
-            quantity: item.quantity,
-            shapeId: item.shapeId,
-            customDesignRef: item.customDesignRef
-          })),
-          currency: currencyCode,
-          taxRate: storeConfig.taxRate,
-          freeShippingThreshold: storeConfig.freeShippingThreshold,
-          shippingFee: storeConfig.shippingFee,
-          couponCode: appliedCoupon?.code || undefined,
-          idempotencyKey,
-          customer: {
-            email: form.email.trim().toLowerCase(),
-            name: form.name.trim(),
-            address: form.address,
-            city: form.city,
-            zip: form.zip,
-            country: form.country,
-          }
-        })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: 'Failed to create checkout intent' }));
-        throw new Error(errData.error || 'Server rejected checkout intent');
-      }
-
-      const orderData = await res.json();
-      
-      // Development mode mock checkout simulation when gateway credentials reject in dev
-      if (orderData.isDevFallback) {
-        toast.info('Development Gateway: Simulating instant order confirmation…');
-        const mockPaymentId = `pay_dev_${Date.now()}`;
-        const mockSignature = `sig_dev_${Date.now()}`;
-        const verifyRes = await fetch('/api/verify-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            razorpay_payment_id: mockPaymentId,
-            razorpay_order_id: orderData.order_id,
-            razorpay_signature: mockSignature,
-            orderData: {
-              email: form.email,
-              shippingName: form.name,
-              shippingAddress: form.address,
-              shippingCity: form.city,
-              shippingZip: form.zip,
-              shippingCountry: form.country,
-            }
-          })
+      const result = await previewCoupon({ code, items, email: form.email.trim() });
+      if (result.isValid && result.couponCode) {
+        cartApplyCoupon({
+          code: result.couponCode,
+          discountAmount: result.discountAmount,
+          description: result.description,
+          discountType: result.discountType,
+          discountValue: result.discountValue,
         });
-
-        const verifyData = await verifyRes.json().catch(() => ({}));
-        if (verifyRes.ok && verifyData.success) {
-          const verifiedId = verifyData.orderId || orderData.order_id;
-          addOrder({
-            id: verifiedId,
-            items,
-            total: orderData.pricing?.total || total,
-            placedAt: Date.now(),
-            email: form.email,
-            shippingName: form.name,
-            shippingAddress: form.address,
-            shippingCity: form.city,
-            shippingZip: form.zip,
-            shippingCountry: form.country,
-            adminNotes: `Dev Mode Mock Order: ${mockPaymentId}`
-          });
-          clear();
-          toast.success("Order confirmed successfully (Development Mode)");
-          navigate(`/order-confirmation/${verifiedId}`);
-          return;
-        }
+        setCouponInput('');
+        toast.success(`Coupon ${result.couponCode} will be applied to your order.`);
+      } else {
+        toast.error(result.error || 'This coupon cannot be applied.');
       }
-
-      // Ensure Razorpay SDK is loaded
-      if (typeof (window as any).Razorpay === 'undefined') {
-        throw new Error('Payment gateway SDK is loading. Please try again in a moment.');
-      }
-
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
-      if (!razorpayKey) {
-        throw new Error('Razorpay Key ID is not configured. Please check VITE_RAZORPAY_KEY_ID in .env');
-      }
-
-      const options: any = {
-        key: razorpayKey,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: storeConfig.storeName,
-        description: items.length === 1 ? items[0].productName : `${items.length} Atelier Masterworks`,
-        order_id: orderData.order_id,
-        handler: async function (response: any) {
-          const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = response;
-          try {
-            // 2. Authoritative Cryptographic HMAC Signature Verification against server order intent
-            const verifyRes = await fetch('/api/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_payment_id,
-                razorpay_order_id,
-                razorpay_signature,
-                orderData: {
-                  email: form.email,
-                  shippingName: form.name,
-                  shippingAddress: form.address,
-                  shippingCity: form.city,
-                  shippingZip: form.zip,
-                  shippingCountry: form.country,
-                }
-              })
-            });
-
-            const verifyData = await verifyRes.json().catch(() => ({}));
-            if (verifyRes.ok && verifyData.success) {
-              const verifiedId = verifyData.orderId || razorpay_order_id;
-              addOrder({
-                id: verifiedId,
-                items,
-                total: orderData.pricing?.total || total,
-                placedAt: Date.now(),
-                email: form.email,
-                shippingName: form.name,
-                shippingAddress: form.address,
-                shippingCity: form.city,
-                shippingZip: form.zip,
-                shippingCountry: form.country,
-                adminNotes: `Verified Razorpay Payment: ${razorpay_payment_id}`
-              });
-              localStorage.setItem('vernox-customer-email', form.email.trim().toLowerCase());
-              trackStoreEvent('purchase', { orderId: verifiedId, orderTotal: orderData.pricing?.total || total });
-              clear();
-              toast.success('Payment verified & order confirmed!');
-              navigate(`/order-confirmation/${verifiedId}`);
-            } else {
-              toast.error(verifyData.error || 'Payment signature verification failed.');
-              setPlacing(false);
-            }
-          } catch (err: any) {
-            toast.error(err.message || 'Signature verification network failure.');
-            setPlacing(false);
-          }
-        },
-        prefill: { 
-          name: form.name, 
-          email: form.email,
-          ...(preferredMethod === 'upi' && upiId ? { vpa: upiId } : {})
-        },
-        theme: { 
-          color: typeof window !== 'undefined' 
-            ? getComputedStyle(document.documentElement).getPropertyValue('--burgundy').trim() || '#5B262C' 
-            : '#5B262C' 
-        },
-        modal: {
-          ondismiss: function () {
-            toast.error('Payment window closed.');
-            setPlacing(false);
-            // Cycle idempotency key so that next intent attempt is fresh
-            setIdempotencyKey(crypto.randomUUID());
-          }
-        }
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        toast.error(response.error?.description || 'Payment failed.');
-        setPlacing(false);
-        setIdempotencyKey(crypto.randomUUID());
-      });
-      rzp.open();
-    } catch (err: any) {
-      toast.error(err.message || 'Checkout initiation error.');
-      setPlacing(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not check the coupon right now.');
+    } finally {
+      setCheckingCoupon(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (items.length === 0) { toast.error('Cart is empty'); return; }
-    
-    // Route all payment options through secure server gateway
-    triggerRazorpayCheckout(paymentMethod as any);
+  // One checkout attempt = one idempotency key + one server order. Any change to what is being
+  // bought or where it ships invalidates the attempt and starts a new one.
+  // Delivery check for the entered PIN code; COD needs a COD-serviceable PIN and a catalogue-only cart.
+  const deliveryProductId = cartHasCustomItem(items) ? CUSTOM_PRODUCT_ID : undefined;
+  const delivery = useDeliveryEstimate(form.pincode, deliveryProductId);
+  // Typing the PIN fills an empty city/state (never overwrites typed values).
+  usePincodeAutofill(form.pincode, form, patch => setForm(prev => ({ ...prev, ...patch })), deliveryProductId);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('prepaid');
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const codBlockedReason: string | null =
+    storeConfig.codEnabled === false ? 'Cash on delivery is not available right now.'
+      : cartHasCustomItem(items) ? 'Custom studio designs are prepaid only.'
+        : !delivery.isValidPincode ? 'Enter your PIN code to check cash on delivery.'
+          : delivery.estimate && !delivery.estimate.codAvailable ? 'Cash on delivery is not available for this PIN code.'
+            : null;
+  useEffect(() => {
+    if (codBlockedReason && paymentMethod === 'cod' && !delivery.isLoading) setPaymentMethod('prepaid');
+  }, [codBlockedReason, paymentMethod, delivery.isLoading]);
+  const codFee = storeConfig.codFee ?? 0;
+  // SMS confirmation of the mobile number for COD; `required` stays true until the step says otherwise.
+  const [codOtp, setCodOtp] = useState<CodOtpState>({ required: true, token: null });
+  const [codOtpEpoch, setCodOtpEpoch] = useState(0);
+  const codPhone = normalizeIndianMobile(form.phone);
+  const awaitingCodOtp = paymentMethod === 'cod' && codOtp.required && !codOtp.token;
+
+  const [phase, setPhase] = useState<Phase>('details');
+  const [intent, setIntent] = useState<CheckoutIntent | null>(null);
+  const [intentFingerprint, setIntentFingerprint] = useState('');
+  // One key per distinct request: a retry of the same request (lost response) reuses it and gets the same order;
+  // any change to items, address, coupon or payment gets a new key instead of a conflict or a stale order.
+  const idempotencyKey = useRef({ key: crypto.randomUUID(), fingerprint: '' });
+
+  const customer: CheckoutCustomer = useMemo(() => ({
+    email: form.email.trim().toLowerCase(),
+    name: form.name.trim(),
+    phone: normalizeIndianMobile(form.phone) ?? form.phone.trim(),
+    address: form.address.trim(),
+    city: form.city.trim(),
+    state: form.state,
+    pincode: form.pincode.trim(),
+    country: 'India',
+    ...(business.open && business.gstin.trim()
+      ? { companyName: business.companyName.trim(), gstin: business.gstin.trim().toUpperCase() }
+      : {}),
+  }), [form, business]);
+
+  const fingerprint = useMemo(
+    () => JSON.stringify({ customer, couponCode, paymentMethod, items: items.map(i => [i.productId, i.sizeLabel, i.finish, i.quantity, i.customDesignRef]) }),
+    [customer, couponCode, paymentMethod, items],
+  );
+  const intentIsCurrent = intent !== null && fingerprint === intentFingerprint;
+
+  useEffect(() => {
+    if (intent && !intentIsCurrent && phase === 'ready') {
+      setIntent(null);
+      setPhase('details');
+      idempotencyKey.current = { key: crypto.randomUUID(), fingerprint: '' };
+    }
+  }, [intent, intentIsCurrent, phase]);
+
+  const activeIntent = intentIsCurrent ? intent : null;
+  const pricing = activeIntent?.pricing ?? null;
+
+  const describeError = (err: unknown): string => {
+    if (err instanceof CheckoutError) {
+      switch (err.code) {
+        case 'INSUFFICIENT_STOCK': return `Some items are no longer available in the requested quantity. ${err.message}`;
+        case 'INVALID_ITEM': return `An item in your cart is no longer available. ${err.message}`;
+        case 'INVALID_COUPON': return `Coupon problem: ${err.message}`;
+        case 'COD_NOT_AVAILABLE':
+        case 'COD_OTP_REQUIRED':
+        case 'COD_OTP_INVALID': return err.message;
+        default: return err.message;
+      }
+    }
+    return err instanceof Error ? err.message : 'Something went wrong. Please try again.';
   };
+
+  const handleContinue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (items.length === 0) { toast.error('Your cart is empty.'); return; }
+    const found = validateAddress(form);
+    setErrors(found);
+    const gstin = business.gstin.trim().toUpperCase();
+    const foundBusiness = business.open && gstin
+      ? {
+        ...(GSTIN_PATTERN.test(gstin) ? {} : { gstin: 'Enter a valid 15-character GSTIN, e.g. 29ABCDE1234F1Z5.' }),
+        ...(business.companyName.trim() ? {} : { companyName: 'Enter the business name registered with this GSTIN.' }),
+      }
+      : {};
+    setBusinessErrors(foundBusiness);
+    if (Object.keys(found).length > 0 || Object.keys(foundBusiness).length > 0) { toast.error('Please correct the highlighted fields.'); return; }
+    if (delivery.estimate && !delivery.estimate.serviceable) {
+      setErrors(prev => ({ ...prev, pincode: 'We do not deliver to this PIN code yet.' }));
+      toast.error('We do not deliver to this PIN code yet.');
+      return;
+    }
+
+    setPhase('creating');
+    try {
+      if (idempotencyKey.current.fingerprint && idempotencyKey.current.fingerprint !== fingerprint) {
+        idempotencyKey.current = { key: crypto.randomUUID(), fingerprint };
+      }
+      idempotencyKey.current.fingerprint = fingerprint;
+      const created = await createCheckoutIntent({ items, couponCode, idempotencyKey: idempotencyKey.current.key, customer, paymentMethod, codVerificationToken: codOtp.token ?? undefined, whatsappOptIn });
+      if (created.paymentMethod === 'cod') {
+        // Confirmed at creation: there is no payment step.
+        trackStoreEvent('purchase', { orderId: created.orderId, orderTotal: created.pricing.total });
+        clear();
+        toast.success('Order placed. Pay in cash when it is delivered.');
+        rememberConfirmationEmail(created.orderId, customer.email);
+        navigate(`/order-confirmation/${created.orderId}`);
+        return;
+      }
+      setIntent(created);
+      setIntentFingerprint(fingerprint);
+      setPhase('ready');
+      toast.success('Order total confirmed. Review it and pay to place your order.');
+    } catch (err) {
+      setPhase('details');
+      toast.error(describeError(err));
+      if (err instanceof CheckoutError && err.code === 'INVALID_COUPON') cartRemoveCoupon();
+      if (err instanceof CheckoutError && err.code === 'COD_NOT_AVAILABLE') setPaymentMethod('prepaid');
+      if (err instanceof CheckoutError && (err.code === 'COD_OTP_REQUIRED' || err.code === 'COD_OTP_INVALID')) {
+        // The code was used up or expired: ask for a fresh one.
+        setCodOtp({ required: true, token: null });
+        setCodOtpEpoch(n => n + 1);
+      }
+    }
+  };
+
+  const handlePay = async () => {
+    if (!intent || !intentIsCurrent) return;
+    setPhase('paying');
+    try {
+      const outcome = await openRazorpay(intent, {
+        storeName: storeConfig.storeName,
+        description: items.length === 1 ? items[0].productName : `${items.length} items`,
+        customer,
+        themeColor: '#5B262C',
+        onPaymentFailed: message => toast.error(`${message} You can try again in the payment window.`),
+      });
+      if (outcome.kind === 'dismissed') {
+        setPhase('ready');
+        toast.info('Payment window closed. Your order is saved as pending; press Pay to try again.');
+        return;
+      }
+      setPhase('verifying');
+      const verified = await verifyPayment(outcome.payment);
+      trackStoreEvent('purchase', { orderId: verified.orderId, orderTotal: intent.pricing.total });
+      if (isCreditCode(couponCode)) trackSpaceEvent('consultation_credit_redeemed', { orderId: verified.orderId });
+      clear();
+      toast.success('Payment received. Your order is confirmed.');
+      rememberConfirmationEmail(verified.orderId, customer.email);
+      navigate(`/order-confirmation/${verified.orderId}`);
+    } catch (err) {
+      // Money may have moved: say so explicitly rather than implying nothing happened.
+      setPhase('ready');
+      toast.error(`${describeError(err)} If you were charged, contact support with order ${intent.orderNumber}.`);
+    }
+  };
+
+  const busy = phase === 'creating' || phase === 'paying' || phase === 'verifying';
+  const set = (key: keyof AddressForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const money = (n: number) => `${currency}${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Opened from a stale link or Back after an order: say so instead of an address form that cannot be submitted.
+  if (items.length === 0 && phase === 'details' && !intent) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <SiteHeader />
+        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14 w-full flex-1">
+          <h1 className="sr-only">Checkout</h1>
+          <EmptyState title="Your cart is empty" action={{ label: 'Shop designs', to: '/shop' }} />
+        </section>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
 
-      {/* ATELIER CHECKOUT BANNER */}
-      <div className="bg-[#1C1615] text-[#E8DFD3] text-[10px] tracking-[0.24em] uppercase py-2.5 px-6 border-b border-white/10 font-sans">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <span className="font-brand tracking-[0.26em]">VERNOX ATELIER</span>
-          <span className="hidden sm:inline-block text-white/60">Complimentary Insured Crated Transit</span>
-          <span className="text-white/80 font-sans text-[10px]">Secure Checkout</span>
-        </div>
-      </div>
-
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14 w-full grid lg:grid-cols-[1.1fr_400px] gap-10 flex-1">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Header & Stepper */}
+        <form onSubmit={handleContinue} className="space-y-8" noValidate>
           <div>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground mb-2">
-              <Link to="/cart" className="hover:text-burgundy transition">Cart</Link>
-              <span>/</span>
-              <span className="text-burgundy font-semibold">Secure Checkout</span>
-            </div>
-            <h1 className="font-display text-3xl sm:text-4xl text-burgundy leading-tight font-semibold">
-              Atelier Commission Checkout
-            </h1>
-            <p className="text-muted-foreground text-xs mt-1 font-serif-italic">
-              Provide recipient specifications for custom packaging, hallmarking, and insured door-to-door delivery.
-            </p>
+            <PageHeader title="Checkout" crumbs={[{ label: 'Cart', to: '/cart' }, { label: 'Checkout' }]} />
           </div>
 
-          {/* Step Badges */}
-          <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider font-semibold border-y border-border/70 py-3">
-            <div className="flex items-center gap-1.5 text-burgundy">
-              <span className="font-mono text-xs font-bold text-burgundy">01.</span>
-              <span>Destination</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-burgundy font-bold">
-              <span className="font-mono text-xs font-bold text-gold">02.</span>
-              <span>Payment</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-muted-foreground/60">
-              <span className="font-mono text-xs font-bold text-muted-foreground/40">03.</span>
-              <span>Hallmark</span>
-            </div>
-          </div>
-          
-          {/* Contact Information */}
-          <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-burgundy font-semibold">1. Recipient & Contact Information</h2>
-              <span className="text-[10px] text-muted-foreground font-mono">Instant Confirmation</span>
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-                Email Address (Receipt & DHL Tracking)
-              </label>
-              <input required type="email" placeholder="client@architecturalstudio.com" value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy font-sans transition" />
-            </div>
-          </div>
+          <div className="bg-card border border-border/70 rounded-lg p-5 shadow-soft space-y-4">
+            <h2 className="font-display text-lg text-burgundy font-semibold border-b border-border/60 pb-2">Contact and delivery</h2>
 
-          {/* Shipping Destination */}
-          <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-burgundy font-semibold">2. Insured Freight Delivery Destination</h2>
-              <span className="text-[10px] text-gold uppercase font-semibold font-mono tracking-wider">
-                Archival Crate
-              </span>
-            </div>
-
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-                Recipient Full Name / Studio Attention
-              </label>
-              <input required placeholder="e.g. Jean Dupont" value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
-            </div>
-
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-                Street Address, Suite or Gallery Floor
-              </label>
-              <input required placeholder="Kloosterstraat 44, Suite 3B" value={form.address}
-                onChange={e => setForm({ ...form, address: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-                  City / Locality
-                </label>
-                <input required placeholder="Antwerp / London / New York" value={form.city}
-                  onChange={e => setForm({ ...form, city: e.target.value })}
-                  className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
+                <label className={labelClass} htmlFor="co-name">Full name</label>
+                <input id="co-name" autoComplete="name" maxLength={ADDRESS_LIMITS.name} value={form.name} onChange={set('name')} className={inputClass} />
+                <FieldError message={errors.name} />
               </div>
               <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-                  ZIP / Postal Code
-                </label>
-                <input required placeholder="2000" value={form.zip}
-                  onChange={e => setForm({ ...form, zip: e.target.value })}
-                  className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
+                <label className={labelClass} htmlFor="co-phone">Mobile number</label>
+                <input id="co-phone" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="10-digit mobile number"
+                  value={form.phone} onChange={set('phone')} className={inputClass} />
+                <FieldError message={errors.phone} />
+              </div>
+            </div>
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input type="checkbox" checked={whatsappOptIn} onChange={e => setWhatsappOptIn(e.target.checked)} className="h-5 w-5 accent-burgundy" />
+              Send me order updates on WhatsApp (reply STOP any time)
+            </label>
+
+            <div>
+              <label className={labelClass} htmlFor="co-email">Email (order updates and tracking)</label>
+              <input id="co-email" type="email" autoComplete="email" maxLength={ADDRESS_LIMITS.email} value={form.email} onChange={set('email')} className={inputClass} />
+              <FieldError message={errors.email} />
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="co-address">Address (house, street, area)</label>
+              <input id="co-address" autoComplete="street-address" maxLength={ADDRESS_LIMITS.address} value={form.address} onChange={set('address')} className={inputClass} />
+              <FieldError message={errors.address} />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass} htmlFor="co-pincode">Pincode</label>
+                <input id="co-pincode" inputMode="numeric" maxLength={6} autoComplete="postal-code" value={form.pincode} onChange={set('pincode')} className={inputClass} />
+                <FieldError message={errors.pincode} />
+                <p className="text-xs mt-1 text-muted-foreground flex items-center gap-1" aria-live="polite">
+                  {delivery.isLoading && 'Checking delivery…'}
+                  {!delivery.isLoading && delivery.estimate?.serviceable && delivery.estimate.estimatedDeliveryDate && (
+                    <><Truck className="w-3 h-3" aria-hidden /> Estimated delivery by {formatDeliveryDate(delivery.estimate.estimatedDeliveryDate)}</>
+                  )}
+                  {!delivery.isLoading && delivery.estimate && !delivery.estimate.serviceable && (
+                    <span className="text-destructive">We do not deliver to this PIN code yet.</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="co-country">Country</label>
+                <input id="co-country" value="India" readOnly className={`${inputClass} bg-muted/40`} />
               </div>
             </div>
 
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block mb-1">
-                Destination Country
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass} htmlFor="co-city">City</label>
+                <input id="co-city" autoComplete="address-level2" maxLength={ADDRESS_LIMITS.city} value={form.city} onChange={set('city')} className={inputClass} />
+                <FieldError message={errors.city} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="co-state">State / UT</label>
+                <select id="co-state" autoComplete="address-level1" value={form.state} onChange={set('state')} className={inputClass}>
+                  <option value="">Select state</option>
+                  {INDIAN_STATES_AND_UTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <FieldError message={errors.state} />
+              </div>
+            </div>
+
+            <div className="border-t border-border/60 pt-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" checked={business.open} onChange={e => setBusiness(b => ({ ...b, open: e.target.checked }))} className="h-4 w-4 accent-burgundy" />
+                Buying for a business? Add your GSTIN for a GST invoice
               </label>
-              <input required placeholder="United States, Belgium, United Kingdom, India..." value={form.country}
-                onChange={e => setForm({ ...form, country: e.target.value })}
-                className="w-full bg-background border border-border rounded px-4 py-2.5 text-sm outline-none focus:border-burgundy transition" />
-            </div>
-          </div>
-
-          {/* PAYMENT OPTIONS SELECTOR */}
-          <div className="bg-card border border-border/70 rounded-lg p-5 noise-overlay shadow-soft space-y-5">
-            <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <h2 className="font-display text-lg text-burgundy font-semibold">3. Payment Method</h2>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-sans">
-                Encrypted & Authenticated
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { id: 'card', label: 'Credit Card', icon: CreditCard, sub: 'Visa, Amex, MC' },
-                { id: 'upi', label: 'UPI / QR', icon: QrCode, sub: 'GPay, PhonePe' },
-                { id: 'razorpay', label: 'NetBanking', icon: Smartphone, sub: 'All Indian Banks' }
-              ].map(method => {
-                const MethodIcon = method.icon;
-                const isSelected = paymentMethod === method.id;
-                return (
-                  <button
-                    key={method.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(method.id as any)}
-                    className={`p-3.5 border rounded-lg flex flex-col items-center justify-center gap-1.5 text-xs transition-all font-semibold uppercase tracking-wider ${
-                      isSelected 
-                        ? 'border-burgundy bg-burgundy/5 text-burgundy ring-2 ring-burgundy/15 shadow-sm' 
-                        : 'border-border bg-background hover:border-burgundy/40 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <MethodIcon className="w-5 h-5" />
-                    <span>{method.label}</span>
-                    <span className="text-[9px] font-mono normal-case tracking-normal text-muted-foreground/70">{method.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* PAYMENT FORMS PANEL */}
-            <div className="bg-background border border-border/70 rounded p-4 space-y-3">
-              {paymentMethod === 'card' && (
-                <div className="space-y-2.5 animate-fade-in">
-                  <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4" /> Credit & Debit Card
+              {business.open && (
+                <div className="mt-3 grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass} htmlFor="co-company">Registered business name</label>
+                    <input id="co-company" autoComplete="organization" maxLength={120} value={business.companyName}
+                      onChange={e => setBusiness(b => ({ ...b, companyName: e.target.value }))} className={inputClass} />
+                    <FieldError message={businessErrors.companyName} />
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Visa, MasterCard, RuPay, and American Express accepted. Secure authorization via verified banking rails.
-                  </p>
-                </div>
-              )}
-
-              {paymentMethod === 'upi' && (
-                <div className="space-y-3 animate-fade-in">
-                  <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
-                    <QrCode className="w-4 h-4" /> UPI Virtual Private Address (VPA) / Instant QR
+                  <div>
+                    <label className={labelClass} htmlFor="co-gstin">GSTIN</label>
+                    <input id="co-gstin" maxLength={15} value={business.gstin} placeholder="29ABCDE1234F1Z5" autoCapitalize="characters" spellCheck={false}
+                      onChange={e => setBusiness(b => ({ ...b, gstin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} />
+                    <FieldError message={businessErrors.gstin} />
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Enter your Virtual Payment Address (e.g. mobile@upi or name@okhdfcbank) or click Place Order to scan the dynamic secure transaction QR with Google Pay, PhonePe, or Paytm.
-                  </p>
-                  <input 
-                    type="text" 
-                    placeholder="username@upi or mobile@okhdfcbank (Optional)" 
-                    value={upiId}
-                    onChange={e => setUpiId(e.target.value)}
-                    className="w-full bg-card border border-border rounded px-3 py-2 text-sm outline-none focus:border-burgundy font-mono" 
-                  />
-                </div>
-              )}
-
-              {paymentMethod === 'razorpay' && (
-                <div className="space-y-2 animate-fade-in">
-                  <div className="text-xs font-semibold text-burgundy uppercase tracking-wider flex items-center gap-1.5">
-                    <Smartphone className="w-4 h-4" /> Unified Razorpay Multi-Rail Gateway
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Direct access to all 58 Indian banks, Corporate NetBanking, EMI, CRED, Apple Pay / International Cards, and digital wallets.
-                  </p>
+                  <p className="sm:col-span-2 text-xs text-muted-foreground">The invoice shows this name and GSTIN so you can claim input tax credit. Prices stay the same.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Place Order CTA */}
-          <button 
-            type="submit"
-            disabled={placing}
-            className="w-full bg-burgundy hover:bg-burgundy-hover text-cream font-semibold py-4 rounded-[2px] hover:shadow-md active:scale-[0.99] transition text-xs uppercase tracking-[0.2em] font-sans disabled:opacity-60 shadow-sm flex items-center justify-center gap-2 cursor-pointer border border-transparent hover:border-dusty-pink"
-          >
-            {placing ? (
-              <span className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-cream border-t-transparent rounded-full animate-spin" />
-                Connecting to Secure Gateway…
+          <fieldset className="bg-card border border-border/70 rounded-lg p-5 shadow-soft space-y-3" disabled={busy || activeIntent !== null}>
+            <legend className="font-display text-lg text-burgundy font-semibold px-1">Payment</legend>
+            <label className="flex items-start gap-3 text-sm cursor-pointer">
+              <input type="radio" name="payment-method" value="prepaid" checked={paymentMethod === 'prepaid'}
+                onChange={() => setPaymentMethod('prepaid')} className="mt-1 accent-burgundy" />
+              <span>
+                <span className="font-semibold text-dark-brown">Pay online</span>
+                <span className="block text-xs text-muted-foreground">UPI, cards, net banking or wallets via Razorpay.</span>
               </span>
-            ) : (
-              `Authorize & Place Commission · ${storeConfig.currency}${total.toFixed(2)}`
+            </label>
+            <label className={`flex items-start gap-3 text-sm ${codBlockedReason ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}>
+              <input type="radio" name="payment-method" value="cod" checked={paymentMethod === 'cod'}
+                disabled={codBlockedReason !== null} onChange={() => setPaymentMethod('cod')} className="mt-1 accent-burgundy" />
+              <span>
+                <span className="font-semibold text-dark-brown">
+                  Cash on delivery{codFee > 0 ? ` (+ ${money(codFee)} fee incl. GST)` : ''}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {codBlockedReason ?? 'Pay in cash when your order arrives.'}
+                </span>
+              </span>
+            </label>
+            {paymentMethod === 'cod' && !codBlockedReason && (
+              <CodOtpStep key={codOtpEpoch} phone={codPhone} onChange={setCodOtp} />
             )}
-          </button>
+          </fieldset>
+
+          {!activeIntent ? (
+            <button
+              type="submit"
+              disabled={busy || items.length === 0 || awaitingCodOtp}
+              className="btn-primary w-full py-4"
+            >
+              {phase === 'creating'
+                ? (paymentMethod === 'cod' ? 'Placing your order…' : 'Confirming your total…')
+                : (paymentMethod === 'cod' ? 'Place order (cash on delivery)' : 'Continue to payment')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePay}
+              disabled={busy}
+              className="btn-primary w-full py-4"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              {phase === 'paying' ? 'Waiting for payment…' : phase === 'verifying' ? 'Confirming your payment…' : `Pay ${money(activeIntent.pricing.total)} securely`}
+            </button>
+          )}
+          {activeIntent && (
+            <p className="text-xs text-muted-foreground -mt-4">
+              Order {activeIntent.orderNumber} is reserved and awaiting payment. Editing your details or cart will create a new order total.
+            </p>
+          )}
         </form>
 
-        {/* RIGHT COLUMN: ORDER SUMMARY SIDEBAR WITH THUMBNAILS & GUARANTEES */}
-        <aside className="space-y-6 sticky top-24">
-          <div className="bg-card border border-border/80 rounded-lg p-5 noise-overlay shadow-luxe space-y-5">
+        <aside className="space-y-6 lg:sticky lg:top-24 self-start">
+          <div className="bg-card border border-border/80 rounded-lg p-5 shadow-luxe space-y-5">
             <div className="flex items-center justify-between border-b border-border/70 pb-3">
-              <div>
-                <h2 className="font-display text-xl text-dark-brown font-semibold">Commission Manifest</h2>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">Antwerp Reserved Items</p>
-              </div>
-              <span className="text-burgundy text-xs font-mono font-bold">
-                ({items.reduce((acc, i) => acc + i.quantity, 0)} works)
-              </span>
+              <h2 className="font-display text-xl text-dark-brown font-semibold">Order summary</h2>
+              <span className="text-burgundy text-xs font-mono font-bold">({items.reduce((a, i) => a + i.quantity, 0)} items)</span>
             </div>
 
-            {/* Item List with high-res thumbnails */}
             <div className="space-y-3.5 max-h-80 overflow-y-auto divide-y divide-border/40 pr-1">
               {items.map((i, idx) => (
                 <div key={i.id} className={`flex gap-3 text-xs ${idx > 0 ? 'pt-3.5' : ''}`}>
-                  <div className="w-14 h-14 bg-background border border-border/80 rounded-[2px] p-1.5 flex items-center justify-center shrink-0 shadow-xs relative">
+                  <div className="w-14 h-14 bg-background border border-border/80 rounded-[2px] p-1.5 flex items-center justify-center shrink-0 relative">
                     {i.customDesignThumb ? (
                       <img src={i.customDesignThumb} alt="" className="w-full h-full object-contain" />
                     ) : (
                       <ShapeThumb shapeId={i.shapeId} finish={i.finish} className="w-full h-full" />
                     )}
-                    <span className="absolute -top-1 -right-1 bg-burgundy text-cream text-[9px] font-mono px-1 rounded-[1px] font-bold">
-                      ×{i.quantity}
-                    </span>
+                    <span className="absolute -top-1 -right-1 bg-burgundy text-cream text-xs font-mono px-1 rounded-[1px] font-bold">×{i.quantity}</span>
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-dark-brown truncate">{i.productName}</div>
-                    <div className="text-muted-foreground text-[10px] mt-0.5 capitalize">
-                      {i.finish} · {i.sizeLabel}
-                    </div>
-                    <div className="text-[9px] text-gold font-mono font-semibold mt-0.5">Solid 3.0mm Plate</div>
-                  </div>
-
-                  <div className="font-semibold font-mono text-dark-brown shrink-0 text-right">
-                    {storeConfig.currency}{(i.unitPrice * i.quantity).toFixed(2)}
+                    <div className="text-muted-foreground text-xs mt-0.5">{finishName(i.finish)} · {i.sizeLabel}</div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Estimated Arrival Banner */}
-            <div className="bg-muted/40 border border-border/70 rounded p-3 text-xs space-y-1">
-              <div className="flex items-center gap-1.5 font-semibold text-dark-brown">
-                <span className="font-mono text-gold text-[10px] uppercase tracking-wider">TRANSIT ·</span>
-                <span>Estimated Insured Arrival</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                White-glove crated transit via <strong>DHL Express Priority</strong>. Tracking provided immediately upon laser inspection.
-              </p>
-            </div>
-
-            {/* PROMOTIONAL COUPON BOX */}
             <div className="bg-background border border-border/70 rounded p-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-dark-brown flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-oxblood" /> Promotional Voucher
+                  <Tag className="w-3.5 h-3.5 text-oxblood" /> Coupon
                 </span>
-                {appliedCoupon && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAppliedCoupon(null);
-                      cartRemoveCoupon();
-                      setCouponInput('');
-                      toast.info('Coupon removed');
-                    }}
-                    className="text-[10px] text-destructive hover:underline font-semibold"
-                  >
+                {couponCode && (
+                  <button type="button" onClick={() => { cartRemoveCoupon(); toast.info('Coupon removed.'); }}
+                    className="text-xs text-destructive hover:underline font-semibold">
                     Remove
                   </button>
                 )}
               </div>
-
-              {appliedCoupon ? (
-                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded text-xs">
-                  <div>
-                    <div className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
-                      {appliedCoupon.code}
-                    </div>
-                    {appliedCoupon.description && (
-                      <div className="text-[10px] text-muted-foreground">
-                        {appliedCoupon.description}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-emerald-700 dark:text-emerald-400 font-semibold font-mono text-sm">
-                    -{storeConfig.currency}{discount.toFixed(2)}
-                  </div>
-                </div>
+              {couponCode ? (
+                <div className="font-mono font-bold text-emerald-700 dark:text-emerald-400 text-xs">{couponCode}</div>
               ) : (
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. WELCOME10, ATELIER50, VERNOXVIP"
-                    value={couponInput}
+                  <input type="text" placeholder="Coupon code" value={couponInput}
                     onChange={e => setCouponInput(e.target.value.toUpperCase())}
-                    className="flex-1 bg-card border border-border rounded px-3 py-1.5 text-xs font-mono uppercase outline-none focus:border-oxblood transition"
-                  />
-                  <button
-                    type="button"
-                    disabled={isValidatingCoupon || !couponInput.trim()}
-                    onClick={async () => {
-                      const cleanCode = couponInput.trim().toUpperCase();
-                      if (!cleanCode) return;
-                      setIsValidatingCoupon(true);
-
-                      // 1. Authoritative local calculation against all admin and launch coupons
-                      const localResult = calculateCouponDiscount({
-                        code: cleanCode,
-                        cartSubtotal: subtotal,
-                        cartItems: items.map(i => ({
-                          productId: i.productId,
-                          productSlug: i.productSlug,
-                          unitPrice: i.unitPrice,
-                          quantity: i.quantity,
-                        })),
-                        customerEmail: form.email.trim() || undefined,
-                        currency: storeConfig.currency || '₹',
-                      }, coupons);
-
-                      // 2. Query serverless endpoint /api/validate-coupon (passing clientCoupons: coupons)
-                      let serverHandled = false;
-                      try {
-                        const res = await fetch('/api/validate-coupon', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            code: cleanCode,
-                            cartSubtotal: subtotal,
-                            cartItems: items,
-                            customerEmail: form.email.trim() || undefined,
-                            currency: storeConfig.currency || '₹',
-                            clientCoupons: coupons,
-                          })
-                        });
-                        if (res.ok) {
-                          const data = await res.json();
-                          if (data.isValid) {
-                            const couponObj = {
-                              code: data.couponCode,
-                              discountAmount: data.discountAmount,
-                              description: data.description,
-                            };
-                            setAppliedCoupon(couponObj);
-                            cartApplyCoupon(couponObj);
-                            toast.success(`Coupon ${data.couponCode} applied! Saved ${storeConfig.currency}${data.discountAmount.toFixed(2)}`);
-                            setCouponInput('');
-                            serverHandled = true;
-                          } else if (!localResult.isValid) {
-                            toast.error(data.error || 'Invalid coupon code');
-                            serverHandled = true;
-                          }
-                        }
-                      } catch {
-                        // Offline or emulator network error: fall through to localResult
-                      } finally {
-                        setIsValidatingCoupon(false);
-                      }
-
-                      // 3. Fallback to local evaluation if server was unreachable or in offline mode
-                      if (!serverHandled) {
-                        if (localResult.isValid) {
-                          const couponObj = {
-                            code: localResult.couponCode || cleanCode,
-                            discountAmount: localResult.discountAmount,
-                            description: localResult.description,
-                          };
-                          setAppliedCoupon(couponObj);
-                          cartApplyCoupon(couponObj);
-                          toast.success(`Coupon ${localResult.couponCode || cleanCode} applied! Saved ${storeConfig.currency}${localResult.discountAmount.toFixed(2)}`);
-                          setCouponInput('');
-                        } else {
-                          toast.error(localResult.error || 'Invalid coupon code');
-                        }
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-oxblood text-ivory hover:bg-oxblood-deep font-semibold text-xs rounded transition shadow-2xs disabled:opacity-50"
-                  >
-                    {isValidatingCoupon ? 'Checking...' : 'Apply'}
+                    className="flex-1 bg-card border border-border rounded px-3 py-1.5 text-xs font-mono uppercase outline-none focus:border-oxblood transition" />
+                  <button type="button" disabled={checkingCoupon || !couponInput.trim()} onClick={applyCouponCode}
+                    className="px-3 py-1.5 bg-oxblood text-ivory hover:bg-oxblood-deep font-semibold text-xs rounded transition disabled:opacity-50">
+                    {checkingCoupon ? 'Checking…' : 'Apply'}
                   </button>
                 </div>
               )}
             </div>
-            
-            {/* Totals */}
+
             <div className="space-y-2 text-xs border-t border-border/70 pt-3">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Merchandise Subtotal</span>
-                <span className="font-semibold text-foreground font-mono">{storeConfig.currency}{subtotal.toFixed(2)}</span>
-              </div>
-              {appliedCoupon && (
-                <div className="flex justify-between text-emerald-600 font-semibold">
-                  <span>Promotional Privilege ({appliedCoupon.code})</span>
-                  <span className="font-mono">-{storeConfig.currency}{appliedCoupon.discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-muted-foreground">
-                <span>Insured Freight & Timber Crate</span>
-                <span className="font-mono">
-                  {shipping === 0 ? (
-                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold uppercase text-[10px]">Complimentary</span>
-                  ) : (
-                    `${storeConfig.currency}${shipping.toFixed(2)}`
+              {pricing ? (
+                <>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span><span className="font-mono text-foreground">{money(pricing.subtotal)}</span>
+                  </div>
+                  {pricing.volumeDiscount && (
+                    <div className="flex justify-between text-emerald-600 font-semibold">
+                      <span>{volumeDiscountLabel(pricing.volumeDiscount)}</span><span className="font-mono">-{money(pricing.volumeDiscount.amount)}</span>
+                    </div>
                   )}
-                </span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Sales Tax / VAT ({storeConfig.taxRate}%)</span>
-                <span className="font-mono">{storeConfig.currency}{tax.toFixed(2)}</span>
-              </div>
-              
-              <div className="flex justify-between text-sm font-semibold border-t border-border/70 pt-3 text-dark-brown">
-                <div>
-                  <span>Total</span>
-                  <span className="block text-[9px] text-muted-foreground font-normal">All duties, taxes & crating included</span>
-                </div>
-                <span className="font-mono text-xl font-bold text-burgundy">{storeConfig.currency}{total.toFixed(2)}</span>
-              </div>
+                  {(pricing.couponDiscount ?? (pricing.volumeDiscount ? 0 : pricing.discount)) > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-semibold">
+                      <span>Discount{couponCode ? ` (${couponCode})` : ''}</span><span className="font-mono">-{money(pricing.couponDiscount ?? pricing.discount)}</span>
+                    </div>
+                  )}
+                  {couponCode && pricing.volumeDiscount && !pricing.couponDiscount && (
+                    <p className="text-muted-foreground">Your bulk discount is larger than coupon {couponCode}, so the coupon was not used.</p>
+                  )}
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Shipping</span><span className="font-mono">{pricing.shipping === 0 ? 'Free' : money(pricing.shipping)}</span>
+                  </div>
+                  {(pricing.codFee ?? 0) > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Cash on delivery fee</span><span className="font-mono">{money(pricing.codFee ?? 0)}</span>
+                    </div>
+                  )}
+                  {!pricing.taxIncluded && (
+                    // Only an order placed before GST-inclusive pricing (a resumed payment) adds GST on top.
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>GST</span><span className="font-mono">{money(pricing.tax)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-semibold border-t border-border/70 pt-3 text-dark-brown">
+                    <span>Total payable</span>
+                    <span className="font-mono text-xl font-bold text-burgundy">{money(pricing.total)}</span>
+                  </div>
+                  {pricing.taxIncluded && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Includes GST</span><span className="font-mono">{money(pricing.tax)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Items subtotal (estimate)</span><span className="font-mono text-foreground">{money(subtotal)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Prices are inclusive of all taxes. Shipping{paymentMethod === 'cod' ? ', the cash on delivery fee' : ''} and discounts are calculated by our server when you continue. That total is the amount you pay.
+                  </p>
+                </>
+              )}
             </div>
 
-            {/* Inclusions Box */}
-            <div className="pt-3 border-t border-border/60 space-y-2 text-[11px] text-muted-foreground">
-              <div className="flex items-baseline gap-2">
-                <span className="font-mono text-gold text-[10px] font-semibold">01 ·</span>
-                <span>Signed Certificate of Authenticity & Studio Hallmark</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-mono text-gold text-[10px] font-semibold">02 ·</span>
-                <span>Reinforced Timber Crated Transit Included</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-mono text-gold text-[10px] font-semibold">03 ·</span>
-                <span>Concealed Float Standoffs & 1:1 Mounting Template</span>
-              </div>
-            </div>
-
-            <Link 
-              to="/cart" 
-              className="block text-center text-[10px] uppercase tracking-widest text-muted-foreground hover:text-burgundy font-bold pt-2 transition"
-            >
+            <Link to="/cart" className="block text-center text-xs text-muted-foreground hover:text-burgundy font-bold pt-2 transition">
               ← Edit quantities in cart
             </Link>
           </div>
 
-          {/* Concierge Assistance */}
-          <div className="bg-card border border-border/70 rounded-[2px] p-4 flex items-center gap-3 shadow-2xs">
-            <div className="p-2 rounded-[2px] bg-burgundy/10 text-burgundy shrink-0">
-              <Phone className="w-4 h-4" />
-            </div>
+          <div className="bg-card border border-border/70 rounded-[2px] p-4 flex items-center gap-3">
+            <div className="p-2 rounded-[2px] bg-burgundy/10 text-burgundy shrink-0"><Phone className="w-4 h-4" /></div>
             <div className="text-xs">
-              <div className="font-semibold text-dark-brown">Need Checkout Assistance?</div>
-              <div className="text-muted-foreground text-[11px] mt-0.5">
-                Our studio concierge is available at: <a href="mailto:concierge@vernox.com" className="text-burgundy font-semibold underline">concierge@vernox.com</a>
+              <div className="font-semibold text-dark-brown">Need help with checkout?</div>
+              <div className="text-muted-foreground text-xs mt-0.5">
+                <Link to="/contact" className="text-burgundy font-semibold underline">Contact us</Link>
               </div>
             </div>
           </div>

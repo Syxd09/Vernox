@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useCatalog, HeroSlide, DEFAULT_HERO_SLIDES } from '@/lib/catalogContext';
+import { useAdminData } from '@/lib/data/adminData';
+import { DEFAULT_HERO_SLIDES, useSettingsMutations } from '@/lib/data/settings';
+import type { HeroSlide } from '@/types/store';
 import { 
   Plus, Edit2, Trash2, ArrowUp, ArrowDown, ExternalLink, 
   Eye, Check, RotateCcw, Copy, Sparkles, Image as ImageIcon,
@@ -23,12 +25,8 @@ const PRESET_BACKGROUNDS = [
 ];
 
 export function AdminHeroSlider() {
-  const { 
-    homepageSettings, 
-    updateHomepageSettings, 
-    products, 
-    logAdminAudit 
-  } = useCatalog();
+  const { homepageSettings, products } = useAdminData();
+  const { updateHomepageSettings } = useSettingsMutations();
 
   const slides: HeroSlide[] = useMemo(() => {
     return (homepageSettings?.heroSlides && homepageSettings.heroSlides.length > 0)
@@ -104,7 +102,6 @@ export function AdminHeroSlider() {
           ? { ...s, ...formState, image: finalImage }
           : s
       );
-      toast.success("Hero slide updated successfully.");
     } else {
       // Add
       const newSlide: HeroSlide = {
@@ -113,16 +110,10 @@ export function AdminHeroSlider() {
         image: finalImage,
       };
       updatedSlides = [...slides, newSlide];
-      toast.success("New hero slide added to carousel.");
     }
 
-    await updateHomepageSettings({ heroSlides: updatedSlides });
-    await logAdminAudit(
-      editingSlideId ? 'update_hero_slide' : 'create_hero_slide',
-      'config',
-      editingSlideId || 'new_slide',
-      { series: formState.series, location: formState.location }
-    );
+    if (!(await updateHomepageSettings({ heroSlides: updatedSlides }))) return;
+    toast.success(editingSlideId ? 'Hero slide updated successfully.' : 'New hero slide added to carousel.');
 
     setIsModalOpen(false);
   };
@@ -135,8 +126,7 @@ export function AdminHeroSlider() {
       series: `${slide.series} (Copy)`,
     };
     const updated = [...slides, duplicated];
-    await updateHomepageSettings({ heroSlides: updated });
-    await logAdminAudit('duplicate_hero_slide', 'config', slide.id);
+    if (!(await updateHomepageSettings({ heroSlides: updated }))) return;
     toast.success("Hero slide duplicated.");
   };
 
@@ -147,8 +137,7 @@ export function AdminHeroSlider() {
       return;
     }
     const updated = slides.filter(s => s.id !== slideId);
-    await updateHomepageSettings({ heroSlides: updated });
-    await logAdminAudit('delete_hero_slide', 'config', slideId);
+    if (!(await updateHomepageSettings({ heroSlides: updated }))) return;
     toast.success("Slide removed from hero slider.");
     if (previewIndex >= updated.length) {
       setPreviewIndex(0);
@@ -164,16 +153,14 @@ export function AdminHeroSlider() {
     const [moved] = reordered.splice(index, 1);
     reordered.splice(targetIdx, 0, moved);
 
-    await updateHomepageSettings({ heroSlides: reordered });
-    await logAdminAudit('reorder_hero_slides', 'config', 'homepage', { from: index, to: targetIdx });
+    if (!(await updateHomepageSettings({ heroSlides: reordered }))) return;
     toast.success("Slide sequence updated.");
   };
 
   // Reset to default
   const handleResetDefaults = async () => {
     if (window.confirm("Restore the original default 4 atelier slides? Any custom slides will be replaced.")) {
-      await updateHomepageSettings({ heroSlides: DEFAULT_HERO_SLIDES });
-      await logAdminAudit('reset_hero_slides', 'config', 'homepage');
+      if (!(await updateHomepageSettings({ heroSlides: DEFAULT_HERO_SLIDES }))) return;
       toast.success("Hero slider reset to default atelier curations.");
       setPreviewIndex(0);
     }
@@ -207,9 +194,9 @@ export function AdminHeroSlider() {
               {slides.length} {slides.length === 1 ? 'Slide' : 'Slides'} Active
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
-            Hero Slider Management
-          </h1>
+          <h2 className="font-display text-3xl">
+            Hero sliders
+          </h2>
           <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
             Control the full-screen editorial image slides, architectural locations, series typography, and linked artworks displayed on the storefront home page.
           </p>
@@ -288,7 +275,7 @@ export function AdminHeroSlider() {
 
           {/* Overlaid Pill Badge */}
           <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-sm bg-white/95 backdrop-blur-md border border-[#EBE4D6] shadow-sm text-dark-brown">
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-sm bg-white/95 backdrop-blur-md border border-border shadow-sm text-dark-brown">
               <span className="w-2 h-2 rounded-full bg-gold" />
               <span className="text-[10px] sm:text-xs uppercase tracking-[0.22em] font-sans font-semibold">
                 {activePreviewSlide.series}

@@ -4,9 +4,10 @@
  * target resource tracking, IP logging, action filters, and CSV/JSON compliance exports.
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { useCatalog } from '@/lib/catalogContext';
-import type { AuditLog, AuditTargetType } from '@/types/admin';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { fetchAuditLogs } from '@/lib/data/staff';
+import type { AuditEntry as AuditLog } from '@/types/store';
 import { 
   Shield, Search, Download, RefreshCw, Filter, 
   Clock, Eye, User, FileText, CheckCircle2, AlertTriangle, Key, X
@@ -14,28 +15,28 @@ import {
 import { toast } from 'sonner';
 
 export function AdminAuditLogs() {
-  const { fetchAuditLogs, currentAdmin, adminRole } = useCatalog();
+  const { permissions } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [targetTypeFilter, setTargetTypeFilter] = useState<string>('all');
   const [inspectingLog, setInspectingLog] = useState<AuditLog | null>(null);
 
-  const loadLogs = async () => {
+  const loadLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const fetched = await fetchAuditLogs(targetTypeFilter !== 'all' ? targetTypeFilter : undefined);
       setLogs(fetched);
-    } catch {
-      toast.error('Failed to retrieve audit log records');
+    } catch (err) {
+      toast.error(`Failed to retrieve audit log records: ${err instanceof Error ? err.message : 'unknown error'}`);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [targetTypeFilter]);
 
   useEffect(() => {
-    loadLogs();
-  }, [targetTypeFilter]);
+    if (permissions?.canViewAuditLogs) void loadLogs();
+  }, [loadLogs, permissions?.canViewAuditLogs]);
 
   // Filtered Logs
   const filteredLogs = useMemo(() => {
@@ -99,12 +100,16 @@ export function AdminAuditLogs() {
     return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
   };
 
+  if (!permissions?.canViewAuditLogs) {
+    return <p className="text-sm text-muted-foreground">Audit logs are available to super admins only.</p>;
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-3xl text-oxblood-deep">System Activity & Audit Logs</h2>
+          <h2 className="font-display text-3xl">Activity log</h2>
           <p className="text-muted-foreground text-sm">
             Tamper-evident administrative compliance trail tracking authentication, inventory adjustments, and catalog updates.
           </p>
@@ -153,14 +158,18 @@ export function AdminAuditLogs() {
 
         <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
           {[
+            // Ids are the targetType values the server and consoles actually write (api/admin.ts, src/lib/data/*).
             { id: 'all', label: 'All Records' },
-            { id: 'auth', label: 'Auth & Login' },
-            { id: 'coupon', label: 'Coupons' },
             { id: 'order', label: 'Orders' },
-            { id: 'inventory', label: 'Inventory' },
             { id: 'product', label: 'Products' },
-            { id: 'config', label: 'Banners & Hero' },
-            { id: 'admin', label: 'Team Roles' },
+            { id: 'inventory', label: 'Inventory' },
+            { id: 'coupon', label: 'Coupons' },
+            { id: 'review', label: 'Reviews' },
+            { id: 'ticket', label: 'Support' },
+            { id: 'consultation', label: 'Consultations' },
+            { id: 'settings', label: 'Settings & Homepage' },
+            { id: 'config', label: 'Integrations' },
+            { id: 'staff', label: 'Team Roles' },
           ].map(f => (
             <button
               key={f.id}
